@@ -1,0 +1,158 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  RESTAURANT
+  DRIVER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  PREPARING
+  READY
+  DRIVER_ASSIGNED
+  ON_THE_WAY
+  DELIVERED
+  CANCELLED
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  phone         String    @unique
+  password      String
+  role          Role      @default(CUSTOMER)
+  region        String?
+  address       String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  restaurant    Restaurant?
+  driverProfile DriverProfile?
+  orders        Order[]   @relation("CustomerOrders")
+  driverOrders  Order[]   @relation("DriverOrders")
+}
+
+model Restaurant {
+  id          String     @id @default(uuid())
+  userId      String     @unique
+  user        User       @relation(fields: [userId], references: [id])
+  name        String
+  coverImage  String     @default("")
+  logo        String     @default("")
+  avgPrepTime Int        @default(30)
+  rating      Float      @default(0)
+  isOpen      Boolean    @default(true)
+  categories  Category[]
+  orders      Order[]
+}
+
+model Category {
+  id           String    @id @default(uuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  name         String
+  products     Product[]
+}
+
+model Product {
+  id          String        @id @default(uuid())
+  categoryId  String
+  category    Category      @relation(fields: [categoryId], references: [id])
+  name        String
+  description String?
+  images      String[]
+  basePrice   Float
+  sizes       ProductSize[]
+  extras      Extra[]
+  isAvailable Boolean       @default(true)
+  orderItems  OrderItem[]
+}
+
+model ProductSize {
+  id        String  @id @default(uuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  name      String
+  price     Float
+}
+
+model Extra {
+  id        String  @id @default(uuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  name      String
+  price     Float
+}
+
+model Order {
+  id            String      @id @default(uuid())
+  customerId    String
+  customer      User        @relation("CustomerOrders", fields: [customerId], references: [id])
+  restaurantId  String
+  restaurant    Restaurant  @relation(fields: [restaurantId], references: [id])
+  driverId      String?
+  driver        User?       @relation("DriverOrders", fields: [driverId], references: [id])
+  items         OrderItem[]
+  subtotal      Float
+  deliveryFee   Float
+  discount      Float       @default(0)
+  total         Float
+  paymentMethod String      @default("CASH")
+  status        OrderStatus @default(PENDING)
+  createdAt     DateTime    @default(now())
+  statusLogs    StatusLog[]
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  sizeId    String?
+  extras    Json    @default("[]")
+  quantity  Int
+  price     Float
+}
+
+model StatusLog {
+  id        String      @id @default(uuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id])
+  status    OrderStatus
+  timestamp DateTime    @default(now())
+}
+
+model DriverProfile {
+  id        String  @id @default(uuid())
+  userId    String  @unique
+  user      User    @relation(fields: [userId], references: [id])
+  isAvailable Boolean @default(true)
+  lat       Float?
+  lng       Float?
+  earnings  Float   @default(0)
+}
+
+model Region {
+  id          String @id @default(uuid())
+  name        String
+  deliveryFee Float
+}
+
+model Coupon {
+  id       String   @id @default(uuid())
+  code     String   @unique
+  type     String
+  value    Float
+  minOrder Float?   @default(0)
+  isActive Boolean  @default(true)
+}

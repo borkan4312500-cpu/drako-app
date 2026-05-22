@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drako — تسجيل الدخول</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Cairo',sans-serif;background:#F5F5F5;min-height:100vh;display:flex;align-items:center;justify-content:center;}
+.page{width:100%;max-width:420px;padding:24px 16px;}
+.logo-wrap{text-align:center;margin-bottom:32px;}
+.logo-icon{width:72px;height:72px;background:#FF6B00;border-radius:20px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;}
+.logo-icon svg{width:42px;height:42px;fill:#fff;}
+.logo-name{font-size:28px;font-weight:900;color:#FF6B00;letter-spacing:-0.5px;}
+.logo-sub{font-size:13px;color:#888;margin-top:2px;}
+.card{background:#fff;border-radius:20px;padding:28px 24px;box-shadow:0 4px 24px rgba(0,0,0,0.07);}
+.card-title{font-size:18px;font-weight:700;color:#1A1A1A;margin-bottom:20px;text-align:center;}
+.error-msg{background:#FFF0F0;border:1px solid #FFCCCC;border-radius:10px;padding:10px 14px;color:#CC0000;font-size:13px;margin-bottom:16px;text-align:center;}
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:13px;font-weight:600;color:#444;margin-bottom:6px;}
+.field input{width:100%;height:50px;border:1.5px solid #E0E0E0;border-radius:12px;padding:0 14px;font-size:14px;font-family:'Cairo',sans-serif;color:#1A1A1A;outline:none;transition:border .2s;}
+.field input:focus{border-color:#FF6B00;}
+.field input::placeholder{color:#AAAAAA;}
+.btn-primary{width:100%;height:52px;background:#FF6B00;color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;transition:background .2s,transform .1s;margin-top:4px;}
+.btn-primary:hover{background:#CC5500;}
+.btn-primary:active{transform:scale(0.98);}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="logo-wrap">
+    <div class="logo-icon">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <path d="M50 10 C30 10 15 25 15 45 C15 60 22 70 35 76 L35 88 C35 91 38 93 41 92 L50 88 L59 92 C62 93 65 91 65 88 L65 76 C78 70 85 60 85 45 C85 25 70 10 50 10Z"/>
+        <circle cx="38" cy="44" r="5" fill="#FF6B00"/>
+        <circle cx="62" cy="44" r="5" fill="#FF6B00"/>
+        <path d="M40 58 Q50 65 60 58" stroke="#FF6B00" stroke-width="3" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <img src="logo.jpg" class="logo-img">
+    <div class="logo-name">Drako</div>
+    <div class="logo-sub">أكل تحبه... يوصل لحد عندك</div>
+  </div>
+  <div class="card">
+    <div class="card-title">تسجيل الدخول</div>
+    <?php if(isset($_GET['error'])): ?>
+    <div class="error-msg">رقم الهاتف أو كلمة المرور غير صحيحة</div>
+    <?php endif; ?>
+    <div id="err-msg" style="display:none" class="error-msg">رقم الهاتف أو كلمة المرور غير صحيحة</div>
+    <form method="POST" action="/login">
+      <div class="field">
+        <label>رقم الهاتف</label>
+        <input type="tel" name="phone" placeholder="01xxxxxxxxx" required>
+      </div>
+      <div class="field">
+        <label>كلمة المرور</label>
+        <input type="password" name="password" placeholder="••••••••" required>
+      </div>
+      <button type="submit" class="btn-primary">دخول</button>
+    </form>
+  </div>
+</div>
+<script>
+const params = new URLSearchParams(location.search);
+if(params.get('error')) document.getElementById('err-msg').style.display='block';
+</script>
+</body>
+</html>
