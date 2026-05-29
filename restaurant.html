@@ -130,6 +130,18 @@ tbody tr:hover{background:var(--surface2);}
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
+  // تحقق من صلاحية التوكن عند تحميل الصفحة
+async function checkAuth() {
+  try {
+    const res = await fetch('/api/admin/stats', { credentials: 'include' }); // أو أي مسار محمي
+    if (res.status === 401) {
+      window.location.href = '/?error=session_expired'; // العودة للصفحة الرئيسية (العميل)
+    }
+  } catch(e) {
+    window.location.href = '/?error=session_expired';
+  }
+}
+checkAuth();
 // ========== SOUND ENGINE ==========
 function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
   const sampleRate = 44100;
