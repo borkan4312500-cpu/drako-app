@@ -1,3 +1,15 @@
+// Middleware لحماية صفحات HTML الخاصة بالإدارة
+function pageAuth(req, res, next) {
+  const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
+  if (!token) return res.redirect('/login.html');
+  try {
+    req.user = jwt.verify(token, JWT_SECRET);
+    next();
+  } catch {
+    res.redirect('/login.html');
+  }
+}
+
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
@@ -94,11 +106,14 @@ function adminOnly(req, res, next) {
 
 // صفحات ثابتة
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'customer.html')));
+app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, 'login.html')));
 app.get('/customer', (req, res) => res.sendFile(path.join(__dirname, 'customer.html')));
-app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
-app.get('/restaurant', (req, res) => res.sendFile(path.join(__dirname, 'restaurant.html')));
-app.get('/driver', (req, res) => res.sendFile(path.join(__dirname, 'driver.html')));
-
+app.get('/admin', pageAuth, (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
+app.get('/restaurant', pageAuth, (req, res) => res.sendFile(path.join(__dirname, 'restaurant.html')));
+app.get('/driver', pageAuth, (req, res) => res.sendFile(path.join(__dirname, 'driver.html')));
+if (!user || !bcrypt.compareSync(password, user.password)) {
+  return res.redirect('/login.html?error=1');
+}
 // تسجيل الدخول
 app.post('/login', (req, res) => {
   const { phone, password } = req.body;
