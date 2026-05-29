@@ -32,7 +32,8 @@ const { Server } = require('socket.io');
 const server = http.createServer(app);
 const io = new Server(server);
 
-const DATA_FILE = path.join(__dirname, 'data.json');
+const DATA_DIR = process.env.DATA_DIR || __dirname;
+const DATA_FILE = path.join(DATA_DIR, 'data.json');
 const JWT_SECRET = process.env.JWT_SECRET || 'drako_secret_key_fallback';
 
 // دالة قراءة البيانات
