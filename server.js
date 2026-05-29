@@ -93,7 +93,7 @@ function adminOnly(req, res, next) {
 }
 
 // صفحات ثابتة
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'customer.html')));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/customer', (req, res) => res.sendFile(path.join(__dirname, 'customer.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 app.get('/restaurant', (req, res) => res.sendFile(path.join(__dirname, 'restaurant.html')));
