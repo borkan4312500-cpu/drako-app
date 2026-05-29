@@ -1,15 +1,3 @@
-// Middleware لحماية صفحات HTML الخاصة بالإدارة
-function pageAuth(req, res, next) {
-  const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
-  if (!token) return res.redirect('/login.html');
-  try {
-    req.user = jwt.verify(token, JWT_SECRET);
-    next();
-  } catch {
-    res.redirect('/login.html');
-  }
-}
-
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
@@ -90,7 +78,7 @@ function writeData(data) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 }
 
-// Middleware
+// Middleware للـ API (يعطي 401 للمناداة البرمجية)
 function requireAuth(req, res, next) {
   const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'غير مصرح' });
@@ -99,28 +87,40 @@ function requireAuth(req, res, next) {
     next();
   } catch { res.status(401).json({ error: 'انتهت الجلسة' }); }
 }
+
 function adminOnly(req, res, next) {
   if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'صلاحيات غير كافية' });
   next();
 }
 
-// صفحات ثابتة
+// Middleware لحماية صفحات HTML (يعيد التوجيه إلى login.html إذا لم يكن هناك توكن صحيح)
+function pageAuth(req, res, next) {
+  const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
+  if (!token) return res.redirect('/login.html');
+  try {
+    req.user = jwt.verify(token, JWT_SECRET);
+    next();
+  } catch {
+    res.redirect('/login.html');
+  }
+}
+
+// الصفحات الثابتة
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'customer.html')));
-app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, 'login.html')));
 app.get('/customer', (req, res) => res.sendFile(path.join(__dirname, 'customer.html')));
+app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, 'login.html')));
+// صفحات محمية
 app.get('/admin', pageAuth, (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 app.get('/restaurant', pageAuth, (req, res) => res.sendFile(path.join(__dirname, 'restaurant.html')));
 app.get('/driver', pageAuth, (req, res) => res.sendFile(path.join(__dirname, 'driver.html')));
-if (!user || !bcrypt.compareSync(password, user.password)) {
-  return res.redirect('/login.html?error=1');
-}
+
 // تسجيل الدخول
 app.post('/login', (req, res) => {
   const { phone, password } = req.body;
   const data = readData();
   const user = data.users.find(u => u.phone === phone);
   if (!user || !bcrypt.compareSync(password, user.password)) {
-    return res.redirect('/?error=1');
+    return res.redirect('/login.html?error=1');
   }
   const token = jwt.sign(
     { id: user.id, role: user.role },
@@ -139,6 +139,7 @@ app.post('/login', (req, res) => {
     default: return res.send('تم الدخول');
   }
 });
+
 app.get('/logout', (req, res) => { res.clearCookie('token'); res.redirect('/'); });
 
 // ==================== أدمن ====================
@@ -473,7 +474,7 @@ app.get('/api/restaurant/profile', requireAuth, (req, res) => {
   const data = readData();
   const restaurant = data.restaurants.find(r => r.userId === req.user.id);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-  res.json({ id: restaurant.id, name: restaurant.name, logo: restaurant.logo || '' });  // أضيف id
+  res.json({ id: restaurant.id, name: restaurant.name, logo: restaurant.logo || '' });
 });
 app.patch('/api/restaurant/profile', requireAuth, upload.single('logo'), (req, res) => {
   if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
@@ -533,7 +534,7 @@ app.patch('/api/restaurant/orders/:id', requireAuth, (req, res) => {
   // إشعارات مخصصة
   io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
   if (status === 'ACCEPTED') {
-    io.emit('orderAccepted', { orderId: order.id }); // للعميل
+    io.emit('orderAccepted', { orderId: order.id });
   } else if (status === 'CANCELLED') {
     io.emit('orderCancelled', { orderId: order.id });
   }
@@ -1127,5 +1128,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 4000;
-// في الآخر:
 server.listen(PORT, () => console.log(`Drako server on port ${PORT}`));
