@@ -93,11 +93,10 @@ function adminOnly(req, res, next) {
 }
 
 // صفحات ثابتة
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-app.get('/customer', (req, res) => res.sendFile(path.join(__dirname, 'customer.html')));
-app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
-app.get('/restaurant', (req, res) => res.sendFile(path.join(__dirname, 'restaurant.html')));
-app.get('/driver', (req, res) => res.sendFile(path.join(__dirname, 'driver.html')));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'customer.html')));
+app.get('/admin', requireAuth, (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
+app.get('/restaurant', requireAuth, (req, res) => res.sendFile(path.join(__dirname, 'restaurant.html')));
+app.get('/driver', requireAuth, (req, res) => res.sendFile(path.join(__dirname, 'driver.html')));
 
 // تسجيل الدخول
 app.post('/login', (req, res) => {
