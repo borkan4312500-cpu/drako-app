@@ -15,7 +15,7 @@ app.use(cookieParser());
 // إعداد multer
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const dir = path.join(__dirname, 'uploads');
+    const dir = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
     if (!fs.existsSync(dir)) fs.mkdirSync(dir);
     cb(null, dir);
   },
@@ -25,8 +25,7 @@ const storage = multer.diskStorage({
   }
 });
 const upload = multer({ storage: storage });
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
+app.use('/uploads', express.static(process.env.UPLOADS_DIR || path.join(__dirname, 'uploads')));
 const http = require('http');
 const { Server } = require('socket.io');
 const server = http.createServer(app);
