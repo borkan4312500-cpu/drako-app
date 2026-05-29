@@ -93,30 +93,39 @@ function adminOnly(req, res, next) {
   next();
 }
 
-// Middleware لحماية صفحات HTML (يعيد التوجيه إلى login.html إذا لم يكن هناك توكن صحيح)
-function pageAuth(req, res, next) {
-  const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
-  if (!token) return res.redirect('/login.html');
-  try {
-    req.user = jwt.verify(token, JWT_SECRET);
-    next();
-  } catch {
-    res.redirect('/login.html');
-  }
+// Middleware لحماية صفحات HTML مع التحقق من الدور المطلوب
+function rolePageAuth(requiredRole) {
+  return (req, res, next) => {
+    const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.redirect('/login.html?redirect=' + encodeURIComponent(req.originalUrl));
+    }
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      if (decoded.role !== requiredRole) {
+        // إذا الدور مش مطابق، يتم إعادة التوجيه إلى صفحة تسجيل الدخول مع خطأ
+        return res.redirect('/login.html?error=role');
+      }
+      req.user = decoded;
+      next();
+    } catch {
+      return res.redirect('/login.html?redirect=' + encodeURIComponent(req.originalUrl));
+    }
+  };
 }
 
 // الصفحات الثابتة
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'customer.html')));
 app.get('/customer', (req, res) => res.sendFile(path.join(__dirname, 'customer.html')));
 app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, 'login.html')));
-// صفحات محمية
-app.get('/admin', pageAuth, (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
-app.get('/restaurant', pageAuth, (req, res) => res.sendFile(path.join(__dirname, 'restaurant.html')));
-app.get('/driver', pageAuth, (req, res) => res.sendFile(path.join(__dirname, 'driver.html')));
+// صفحات محمية بالأدوار
+app.get('/admin', rolePageAuth('ADMIN'), (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
+app.get('/restaurant', rolePageAuth('RESTAURANT'), (req, res) => res.sendFile(path.join(__dirname, 'restaurant.html')));
+app.get('/driver', rolePageAuth('DRIVER'), (req, res) => res.sendFile(path.join(__dirname, 'driver.html')));
 
-// تسجيل الدخول
+// تسجيل الدخول (مُحدث ليدعم إعادة التوجيه بعد تسجيل الدخول)
 app.post('/login', (req, res) => {
-  const { phone, password } = req.body;
+  const { phone, password, redirect } = req.body;
   const data = readData();
   const user = data.users.find(u => u.phone === phone);
   if (!user || !bcrypt.compareSync(password, user.password)) {
@@ -132,12 +141,24 @@ app.post('/login', (req, res) => {
     sameSite: 'lax',
     maxAge: 30 * 24 * 60 * 60 * 1000
   });
+
+  let target = '/';
   switch (user.role) {
-    case 'ADMIN': return res.redirect('/admin');
-    case 'RESTAURANT': return res.redirect('/restaurant');
-    case 'DRIVER': return res.redirect('/driver');
+    case 'ADMIN': target = '/admin'; break;
+    case 'RESTAURANT': target = '/restaurant'; break;
+    case 'DRIVER': target = '/driver'; break;
     default: return res.send('تم الدخول');
   }
+
+  // إذا كان هناك redirect وهو آمن (يبدأ بنفس مسار الدور)، استخدمه
+  if (redirect) {
+    const redirectPrefix = '/' + redirect.split('/')[1]; // مثلا /admin, /restaurant
+    if (target.startsWith(redirectPrefix)) {
+      target = redirect;
+    }
+  }
+
+  return res.redirect(target);
 });
 
 app.get('/logout', (req, res) => { res.clearCookie('token'); res.redirect('/'); });
@@ -449,7 +470,6 @@ app.patch('/api/admin/orders/:id/reject', requireAuth, adminOnly, (req, res) => 
   order.cancelReason = reason || 'ألغاه الأدمن';
   order.adminApproved = false;
   writeData(data);
-  // إشعار بالإلغاء
   io.emit('orderCancelled', { orderId: order.id });
   res.json({ success: true });
 });
@@ -531,7 +551,6 @@ app.patch('/api/restaurant/orders/:id', requireAuth, (req, res) => {
 
   writeData(data);
 
-  // إشعارات مخصصة
   io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
   if (status === 'ACCEPTED') {
     io.emit('orderAccepted', { orderId: order.id });
@@ -746,7 +765,6 @@ app.patch('/api/driver/orders/:id/accept', requireAuth, (req, res) => {
   writeData(data);
 
   io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
-  // إشعار بوصول الطيار
   io.emit('driverArrived', { orderId: order.id, driverName: req.user.name || 'طيار' });
 
   res.json({ success: true });
@@ -926,7 +944,6 @@ app.post('/api/orders', customerAuth, (req, res) => {
   data.orders.push(order);
   writeData(data);
   
-  // إرسال إشعار بطلب جديد لجميع المتصلين (أدمن، مطعم)
   io.emit('newOrder', { orderId: order.id, restaurantId, customerName });
   
   res.json({ success: true, orderId: order.id });
@@ -1112,17 +1129,14 @@ setInterval(() => {
 
   if (changed) {
     writeData(data);
-    // إشعار بكل طلب أصبح جاهزاً
     updatedOrders.forEach(o => {
       io.emit('orderStatusUpdate', { orderId: o.id, status: o.status });
     });
-    // إشعار خاص للسائقين بوجود طلبات جديدة جاهزة
     const readyCount = data.orders.filter(o => o.status === 'READY' && !o.driverId).length;
     io.emit('driver:newJob', { count: readyCount });
   }
 }, 60000);
 
-// إعداد Socket.IO
 io.on('connection', (socket) => {
   console.log('عميل متصل:', socket.id);
 });
