@@ -167,15 +167,14 @@ tbody tr:hover{background:var(--surface2);}
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-  // تحقق من صلاحية التوكن عند تحميل الصفحة
 async function checkAuth() {
   try {
-    const res = await fetch('/api/admin/stats', { credentials: 'include' }); // أو أي مسار محمي
+    const res = await fetch('/api/admin/stats', { credentials: 'include' });
     if (res.status === 401) {
-      window.location.href = '/?error=session_expired'; // العودة للصفحة الرئيسية (العميل)
+      window.location.href = '/login.html';  // تم التعديل هنا
     }
   } catch(e) {
-    window.location.href = '/?error=session_expired';
+    window.location.href = '/login.html';
   }
 }
 checkAuth();
