@@ -43,6 +43,7 @@
     <div class="logo">Drako</div>
     <div class="sub">لوحة التحكم</div>
     <form method="POST" action="/login">
+      <input type="hidden" name="redirect" id="redirectInput" value="">
       <div class="field">
         <label>رقم الهاتف</label>
         <input type="text" name="phone" placeholder="01xxxxxxxxx" required>
@@ -56,9 +57,15 @@
     </form>
   </div>
   <script>
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('error') === '1') {
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirect = urlParams.get('redirect');
+    if (redirect) {
+      document.getElementById('redirectInput').value = redirect;
+    }
+    if (urlParams.get('error') === '1') {
       document.getElementById('error').textContent = 'رقم الهاتف أو كلمة المرور غير صحيحة';
+    } else if (urlParams.get('error') === 'role') {
+      document.getElementById('error').textContent = 'ليس لديك صلاحية للدخول إلى هذه الصفحة';
     }
   </script>
 </body>
