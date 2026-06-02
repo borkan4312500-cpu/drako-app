@@ -312,12 +312,13 @@ async function addCategory() {
 }
 async function deleteCategory(id) { await apiFetch(`/api/restaurant/categories/${id}`,{method:'DELETE'}); toast('تم الحذف'); renderCategories(); }
 
-// ========== المنتجات (مع مجموعات تعمل بكفاءة) ==========
+// ========== المنتجات (مع حساب أقل سعر للمنتج المتعدد) ==========
 async function renderProducts() {
   await loadProducts();
-  let html = `<div style="display:flex;justify-content:space-between;margin-bottom:16px"><h2>المنتجات</h2><button class="btn btn-primary" onclick="openProductModal()">+ إضافة منتج</button></div><div class="section"><div class="table-wrap"><table><thead><tr><th>الصورة</th><th>الاسم</th><th>النوع</th><th>الحالة</th><th></th></tr></thead><tbody>`;
+  let html = `<div style="display:flex;justify-content:space-between;margin-bottom:16px"><h2>المنتجات</h2><button class="btn btn-primary" onclick="openProductModal()">+ إضافة منتج</button></div><div class="section"><div class="table-wrap"><table><thead><tr><th>الصورة</th><th>الاسم</th><th>النوع</th><th>السعر الأساسي</th><th>الحالة</th><th></th></tr></thead><tbody>`;
   productsList.forEach(p => {
-    html += `<tr><td><img src="${p.image || 'https://placehold.co/50x50/FF6B00/white?text=🍔'}" width="45" height="45" style="border-radius:8px"></td><td><strong>${p.name}</strong><br><span style="font-size:11px;color:var(--text3)">${p.description||''}</span></td><td><span class="badge ${p.type==='single'?'badge-green':'badge-orange'}">${p.type==='single'?'منفرد':'متعدد'}</span></td><td><span class="badge ${p.isAvailable?'badge-green':'badge-red'}">${p.isAvailable?'متاح':'غير متاح'}</span></td><td><button class="btn btn-ghost btn-sm" onclick="editProduct('${p.id}')">تعديل</button> <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">حذف</button></td></tr>`;
+    let priceDisplay = p.type === 'single' ? `${p.basePrice} ج` : (p.basePrice ? `يبدأ من ${p.basePrice} ج` : 'متعدد');
+    html += `<tr><td><img src="${p.image || 'https://placehold.co/50x50/FF6B00/white?text=🍔'}" width="45" height="45" style="border-radius:8px"></td><td><strong>${p.name}</strong><br><span style="font-size:11px;color:var(--text3)">${p.description||''}</span></td><td><span class="badge ${p.type==='single'?'badge-green':'badge-orange'}">${p.type==='single'?'منفرد':'متعدد'}</span></td><td>${priceDisplay}</td><td><span class="badge ${p.isAvailable?'badge-green':'badge-red'}">${p.isAvailable?'متاح':'غير متاح'}</span></td><td><button class="btn btn-ghost btn-sm" onclick="editProduct('${p.id}')">تعديل</button> <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">حذف</button></td></tr>`;
   });
   html += `</tbody></table></div></div>`;
   document.getElementById('content').innerHTML = html;
@@ -388,6 +389,25 @@ function collectGroups() {
   });
   return groups;
 }
+
+// حساب أقل سعر للمنتج المتعدد من المجموعات الإجبارية (أو جميع الخيارات)
+function computeMinPriceFromGroups(groups) {
+  let minPrice = Infinity;
+  groups.forEach(group => {
+    if (group.type === 'single') {
+      group.options.forEach(opt => {
+        if (opt.price < minPrice) minPrice = opt.price;
+      });
+    } else {
+      // للمجموعات المتعددة نأخذ أقل سعر أيضاً (يمكن إضافتها)
+      group.options.forEach(opt => {
+        if (opt.price < minPrice) minPrice = opt.price;
+      });
+    }
+  });
+  return minPrice === Infinity ? 0 : minPrice;
+}
+
 function openProductModal() {
   loadCategories();
   const catOptions = categoriesList.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
@@ -397,7 +417,7 @@ function openProductModal() {
     <div class="field"><label>التصنيف</label><select id="prodCat">${catOptions}</select></div>
     <div class="product-type-selector"><div class="type-option selected" data-type="single">🍔 منتج منفرد (سعر ثابت + إضافات)</div><div class="type-option" data-type="multi">🍕 منتج متعدد (أحجام/خيارات)</div></div>
     <div id="singleFields"><div class="field"><label>السعر الأساسي (ج)</label><input id="basePrice" type="number" value="20"></div></div>
-    <div id="multiFields" style="display:none;"><div class="field"><label>السعر من الخيارات</label><div style="color:var(--orange);font-size:12px;">سيتم تحديد السعر بناءً على المجموعات</div></div></div>
+    <div id="multiFields" style="display:none;"><div class="field"><label>السعر يبدأ من أقل خيار</label><div style="color:var(--orange);font-size:12px;">سيتم حساب أقل سعر تلقائياً من المجموعات</div></div></div>
     <div class="templates-bar">
       <span style="color:var(--text3);">قوالب سريعة:</span>
       <button type="button" class="btn-group-template" onclick="addGroupFromTemplate('sizes')">📏 أحجام</button>
@@ -412,7 +432,6 @@ function openProductModal() {
     <div class="field"><label>أو رابط صورة (اختياري)</label><input id="prodImageUrl" placeholder="https://..."></div>
   `;
   openModal('إضافة منتج جديد', modalBody, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveProduct()">حفظ المنتج</button>`);
-  // إضافة مجموعة افتراضية واحدة فارغة ليسهل على المستخدم
   setTimeout(() => { addGroupRow(); }, 50);
   // تبديل نوع المنتج
   document.querySelectorAll('.type-option').forEach(opt => {
@@ -431,8 +450,15 @@ async function saveProduct() {
   const type = document.querySelector('.type-option.selected').dataset.type;
   const category = document.getElementById('prodCat').value;
   const description = document.getElementById('prodDesc').value;
-  const basePrice = type === 'single' ? (parseFloat(document.getElementById('basePrice').value) || 0) : 0;
-  const groups = collectGroups();
+  let basePrice = 0;
+  let groups = collectGroups();
+  if (type === 'single') {
+    basePrice = parseFloat(document.getElementById('basePrice').value) || 0;
+    // لا نضيف مجموعات افتراضية للمنتج الفردي إلا إذا أضافها المستخدم
+  } else {
+    // للمنتج المتعدد: حساب أقل سعر من المجموعات
+    basePrice = computeMinPriceFromGroups(groups);
+  }
   const formData = new FormData();
   formData.append('name', name);
   formData.append('description', description);
