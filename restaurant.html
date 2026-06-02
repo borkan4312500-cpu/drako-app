@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-<title>سفرة — لوحة مطعم احترافية</title>
+<title>سفرة جولد — لوحة مطعم احترافية</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -18,86 +18,78 @@
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo',sans-serif;}
 body{background:var(--bg);color:var(--text);display:flex;min-height:100vh;overflow:hidden;}
 
-/* custom scroll */
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px;}
 
-/* sidebar */
-.sidebar{ width:270px;flex-shrink:0;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;overflow-y:auto; backdrop-filter:blur(4px);}
+.sidebar{ width:280px;flex-shrink:0;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;overflow-y:auto;}
 .sb-logo{padding:22px 18px 12px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);}
-.sb-logo-mark{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,var(--gold),var(--gold2));display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:#0C0E13;box-shadow:0 6px 14px var(--gold-glow);}
+.sb-logo-mark{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,var(--gold),var(--gold2));display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:#0C0E13;}
 .sb-logo-text{display:flex;flex-direction:column;}
-.sb-logo-name{font-size:20px;font-weight:900;letter-spacing:-0.3px;}
-.sb-nav{flex:1;padding:14px 12px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;}
-.nav-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:14px;cursor:pointer;font-size:14px;font-weight:600;color:var(--text2);transition:all 0.2s ease;}
+.sb-logo-name{font-size:20px;font-weight:900;}
+.sb-nav{flex:1;padding:14px 12px;display:flex;flex-direction:column;gap:4px;}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:14px;cursor:pointer;font-size:14px;font-weight:600;color:var(--text2);transition:all 0.2s;}
 .nav-item:hover{background:var(--surface2);color:var(--text);}
 .nav-item.active{background:var(--gold-dim);color:var(--gold);border-right:3px solid var(--gold);}
 .nav-icon{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;background:var(--surface2);}
-.nav-item.active .nav-icon{background:rgba(245,176,66,.15);}
 .sb-footer{padding:12px 12px 20px;border-top:1px solid var(--border);margin-top:auto;}
 
-/* main */
 .main-wrap{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;}
-.topbar{height:68px;background:rgba(20,24,34,0.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 28px;gap:16px;flex-shrink:0;justify-content:space-between;}
-.topbar-left .topbar-title{font-size:20px;font-weight:800;background:linear-gradient(135deg,var(--gold),var(--gold2));-webkit-background-clip:text;background-clip:text;color:transparent;}
-.topbar-sub{font-size:12px;color:var(--text3);}
+.topbar{height:68px;background:rgba(20,24,34,0.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 28px;justify-content:space-between;}
+.topbar-title{font-size:20px;font-weight:800;background:linear-gradient(135deg,var(--gold),var(--gold2));-webkit-background-clip:text;background-clip:text;color:transparent;}
 .content{flex:1;overflow-y:auto;padding:28px;}
 
-/* cards & profile hero */
-.profile-hero{background:linear-gradient(125deg, var(--surface) 0%, var(--surface2) 100%);border-radius:var(--radius-lg);border:1px solid var(--border);padding:28px;margin-bottom:32px;box-shadow:var(--shadow);display:flex;flex-wrap:wrap;gap:28px;align-items:center;position:relative;overflow:hidden;}
-.profile-hero::before{content:"🍽️";position:absolute;font-size:180px;opacity:0.03;bottom:-20px;left:-20px;pointer-events:none;}
+/* Profile Hero */
+.profile-hero{background:linear-gradient(125deg, var(--surface) 0%, var(--surface2) 100%);border-radius:var(--radius-lg);border:1px solid var(--border);padding:28px;margin-bottom:32px;display:flex;flex-wrap:wrap;gap:28px;align-items:center;position:relative;}
 .profile-avatar{flex-shrink:0;}
-.avatar-frame{width:130px;height:130px;border-radius:30px;background:linear-gradient(145deg,var(--gold),var(--gold2));display:flex;align-items:center;justify-content:center;padding:4px;}
-.rest-logo-img{width:120px;height:120px;border-radius:26px;object-fit:cover;background:var(--surface3);border:2px solid rgba(255,255,255,0.1);}
+.avatar-frame{width:130px;height:130px;border-radius:30px;background:linear-gradient(145deg,var(--gold),var(--gold2));padding:4px;}
+.rest-logo-img{width:120px;height:120px;border-radius:26px;object-fit:cover;background:var(--surface3);}
 .profile-info{flex:2;min-width:220px;}
-.rest-name{font-size:32px;font-weight:900;letter-spacing:-1px;background:linear-gradient(to left, #FFF8E7, var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:8px;}
-.rest-bio{color:var(--text2);margin-bottom:16px;line-height:1.45;max-width:500px;}
-.rest-stats{display:flex;gap:24px;flex-wrap:wrap;margin-top:8px;}
+.rest-name{font-size:32px;font-weight:900;background:linear-gradient(to left, #FFF8E7, var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:8px;}
+.rest-bio{color:var(--text2);margin-bottom:16px;line-height:1.5;}
+.rest-stats{display:flex;gap:24px;flex-wrap:wrap;}
 .star-rating{display:flex;align-items:center;gap:8px;background:var(--surface3);padding:5px 14px;border-radius:60px;}
 .star-rating span{font-weight:800;color:var(--gold);font-size:18px;}
-.review-count{color:var(--text3);font-size:13px;}
-.rating-number{font-weight:800;font-size:18px;color:var(--text);}
-.profile-actions{display:flex;gap:12px;margin-left:auto;align-items:center;}
-.btn-edit-profile{background:var(--gold-dim);border:1px solid rgba(245,176,66,0.4);color:var(--gold);padding:10px 22px;border-radius:40px;font-weight:700;font-size:14px;cursor:pointer;transition:0.2s;}
-.btn-edit-profile:hover{background:var(--gold);color:#0C0E13;border-color:var(--gold);}
+.btn-edit-profile{background:var(--gold-dim);border:1px solid rgba(245,176,66,0.4);color:var(--gold);padding:10px 22px;border-radius:40px;font-weight:700;cursor:pointer;}
+
 .stats-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(180px,1fr));gap:18px;margin-bottom:28px;}
-.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;transition:all 0.2s;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;transition:0.2s;}
 .stat-card:hover{transform:translateY(-3px);border-color:rgba(245,176,66,0.5);}
 .sc-icon{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;background:var(--surface2);margin-bottom:12px;}
 .sc-value{font-size:28px;font-weight:900;}
-.sc-label{font-size:13px;color:var(--text3);margin-top:6px;}
 .section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:24px;overflow:hidden;}
 .sec-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
 .sec-title{font-weight:800;font-size:16px;}
-.btn{display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:40px;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all 0.2s;}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:40px;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:0.2s;}
 .btn-primary{background:var(--gold);color:#0C0E13;}
-.btn-primary:hover{background:var(--gold2);transform:scale(0.97);}
+.btn-primary:hover{background:var(--gold2);}
 .btn-ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
-.btn-ghost:hover{background:var(--surface3);color:var(--text);}
 .badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:40px;font-size:12px;font-weight:700;}
 .badge-gold{background:var(--gold-dim);color:var(--gold);}
 .badge-green{background:rgba(45,212,191,0.12);color:var(--green);}
 .table-wrap{overflow-x:auto;}
 table{width:100%;border-collapse:collapse;}
 th,td{padding:12px 16px;text-align:right;border-bottom:1px solid var(--border);font-size:13px;}
-th{color:var(--text3);font-weight:700;background:var(--surface2);}
-tbody tr:hover{background:rgba(245,176,66,0.05);}
+th{color:var(--text3);background:var(--surface2);}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(6px);}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:28px;width:100%;max-width:520px;overflow:hidden;}
-.modal-head{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
-.modal-title{font-weight:800;font-size:18px;}
-.modal-close{background:var(--surface2);border:none;width:32px;height:32px;border-radius:40px;cursor:pointer;color:var(--text2);}
-.modal-body{padding:22px;max-height:60vh;overflow-y:auto;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:28px;width:100%;max-width:600px;max-height:85vh;overflow-y:auto;}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;}
+.modal-body{padding:22px;}
+.modal-foot{display:flex;gap:12px;padding:16px 22px;border-top:1px solid var(--border);}
 .field{margin-bottom:16px;display:flex;flex-direction:column;gap:6px;}
 .field label{font-size:13px;font-weight:700;color:var(--text3);}
-.field input,.field textarea,.field select{background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:10px 14px;font-size:14px;color:var(--text);outline:none;font-family:'Cairo';}
+.field input,.field textarea,.field select{background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:10px 14px;font-size:14px;color:var(--text);outline:none;}
 .field input:focus{border-color:var(--gold);}
-.modal-foot{display:flex;gap:12px;padding:16px 22px;border-top:1px solid var(--border);}
-.filter-bar{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
-.tab-bar{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
-.tab-btn{padding:6px 16px;border-radius:40px;font-size:13px;font-weight:600;background:var(--surface2);color:var(--text2);cursor:pointer;border:1px solid var(--border);transition:0.2s;}
-.tab-btn.active{background:var(--gold);color:#0C0E13;border-color:var(--gold);}
+.group-box{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;}
+.option-row{display:flex;gap:8px;margin-bottom:6px;}
+.option-row input{flex:1;}
+.btn-add-row{background:var(--surface2);border:1px dashed var(--border);padding:5px 10px;border-radius:8px;cursor:pointer;font-size:12px;margin-top:4px;}
+.tab-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.tab-btn{padding:6px 16px;border-radius:40px;font-size:13px;font-weight:600;background:var(--surface2);color:var(--text2);cursor:pointer;border:1px solid var(--border);}
+.tab-btn.active{background:var(--gold);color:#0C0E13;}
+.product-type-selector{display:flex;gap:12px;margin-bottom:20px;}
+.type-option{flex:1;text-align:center;padding:12px;border-radius:14px;background:var(--surface2);border:2px solid transparent;cursor:pointer;}
+.type-option.selected{border-color:var(--gold);background:var(--gold-dim);}
 </style>
 </head>
 <body>
@@ -105,116 +97,103 @@ tbody tr:hover{background:rgba(245,176,66,0.05);}
 <div class="sidebar">
   <div class="sb-logo">
     <div class="sb-logo-mark">س</div>
-    <div class="sb-logo-text"><div class="sb-logo-name">سفرة</div><div class="sb-logo-sub" style="font-size:11px;color:var(--text3)">لوحة المطعم</div></div>
+    <div class="sb-logo-text"><div class="sb-logo-name">سفرة جولد</div><div class="sb-logo-sub" style="font-size:11px;color:var(--text3)">لوحة المطعم</div></div>
   </div>
   <div class="sb-nav">
-    <div class="nav-item active" data-nav="dashboard"><div class="nav-icon">🏠</div>الملف الشخصي</div>
-    <div class="nav-item" data-nav="stats"><div class="nav-icon">📊</div>الإحصائيات</div>
+    <div class="nav-item active" data-nav="profile"><div class="nav-icon">🏠</div>الملف الشخصي</div>
+    <div class="nav-item" data-nav="dashboard"><div class="nav-icon">📊</div>الإحصائيات</div>
     <div class="nav-item" data-nav="orders"><div class="nav-icon">📦</div>الطلبات</div>
     <div class="nav-item" data-nav="products"><div class="nav-icon">🍔</div>قائمة الطعام</div>
+    <div class="nav-item" data-nav="categories"><div class="nav-icon">🏷️</div>التصنيفات</div>
   </div>
   <div class="sb-footer">
     <div class="sb-user" style="display:flex;gap:8px;align-items:center;background:var(--surface2);padding:10px;border-radius:18px;">
       <div style="width:32px;height:32px;background:var(--gold-dim);border-radius:50%;display:flex;align-items:center;justify-content:center;">👨‍🍳</div>
-      <div style="flex:1"><div style="font-size:13px;font-weight:700;" id="side-rest-name">مطعم النخبة</div><div style="font-size:10px;color:var(--text3)">مدير</div></div>
-      <div style="font-size:16px;">⚙️</div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:700;" id="side-rest-name">مطعم النخبة</div></div>
     </div>
   </div>
 </div>
 
 <div class="main-wrap">
   <div class="topbar">
-    <div class="topbar-left"><div class="topbar-title" id="page-headline">الملف الشخصي للمطعم</div><div class="topbar-sub">لوحة تحكم متكاملة</div></div>
-    <div style="display:flex;gap:8px;"><span style="background:var(--surface2);padding:6px 12px;border-radius:40px;font-size:12px;">🌟 نسخة ذهبية</span></div>
+    <div class="topbar-title" id="page-headline">الملف الشخصي</div>
+    <div style="font-size:12px;color:var(--text3);">⭐ نظام متكامل</div>
   </div>
   <div class="content" id="app-content"></div>
 </div>
 
-<div class="modal-overlay" id="globalModal"><div class="modal"><div class="modal-head"><span class="modal-title" id="modalTitle"></span><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFooter"></div></div></div>
+<div class="modal-overlay" id="globalModal"><div class="modal"><div class="modal-head"><span class="modal-title" id="modalTitle"></span><button class="modal-close" style="background:var(--surface2);border:none;width:30px;border-radius:40px;cursor:pointer;" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFooter"></div></div></div>
 
 <script>
-// ------------------ MOCK API but fully functional as standalone dashboard with localstorage persistence ------------------
+// ------------------------- البيانات الأساسية -------------------------
 let restaurantData = {
   id: "rest_101",
   name: "مطعم أريكة الذهب",
   bio: "أشهى المأكولات الشرقية والغربية، جودة عالية وأسعار مناسبة. نقدم لكم تجربة فريدة مع أفضل الطهاة. خدمة سريعة وبيئة عائلية. 🥘🍕",
-  logo: "https://placehold.co/400x400/FFB347/0C0E13?text=🍽️&font=playfair",
+  logo: "https://placehold.co/400x400/F5B042/0C0E13?text=🍽️&font=playfair",
   rating: 4.7,
   reviewsCount: 1289,
-  stats: { pendingOrders: 7, accepted: 4, preparing: 5, revenueToday: 2475, totalProducts: 24 }
+  stats: { pendingOrders: 7, preparing: 5, revenueToday: 2475 }
 };
 
 let products = [
-  { id: "p1", name: "شاورما دجاج", price: 18, category: "ساندويشات", isAvailable: true, description: "دجاج طازج + صلصة خاصة", image: "https://placehold.co/100x100/FFB347/white?text=🍗" },
-  { id: "p2", name: "بيتزا مشكلة", price: 45, category: "بيتزا", isAvailable: true, description: "جبنة + زيتون + فلفل", image: "https://placehold.co/100x100/FFB347/white?text=🍕" },
-  { id: "p3", name: "برجر كريسبي", price: 32, category: "برجر", isAvailable: true, description: "برجر لحم أنجوس", image: "https://placehold.co/100x100/FFB347/white?text=🍔" }
+  { id: "p1", name: "شاورما دجاج", type: "single", basePrice: 18, category: "ساندويشات", isAvailable: true, description: "دجاج طازج + صلصة خاصة", image: "https://placehold.co/100x100/F5B042/white?text=🍗", extras: [{ name:"ثومية", price:2 },{ name:"مخلل", price:1.5 },{ name:"عيش بر", price:3 }] },
+  { id: "p2", name: "بيتزا عائلية", type: "multi", category: "بيتزا", isAvailable: true, description: "جبنة + زيتون", image: "https://placehold.co/100x100/F5B042/white?text=🍕", sizeGroups: [{ size:"صغير", price:35 },{ size:"وسط", price:50 },{ size:"كبير", price:70 }], spiceOptions: [{ name:"عادي", price:0 },{ name:"حار", price:0 }] },
+  { id: "p3", name: "وجبة دجاج مقلي", type: "multi", category: "وجبات", isAvailable: true, description: "دجاج مقرمش", image: "https://placehold.co/100x100/F5B042/white?text=🍗", sizeGroups: [{ size:"5 قطع", price:35 },{ size:"8 قطع", price:55 },{ size:"12 قطعة", price:75 }], spiceOptions: [{ name:"عادي", price:0 },{ name:"حار جداً", price:0 }] }
 ];
 
 let ordersList = [
-  { id: "ord_001", customerName: "أحمد محمود", customerPhone: "0561234567", total: 86, status: "PENDING", createdAt: new Date().toISOString(), items: [{ name: "بيتزا مشكلة", qty: 1, price: 45 }] },
-  { id: "ord_002", customerName: "سارة خالد", customerPhone: "0529876543", total: 50, status: "PREPARING", createdAt: new Date(Date.now() - 3600000).toISOString(), items: [{ name: "برجر كريسبي", qty: 1, price: 32 }, { name: "شاورما", qty: 1, price: 18 }], preparingAt: new Date(Date.now() - 200000).toISOString() },
-  { id: "ord_003", customerName: "ماجد العتيبي", customerPhone: "0591122334", total: 120, status: "ACCEPTED", createdAt: new Date().toISOString(), items: [{ name: "بيتزا عائلية", qty: 1, price: 120 }] }
+  { id: "ord_001", customerName: "أحمد محمود", customerPhone: "0561234567", total: 86, status: "PENDING", createdAt: new Date().toISOString(), items: [{ name: "بيتزا وسط", qty: 1, price: 50 }] },
+  { id: "ord_002", customerName: "سارة خالد", customerPhone: "0529876543", total: 55, status: "PREPARING", createdAt: new Date(Date.now() - 3600000).toISOString(), items: [{ name: "وجبة 8 قطع", qty: 1, price: 55 }] }
 ];
+let categories = [{ id:"cat1", name:"ساندويشات" },{ id:"cat2", name:"بيتزا" },{ id:"cat3", name:"وجبات" }];
 
-// Load from localStorage if exists
-function loadPersisted() {
-  const savedRest = localStorage.getItem("restaurantProfile");
-  if (savedRest) { try{ Object.assign(restaurantData, JSON.parse(savedRest)); }catch(e){} }
-  const savedProducts = localStorage.getItem("restaurantProducts");
-  if(savedProducts) products = JSON.parse(savedProducts);
-  const savedOrders = localStorage.getItem("restaurantOrders");
-  if(savedOrders) ordersList = JSON.parse(savedOrders);
+function persistData() { localStorage.setItem("restaurantProfile", JSON.stringify(restaurantData)); localStorage.setItem("products", JSON.stringify(products)); localStorage.setItem("orders", JSON.stringify(ordersList)); localStorage.setItem("categories", JSON.stringify(categories)); }
+function loadData() {
+  const saved = localStorage.getItem("restaurantProfile"); if(saved) restaurantData = JSON.parse(saved);
+  const savedProducts = localStorage.getItem("products"); if(savedProducts) products = JSON.parse(savedProducts);
+  const savedOrders = localStorage.getItem("orders"); if(savedOrders) ordersList = JSON.parse(savedOrders);
+  const savedCats = localStorage.getItem("categories"); if(savedCats) categories = JSON.parse(savedCats);
   document.getElementById("side-rest-name").innerText = restaurantData.name;
 }
-loadPersisted();
-function persistAll() { localStorage.setItem("restaurantProfile", JSON.stringify(restaurantData)); localStorage.setItem("restaurantProducts", JSON.stringify(products)); localStorage.setItem("restaurantOrders", JSON.stringify(ordersList)); }
+loadData();
 
-// Helper functions
-function closeModal() { document.getElementById("globalModal").classList.remove("open"); document.getElementById("globalModal").style.display = "none"; }
+function toast(msg, type="success"){ const t=document.createElement('div'); t.innerText=(type==='success'?'✅ ':'⚠️ ')+msg; t.style.cssText='position:fixed;bottom:25px;left:50%;transform:translateX(-50%);background:#1E293B;color:#F5B042;padding:12px 22px;border-radius:60px;z-index:9999;font-weight:600;border:1px solid #F5B042;'; document.body.appendChild(t); setTimeout(()=>t.remove(),2500);}
+function closeModal(){ document.getElementById("globalModal").style.display = "none"; }
 function openModal(title, bodyHTML, footerHTML) {
-  const modalDiv = document.getElementById("globalModal");
   document.getElementById("modalTitle").innerText = title;
   document.getElementById("modalBody").innerHTML = bodyHTML;
   document.getElementById("modalFooter").innerHTML = footerHTML || `<button class="btn btn-ghost" onclick="closeModal()">إغلاق</button>`;
-  modalDiv.style.display = "flex";
-  modalDiv.classList.add("open");
+  document.getElementById("globalModal").style.display = "flex";
 }
-function toast(msg, type="success"){ const t=document.createElement('div'); t.innerText=(type==='success'?'✅ ':'⚠️ ')+msg; t.style.cssText='position:fixed;bottom:25px;left:50%;transform:translateX(-50%);background:#1E293B;color:#F5B042;padding:12px 22px;border-radius:60px;z-index:9999;font-weight:600;backdrop-filter:blur(8px);border:1px solid #F5B042;'; document.body.appendChild(t); setTimeout(()=>t.remove(),2700);}
 
 // navigation
-const navItems = document.querySelectorAll(".nav-item");
-let currentSection = "dashboard";
+let currentSection = "profile";
 function setActiveNav(section){
-  navItems.forEach(i=>i.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(i=>i.classList.remove("active"));
   document.querySelector(`.nav-item[data-nav="${section}"]`).classList.add("active");
 }
 function renderPage(section){
-  currentSection = section;
-  setActiveNav(section);
-  const headlineMap = { dashboard:"الملف الشخصي للمطعم", stats:"الإحصائيات والتقارير", orders:"إدارة الطلبات", products:"قائمة الطعام والمينيوم" };
-  document.getElementById("page-headline").innerHTML = headlineMap[section] || "لوحة التحكم";
-  if(section === "dashboard") renderDashboard();
-  else if(section === "stats") renderStats();
+  currentSection = section; setActiveNav(section);
+  const titles = { profile:"الملف الشخصي للمطعم", dashboard:"الإحصائيات والتقارير", orders:"الطلبات", products:"قائمة الطعام", categories:"التصنيفات" };
+  document.getElementById("page-headline").innerHTML = titles[section] || "لوحة التحكم";
+  if(section === "profile") renderProfile();
+  else if(section === "dashboard") renderDashboard();
   else if(section === "orders") renderOrders();
   else if(section === "products") renderProducts();
+  else if(section === "categories") renderCategories();
 }
-async function renderDashboard(){
+// الملف الشخصي المتكامل
+function renderProfile(){
   const html = `
     <div class="profile-hero">
-      <div class="profile-avatar">
-        <div class="avatar-frame"><img src="${restaurantData.logo}" class="rest-logo-img" id="restaurant-logo-img" alt="شعار"></div>
-      </div>
+      <div class="profile-avatar"><div class="avatar-frame"><img src="${restaurantData.logo}" class="rest-logo-img" id="profile-logo-img"></div></div>
       <div class="profile-info">
-        <div class="rest-name" id="rest-name-display">${escapeHtml(restaurantData.name)}</div>
-        <div class="rest-bio" id="rest-bio-display">${escapeHtml(restaurantData.bio)}</div>
-        <div class="rest-stats">
-          <div class="star-rating"><span>⭐ ${restaurantData.rating}</span> <div class="review-count">(${restaurantData.reviewsCount} تقييم)</div></div>
-          <div class="star-rating"><span>📋</span> <div>${products.length} صنف</div></div>
-        </div>
+        <div class="rest-name" id="profile-name">${restaurantData.name}</div>
+        <div class="rest-bio" id="profile-bio">${restaurantData.bio}</div>
+        <div class="rest-stats"><div class="star-rating"><span>⭐ ${restaurantData.rating}</span><div>(${restaurantData.reviewsCount} تقييم)</div></div></div>
       </div>
-      <div class="profile-actions">
-        <button class="btn-edit-profile" id="editProfileBtn">✏️ تعديل الملف الشخصي</button>
-      </div>
+      <button class="btn-edit-profile" onclick="openEditProfileModal()">✏️ تعديل الملف الشخصي</button>
     </div>
     <div class="stats-grid">
       <div class="stat-card"><div class="sc-icon">📦</div><div class="sc-value">${restaurantData.stats.pendingOrders}</div><div class="sc-label">طلبات معلقة</div></div>
@@ -222,100 +201,114 @@ async function renderDashboard(){
       <div class="stat-card"><div class="sc-icon">💰</div><div class="sc-value">${restaurantData.stats.revenueToday} ج</div><div class="sc-label">إيرادات اليوم</div></div>
       <div class="stat-card"><div class="sc-icon">⭐</div><div class="sc-value">${restaurantData.rating}</div><div class="sc-label">التقييم العام</div></div>
     </div>
-    <div class="section"><div class="sec-head"><div class="sec-title">🌟 نبذة عن المطعم</div></div><div style="padding:20px; line-height:1.6; color:var(--text2);">${escapeHtml(restaurantData.bio)}</div></div>
-    <div class="section"><div class="sec-head"><div class="sec-title">🗣️ آراء العملاء</div><div><span class="badge badge-gold">⭐ ${restaurantData.rating} (${restaurantData.reviewsCount} مراجعة)</span></div></div><div style="padding:20px;"><div style="display:flex; gap:12px; align-items:center; background:var(--surface2); border-radius:20px; padding:14px;"><span style="font-size:32px;">😍</span> <div>“أفضل مطعم في المنطقة، جودة وسرعة في التوصيل” — <strong>أحمد س.</strong></div></div><div style="margin-top:12px;display:flex;gap:12px;"><span>⭐⭐⭐⭐⭐</span><span style="color:var(--text3)"> 5 نجوم من 1289 تقييمًا</span></div></div></div>
+    <div class="section"><div class="sec-head"><div class="sec-title">🌟 نبذة عن المطعم</div></div><div style="padding:20px;color:var(--text2);">${restaurantData.bio}</div></div>
+    <div class="section"><div class="sec-head"><div class="sec-title">🗣️ آراء العملاء</div></div><div style="padding:20px;"><div style="background:var(--surface2);border-radius:20px;padding:14px;">⭐ ${restaurantData.rating} / 5 بناءً على ${restaurantData.reviewsCount} مراجعة<br>“خدمة رائعة وجودة ممتازة” - أحمد</div></div></div>
   `;
   document.getElementById("app-content").innerHTML = html;
-  document.getElementById("editProfileBtn")?.addEventListener("click", showEditProfileModal);
 }
-function showEditProfileModal(){
-  openModal("✏️ تحرير الملف الشخصي", `
-    <div class="field"><label>اسم المطعم</label><input id="edit-name" value="${escapeHtml(restaurantData.name)}"></div>
-    <div class="field"><label>نبذة تعريفية / سيرة المطعم</label><textarea id="edit-bio" rows="3">${escapeHtml(restaurantData.bio)}</textarea></div>
-    <div class="field"><label>رابط الشعار (URL)</label><input id="edit-logo-url" value="${restaurantData.logo}"></div>
-    <div class="field"><label>التقييم (مثلاً 4.7)</label><input id="edit-rating" type="number" step="0.1" value="${restaurantData.rating}"></div>
+function openEditProfileModal(){
+  openModal("تعديل الملف الشخصي", `
+    <div class="field"><label>اسم المطعم</label><input id="edit-name" value="${restaurantData.name}"></div>
+    <div class="field"><label>نبذة تعريفية</label><textarea id="edit-bio" rows="3">${restaurantData.bio}</textarea></div>
+    <div class="field"><label>رابط الشعار</label><input id="edit-logo" value="${restaurantData.logo}"></div>
+    <div class="field"><label>التقييم (نجوم)</label><input id="edit-rating" type="number" step="0.1" value="${restaurantData.rating}"></div>
     <div class="field"><label>عدد التقييمات</label><input id="edit-reviews" type="number" value="${restaurantData.reviewsCount}"></div>
-  `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" id="saveProfileBtn">💾 حفظ الملف الشخصي</button>`);
-  setTimeout(()=>{
-    document.getElementById("saveProfileBtn")?.addEventListener("click",()=>{
-      const newName = document.getElementById("edit-name").value.trim();
-      const newBio = document.getElementById("edit-bio").value.trim();
-      const newLogo = document.getElementById("edit-logo-url").value.trim();
-      const newRating = parseFloat(document.getElementById("edit-rating").value);
-      const newReviews = parseInt(document.getElementById("edit-reviews").value);
-      if(newName) restaurantData.name = newName;
-      if(newBio) restaurantData.bio = newBio;
-      if(newLogo) restaurantData.logo = newLogo;
-      if(!isNaN(newRating)) restaurantData.rating = newRating;
-      if(!isNaN(newReviews)) restaurantData.reviewsCount = newReviews;
-      persistAll();
-      document.getElementById("side-rest-name").innerText = restaurantData.name;
-      closeModal();
-      renderPage("dashboard");
-      toast("تم تحديث الملف الشخصي للمطعم!");
-    });
-  },50);
+  `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveProfileEdit()">💾 حفظ</button>`);
 }
-function renderStats(){
-  const totalRevenueToday = ordersList.filter(o=>new Date(o.createdAt).toDateString() === new Date().toDateString()).reduce((sum,o)=>sum+o.total,0);
+function saveProfileEdit(){
+  restaurantData.name = document.getElementById("edit-name").value;
+  restaurantData.bio = document.getElementById("edit-bio").value;
+  restaurantData.logo = document.getElementById("edit-logo").value;
+  restaurantData.rating = parseFloat(document.getElementById("edit-rating").value);
+  restaurantData.reviewsCount = parseInt(document.getElementById("edit-reviews").value);
+  persistData(); closeModal(); renderPage("profile"); toast("تم تحديث الملف الشخصي!");
+}
+function renderDashboard(){
   const totalOrders = ordersList.length;
   const completed = ordersList.filter(o=>o.status==="DELIVERED").length;
-  const avgRating = restaurantData.rating;
-  const html = `<div class="stats-grid"><div class="stat-card"><div class="sc-icon">📅</div><div class="sc-value">${totalRevenueToday} ج</div><div class="sc-label">إيرادات اليوم</div></div>
+  const html = `<div class="stats-grid"><div class="stat-card"><div class="sc-icon">📅</div><div class="sc-value">${restaurantData.stats.revenueToday} ج</div><div class="sc-label">إيرادات اليوم</div></div>
   <div class="stat-card"><div class="sc-icon">📦</div><div class="sc-value">${totalOrders}</div><div class="sc-label">إجمالي الطلبات</div></div>
   <div class="stat-card"><div class="sc-icon">✅</div><div class="sc-value">${completed}</div><div class="sc-label">مكتملة</div></div>
-  <div class="stat-card"><div class="sc-icon">⭐</div><div class="sc-value">${avgRating}</div><div class="sc-label">تقييم عام</div></div></div>
-  <div class="section"><div class="sec-head"><div class="sec-title">📊 تفاصيل إضافية</div></div><div style="padding:20px;"><ul style="list-style:none"><li>🍽️ أطباق متوفرة: ${products.length}</li><li>📞 طلبات معلقة: ${restaurantData.stats.pendingOrders}</li><li>🏅 شعبية المطعم: ${restaurantData.reviewsCount} تقييم</li></ul></div></div>`;
+  <div class="stat-card"><div class="sc-icon">⭐</div><div class="sc-value">${restaurantData.rating}</div><div class="sc-label">تقييم عام</div></div></div>
+  <div class="section"><div class="sec-head"><div class="sec-title">📊 إحصائيات إضافية</div></div><div style="padding:20px;"><ul><li>🍽️ أطباق متوفرة: ${products.length}</li><li>📞 طلبات معلقة: ${restaurantData.stats.pendingOrders}</li><li>🏅 شعبية: ${restaurantData.reviewsCount} تقييم</li></ul></div></div>`;
   document.getElementById("app-content").innerHTML = html;
 }
 function renderOrders(){
   let filterStatus = "ALL";
   const generateTable = () => {
     let filtered = filterStatus === "ALL" ? ordersList : ordersList.filter(o=>o.status === filterStatus);
-    let rows = filtered.map(o => `<tr><td>${o.id.slice(-6)}</td><td>${o.customerName}</td><td>${o.customerPhone}</td><td>${o.items.map(i=>i.name).join(", ")}</td><td>${o.total} ج</td><td><span class="badge badge-gold">${statusText(o.status)}</span></td><td>${new Date(o.createdAt).toLocaleTimeString()}</td><td>${orderActions(o)}</td></tr>`).join("");
-    return `<div class="tab-bar"><div class="tab-btn ${filterStatus==='ALL'?'active':''}" data-filter="ALL">الكل</div><div class="tab-btn ${filterStatus==='PENDING'?'active':''}" data-filter="PENDING">جديدة</div><div class="tab-btn ${filterStatus==='PREPARING'?'active':''}" data-filter="PREPARING">تحضير</div><div class="tab-btn ${filterStatus==='ACCEPTED'?'active':''}" data-filter="ACCEPTED">مقبولة</div></div><div class="section"><div class="table-wrap"><table><thead><tr><th>رقم</th><th>العميل</th><th>هاتف</th><th>الأصناف</th><th>المجموع</th><th>الحالة</th><th>الوقت</th><th>إجراء</th></tr></thead><tbody>${rows||'<tr><td colspan="8" style="text-align:center">لا توجد طلبات</td></tr>'}</tbody></table></div></div>`;
+    let rows = filtered.map(o => `<tr><td>${o.id.slice(-6)}</td><td>${o.customerName}</td><td>${o.customerPhone}</td><td>${o.items.map(i=>i.name).join(", ")}</td><td>${o.total} ج</td><td><span class="badge badge-gold">${o.status}</span></td><td>${new Date(o.createdAt).toLocaleTimeString()}</td><td>${orderActions(o)}</td></tr>`).join("");
+    return `<div class="tab-bar"><div class="tab-btn ${filterStatus==='ALL'?'active':''}" data-filter="ALL">الكل</div><div class="tab-btn ${filterStatus==='PENDING'?'active':''}" data-filter="PENDING">جديدة</div><div class="tab-btn ${filterStatus==='PREPARING'?'active':''}" data-filter="PREPARING">تحضير</div></div><div class="section"><div class="table-wrap"><table><thead><tr><th>رقم</th><th>العميل</th><th>هاتف</th><th>الأصناف</th><th>المجموع</th><th>الحالة</th><th>الوقت</th><th>إجراء</th></tr></thead><tbody>${rows||'<tr><td colspan="8">لا توجد طلبات</td></tr>'}</tbody></table></div></div>`;
   };
   const html = generateTable();
   document.getElementById("app-content").innerHTML = html;
-  document.querySelectorAll(".tab-btn").forEach(btn=>{
-    btn.addEventListener("click",(e)=>{
-      filterStatus = btn.getAttribute("data-filter");
-      renderOrders();
-    });
-  });
+  document.querySelectorAll(".tab-btn").forEach(btn=>btn.addEventListener("click",(e)=>{ filterStatus = btn.getAttribute("data-filter"); renderOrders(); }));
 }
-function statusText(st){ const map={PENDING:"🕒 معلق", ACCEPTED:"✅ مقبول", PREPARING:"🔥 تحضير", DELIVERED:"🚚 مُسلّم"}; return map[st]||st; }
 function orderActions(o){
-  if(o.status==="PENDING") return `<button class="btn btn-primary btn-sm" onclick="updateOrderStatus('${o.id}','ACCEPTED')">قبول</button> <button class="btn btn-ghost btn-sm" onclick="updateOrderStatus('${o.id}','CANCELLED')">رفض</button>`;
-  if(o.status==="ACCEPTED") return `<button class="btn btn-primary btn-sm" onclick="updateOrderStatus('${o.id}','PREPARING')">بدء التحضير</button>`;
-  if(o.status==="PREPARING") return `<button class="btn btn-success btn-sm" onclick="updateOrderStatus('${o.id}','DELIVERED')">تسليم</button>`;
+  if(o.status==="PENDING") return `<button class="btn btn-primary btn-sm" onclick="updateOrder('${o.id}','ACCEPTED')">قبول</button>`;
+  if(o.status==="ACCEPTED") return `<button class="btn btn-primary btn-sm" onclick="updateOrder('${o.id}','PREPARING')">تحضير</button>`;
   return "—";
 }
-window.updateOrderStatus = function(id,newStatus){
-  const order = ordersList.find(o=>o.id===id);
-  if(order){ order.status = newStatus; if(newStatus==="PREPARING") order.preparingAt = new Date().toISOString(); persistAll(); renderPage("orders"); toast(`تم تحديث الحالة إلى ${newStatus}`); }
-}
-function renderProducts(){
-  let html = `<div style="display:flex; justify-content:space-between; margin-bottom:18px;"><h2>🍽️ قائمة الطعام</h2><button class="btn btn-primary" id="addNewProductBtn">+ إضافة طبق جديد</button></div><div class="section"><div class="table-wrap"><table><thead><tr><th>الصورة</th><th>الاسم</th><th>السعر</th><th>التصنيف</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>`;
-  products.forEach(p=>{ html+=`<tr><td><img src="${p.image}" width="45" height="45" style="border-radius:12px;"></td><td><strong>${p.name}</strong><br><span style="font-size:11px;color:var(--text3)">${p.description||''}</span></td><td>${p.price} ج</td><td>${p.category}</td><td><span class="badge ${p.isAvailable ? 'badge-green' : 'badge-gold'}">${p.isAvailable ? "متاح" : "غير متاح"}</span></td><td><button class="btn btn-ghost btn-sm" onclick="editProductItem('${p.id}')">تعديل</button> <button class="btn btn-ghost btn-sm" onclick="deleteProductItem('${p.id}')">حذف</button></td></tr>`; });
-  html+=`</tbody></table></div></div>`;
+window.updateOrder = (id,status) => { let order = ordersList.find(o=>o.id===id); if(order){ order.status=status; persistData(); renderOrders(); toast(`تم تحديث الحالة`); } };
+function renderCategories(){
+  let html = `<div style="display:flex;justify-content:space-between;margin-bottom:16px"><h2>التصنيفات</h2><button class="btn btn-primary" onclick="openAddCategoryModal()">+ إضافة تصنيف</button></div><div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>إجراءات</th></tr></thead><tbody>${categories.map((c,i)=>`<tr><td>${i+1}</td><td>${c.name}</td><td><button class="btn btn-ghost btn-sm" onclick="deleteCategory('${c.id}')">🗑️</button></td></tr>`).join('')}</tbody></table></div></div>`;
   document.getElementById("app-content").innerHTML = html;
-  document.getElementById("addNewProductBtn")?.addEventListener("click",showAddProductModal);
 }
-function showAddProductModal(){
-  openModal("➕ إضافة منتج جديد", `<div class="field"><label>اسم المنتج</label><input id="prodName"></div><div class="field"><label>السعر (ج)</label><input id="prodPrice" type="number" value="0"></div><div class="field"><label>التصنيف</label><input id="prodCat" placeholder="مثل: برجر، مشروبات"></div><div class="field"><label>وصف سريع</label><textarea id="prodDesc" rows="2"></textarea></div><div class="field"><label>رابط صورة</label><input id="prodImg" placeholder="https://..."></div>`, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" id="confirmAddProduct">إضافة المنتج</button>`);
-  setTimeout(()=>{ document.getElementById("confirmAddProduct")?.addEventListener("click",()=>{ const newP={ id:"p"+Date.now(), name:document.getElementById("prodName").value, price:parseFloat(document.getElementById("prodPrice").value)||0, category:document.getElementById("prodCat").value, description:document.getElementById("prodDesc").value, isAvailable:true, image:document.getElementById("prodImg").value||"https://placehold.co/100x100/FFB347/white?text=🍽️"}; if(newP.name){ products.push(newP); persistAll(); toast("تمت الإضافة"); closeModal(); renderProducts(); } else toast("أدخل اسم المنتج","error"); }); },50);
+function openAddCategoryModal(){ openModal("إضافة تصنيف", `<div class="field"><label>اسم التصنيف</label><input id="catName"></div>`, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addCategory()">إضافة</button>`); }
+function addCategory(){ let name = document.getElementById("catName").value; if(name){ categories.push({id:"cat"+Date.now(), name}); persistData(); closeModal(); renderCategories(); toast("تمت الإضافة"); } }
+function deleteCategory(id){ categories = categories.filter(c=>c.id!==id); persistData(); renderCategories(); toast("تم الحذف"); }
+
+// ------------------------- إدارة المنتجات الاحترافية -------------------------
+function renderProducts(){
+  let html = `<div style="display:flex;justify-content:space-between;margin-bottom:16px"><h2>🍽️ قائمة الطعام</h2><button class="btn btn-primary" onclick="openAddProductModal()">+ إضافة منتج جديد</button></div><div class="section"><div class="table-wrap"><table><thead><tr><th>الصورة</th><th>الاسم</th><th>النوع</th><th>التفاصيل</th><th>السعر</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>`;
+  products.forEach(p => {
+    let priceDetail = p.type === "single" ? `${p.basePrice} ج` : (p.sizeGroups ? p.sizeGroups.map(s=>`${s.size}:${s.price}ج`).join(" | ") : "متعدد الأحجام");
+    let typeText = p.type === "single" ? "منفرد + إضافات" : "متعدد الأحجام";
+    html += `<tr><td><img src="${p.image}" width="45" height="45" style="border-radius:12px;"></td><td><strong>${p.name}</strong><br><span style="font-size:11px;color:var(--text3)">${p.description||''}</span></td><td><span class="badge badge-gold">${typeText}</span></td><td style="max-width:200px;">${priceDetail}</td><td>—</td><td><span class="badge ${p.isAvailable?'badge-green':'badge-gold'}">${p.isAvailable?"متاح":"غير متاح"}</span></td><td><button class="btn btn-ghost btn-sm" onclick="editProductItem('${p.id}')">تعديل</button> <button class="btn btn-ghost btn-sm" onclick="deleteProductItem('${p.id}')">حذف</button></td></tr>`;
+  });
+  html += `</tbody></table></div></div>`;
+  document.getElementById("app-content").innerHTML = html;
 }
-window.editProductItem=(id)=>{
-  const prod = products.find(p=>p.id===id);
-  if(!prod) return;
-  openModal("✏️ تعديل المنتج", `<div class="field"><label>الاسم</label><input id="epName" value="${prod.name}"></div><div class="field"><label>السعر</label><input id="epPrice" type="number" value="${prod.price}"></div><div class="field"><label>التصنيف</label><input id="epCat" value="${prod.category}"></div><div class="field"><label>الوصف</label><textarea id="epDesc">${prod.description||''}</textarea></div><div class="field"><label>الصورة URL</label><input id="epImg" value="${prod.image}"></div><div class="field"><label>متاح؟</label><select id="epAvail"><option ${prod.isAvailable?"selected":""} value="true">متاح</option><option ${!prod.isAvailable?"selected":""} value="false">غير متاح</option></select></div>`, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" id="saveProductEdit">حفظ التعديلات</button>`);
-  setTimeout(()=>{ document.getElementById("saveProductEdit")?.addEventListener("click",()=>{ prod.name=document.getElementById("epName").value; prod.price=parseFloat(document.getElementById("epPrice").value); prod.category=document.getElementById("epCat").value; prod.description=document.getElementById("epDesc").value; prod.image=document.getElementById("epImg").value; prod.isAvailable=document.getElementById("epAvail").value==="true"; persistAll(); closeModal(); renderProducts(); toast("تم التحديث"); }); },50);
+function openAddProductModal(){
+  openModal("إضافة منتج احترافي", `
+    <div class="field"><label>اسم المنتج</label><input id="prodName"></div>
+    <div class="field"><label>الوصف</label><input id="prodDesc"></div>
+    <div class="field"><label>التصنيف</label><select id="prodCat">${categories.map(c=>`<option value="${c.name}">${c.name}</option>`).join('')}</select></div>
+    <div class="field"><label>رابط الصورة</label><input id="prodImg" value="https://placehold.co/100x100/F5B042/white?text=🍽️"></div>
+    <div class="product-type-selector"><div class="type-option selected" data-type="single">🍔 منتج منفرد (سعر ثابت + إضافات)</div><div class="type-option" data-type="multi">🍕 منتج متعدد الأحجام (بيتزا/دجاج)</div></div>
+    <div id="singleFields"><div class="field"><label>السعر الأساسي (ج)</label><input id="basePrice" type="number" value="20"></div><div class="field"><label>الإضافات (ثومية، مخلل، عيش..)</label><div id="extrasList"></div><button type="button" class="btn-add-row" onclick="addExtraRow()">+ إضافة إضافة</button></div></div>
+    <div id="multiFields" style="display:none;"><div class="field"><label>الأحجام / المقاسات</label><div id="sizesList"></div><button type="button" class="btn-add-row" onclick="addSizeRow()">+ إضافة حجم</button></div><div class="field"><label>خاصية إضافية (حار/عادي)</label><div id="spiceList"></div><button type="button" class="btn-add-row" onclick="addSpiceRow()">+ إضافة خيار</button></div></div>
+  `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveNewProduct()">💾 حفظ المنتج</button>`);
+  let selectedType = "single";
+  document.querySelectorAll(".type-option").forEach(opt=>{ opt.onclick=()=>{ document.querySelectorAll(".type-option").forEach(o=>o.classList.remove("selected")); opt.classList.add("selected"); selectedType=opt.dataset.type; document.getElementById("singleFields").style.display = selectedType==="single"?"block":"none"; document.getElementById("multiFields").style.display = selectedType==="multi"?"block":"none"; }; });
+  addExtraRow(); addSizeRow(); addSpiceRow();
 }
-window.deleteProductItem=(id)=>{ if(confirm("حذف هذا المنتج نهائياً؟")){ products=products.filter(p=>p.id!==id); persistAll(); renderProducts(); toast("تم الحذف"); } }
-function escapeHtml(str){ return String(str).replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
-navItems.forEach(item=>{ item.addEventListener("click", ()=>renderPage(item.getAttribute("data-nav"))); });
-renderPage("dashboard");
+function addExtraRow(){ let container = document.getElementById("extrasList"); let div = document.createElement("div"); div.className="option-row"; div.innerHTML=`<input placeholder="اسم الإضافة (ثومية)" style="flex:2"><input placeholder="السعر" type="number" style="flex:1" value="2"><button type="button" class="btn btn-ghost btn-sm" onclick="this.parentElement.remove()">✕</button>`; container.appendChild(div); }
+function addSizeRow(){ let container = document.getElementById("sizesList"); let div = document.createElement("div"); div.className="option-row"; div.innerHTML=`<input placeholder="الحجم (صغير)" style="flex:2"><input placeholder="السعر" type="number" style="flex:1" value="0"><button type="button" class="btn btn-ghost btn-sm" onclick="this.parentElement.remove()">✕</button>`; container.appendChild(div); }
+function addSpiceRow(){ let container = document.getElementById("spiceList"); let div = document.createElement("div"); div.className="option-row"; div.innerHTML=`<input placeholder="خيار (حار/عادي)" style="flex:2"><input placeholder="السعر الإضافي" type="number" style="flex:1" value="0"><button type="button" class="btn btn-ghost btn-sm" onclick="this.parentElement.remove()">✕</button>`; container.appendChild(div); }
+function saveNewProduct(){
+  let name = document.getElementById("prodName").value, desc = document.getElementById("prodDesc").value, cat = document.getElementById("prodCat").value, img = document.getElementById("prodImg").value;
+  let type = document.querySelector(".type-option.selected").dataset.type;
+  let newProduct = { id:"p"+Date.now(), name, description:desc, category:cat, image:img, isAvailable:true, type };
+  if(type === "single"){
+    let basePrice = parseFloat(document.getElementById("basePrice").value);
+    let extras = []; document.querySelectorAll("#extrasList .option-row").forEach(row=>{ let nameInp = row.querySelector("input:first-child")?.value; let priceInp = row.querySelector("input[type='number']")?.value; if(nameInp) extras.push({ name:nameInp, price:parseFloat(priceInp)||0 }); });
+    newProduct.basePrice = basePrice; newProduct.extras = extras;
+  } else {
+    let sizeGroups = []; document.querySelectorAll("#sizesList .option-row").forEach(row=>{ let size = row.querySelector("input:first-child")?.value; let price = row.querySelector("input[type='number']")?.value; if(size) sizeGroups.push({ size, price:parseFloat(price)||0 }); });
+    let spiceOptions = []; document.querySelectorAll("#spiceList .option-row").forEach(row=>{ let nameSp = row.querySelector("input:first-child")?.value; let priceSp = row.querySelector("input[type='number']")?.value; if(nameSp) spiceOptions.push({ name:nameSp, price:parseFloat(priceSp)||0 }); });
+    newProduct.sizeGroups = sizeGroups; newProduct.spiceOptions = spiceOptions;
+  }
+  products.push(newProduct); persistData(); closeModal(); renderProducts(); toast("تم إضافة المنتج بنجاح!");
+}
+function editProductItem(id){ let p = products.find(x=>x.id===id); if(!p) return;
+  openModal("تعديل المنتج", `<div class="field"><label>الاسم</label><input id="eName" value="${p.name}"></div><div class="field"><label>الوصف</label><input id="eDesc" value="${p.description||''}"></div><div class="field"><label>الصورة</label><input id="eImg" value="${p.image}"></div><div class="field"><label>متاح</label><select id="eAvail"><option ${p.isAvailable?"selected":""} value="true">نعم</option><option ${!p.isAvailable?"selected":""} value="false">لا</option></select></div>`, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveEditedProduct('${id}')">حفظ</button>`);
+  setTimeout(()=>{ document.getElementById("eName").value=p.name; document.getElementById("eDesc").value=p.description||''; document.getElementById("eImg").value=p.image; },50);
+}
+function saveEditedProduct(id){ let p = products.find(x=>x.id===id); if(p){ p.name=document.getElementById("eName").value; p.description=document.getElementById("eDesc").value; p.image=document.getElementById("eImg").value; p.isAvailable=document.getElementById("eAvail").value==="true"; persistData(); closeModal(); renderProducts(); toast("تم التحديث"); } }
+function deleteProductItem(id){ if(confirm("حذف المنتج؟")){ products = products.filter(p=>p.id!==id); persistData(); renderProducts(); toast("تم الحذف"); } }
+document.querySelectorAll(".nav-item").forEach(item=>{ item.addEventListener("click",()=>renderPage(item.dataset.nav)); });
+renderPage("profile");
 </script>
 </body>
 </html>
