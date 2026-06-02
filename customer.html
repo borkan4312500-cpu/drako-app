@@ -871,22 +871,14 @@ function calculateMinPrice(product) {
   return base;
 }
 
+// في renderProducts، السعر المعروض يجب أن يكون السعر الأساسي فقط مع إشارة إلى وجود خيارات
 function renderProducts(list = products) {
   const container = document.getElementById('productsContainer');
   if (!list.length) { container.innerHTML = '<div class="empty">لا توجد منتجات</div>'; return; }
   container.innerHTML = list.map(p => {
     const hasGroups = p.groups && p.groups.length > 0;
-    let displayPrice;
-    let priceDisplay;
-    if (hasGroups) {
-      const minPrice = calculateMinPrice(p);
-      displayPrice = minPrice;
-      priceDisplay = 'يبدأ من ' + displayPrice + ' ج';
-    } else {
-      const price = p.price || p.basePrice || 0;
-      displayPrice = price;
-      priceDisplay = displayPrice + ' ج';
-    }
+    const basePrice = p.basePrice || p.price || 0;
+    let priceDisplay = hasGroups ? `يبدأ من ${basePrice} ج` : `${basePrice} ج`;
     const escapedProduct = JSON.stringify(p).replace(/'/g, "\\'").replace(/"/g, '&quot;');
     return `
       <div class="product-card">
@@ -900,40 +892,41 @@ function renderProducts(list = products) {
       </div>
     `;
   }).join('');
+
 }
 
-// ========== Product Sheet (with groups) ==========
+// ========== Product Sheet (with groups) - FIXED VERSION ==========
 function openProductSheet(product) {
   currentProduct = product;
   const hasGroups = product.groups && product.groups.length > 0;
-  if (!hasGroups) { addToCartSimple(product); return; }
+  if (!hasGroups) { 
+    addToCartSimple(product); 
+    return; 
+  }
 
   const basePrice = product.basePrice || 0;
-  // حساب السعر المقترح الأولي بناءً على الخيارات الإجبارية
-  let suggestedExtra = 0;
-  product.groups.forEach(group => {
-    if (group.required && group.options && group.options.length) {
-      suggestedExtra += Math.min(...group.options.map(o => o.price));
-    }
-  });
-  const suggestedTotal = basePrice + suggestedExtra;
-
+  
+  // بناء واجهة الخيارات
   let html = `
     <div style="display:flex;gap:16px;margin-bottom:20px">
       <img src="${product.image || 'placeholder.jpg'}" style="width:100px;height:100px;border-radius:16px;object-fit:cover">
       <div>
         <h3>${product.name}</h3>
         <p style="color:#666">${product.description || ''}</p>
+        <div style="color:#FF6B00; font-weight:bold;">السعر الأساسي: ${basePrice} ج</div>
       </div>
     </div>
   `;
 
-  product.groups.forEach(group => {
+  // تخزين معلومات المجموعات للتحقق من اكتمالها
+  window._requiredGroups = [];
+  product.groups.forEach((group, idx) => {
+    if (group.required) window._requiredGroups.push(group.id);
     html += `<div style="margin-top:16px"><strong>${group.name} ${group.required ? '*' : ''}</strong>`;
     if (group.type === 'single') {
       group.options.forEach(opt => {
         html += `<label class="option-label">
-          <input type="radio" name="${group.id}" value="${opt.price}" data-extra="${opt.price}" ${opt.price === 0 && group.required ? 'checked' : ''}>
+          <input type="radio" name="${group.id}" value="${opt.price}" data-extra="${opt.price}" data-required="${group.required}" ${group.required && opt.price === 0 ? 'checked' : ''}>
           <span style="flex:1">${opt.value}</span>
           <span style="color:#FF6B00;font-weight:bold">${opt.price > 0 ? '+' + opt.price + ' ج' : 'مجاني'}</span>
         </label>`;
@@ -963,20 +956,49 @@ function openProductSheet(product) {
       <textarea id="item-notes" style="width:100%;height:60px;border:1px solid #ddd;border-radius:10px;padding:8px;margin-top:4px" placeholder="مثلاً: بدون بصل، زيادة صوص..."></textarea>
     </div>
     <div style="font-size:20px;font-weight:900;margin-top:16px;color:#FF6B00">
-      الإجمالي: <span id="sheet-total">${suggestedTotal}</span> ج
+      الإجمالي: <span id="sheet-total">0</span> ج
     </div>
+    <div id="validation-error" style="color:red; font-size:12px; margin-top:8px; display:none;">⚠️ يرجى اختيار جميع الخيارات الإجبارية</div>
     <button class="btn" style="margin-top:16px" onclick="confirmAddToCart()">🛒 أضف للطلب</button>
   `;
 
   document.getElementById('sheetContent').innerHTML = html;
   document.getElementById('productSheet').classList.add('open');
 
+  // دالة تحديث الإجمالي بناءً على الخيارات المختارة والكمية
   const updateTotal = () => {
-    let total = basePrice;
-    document.querySelectorAll('#sheetContent input:checked').forEach(inp => total += Number(inp.value) || 0);
-    window._currentUnitPrice = total;
-    document.getElementById('sheet-total').textContent = total * (window._currentQty || 1);
+    let extra = 0;
+    let allRequiredSelected = true;
+    
+    // فحص المجموعات الإجبارية
+    window._requiredGroups.forEach(grpId => {
+      const selected = document.querySelector(`#sheetContent input[name="${grpId}"]:checked`);
+      if (!selected) allRequiredSelected = false;
+    });
+    
+    // حساب الإضافات من الخيارات المختارة
+    document.querySelectorAll('#sheetContent input:checked').forEach(inp => {
+      extra += Number(inp.value) || 0;
+    });
+    
+    const unitPrice = basePrice + extra;
+    const total = unitPrice * (window._currentQty || 1);
+    document.getElementById('sheet-total').textContent = total;
+    
+    // عرض رسالة الخطأ إذا كانت الخيارات الإجبارية غير مكتملة
+    const errorDiv = document.getElementById('validation-error');
+    if (errorDiv) {
+      if (!allRequiredSelected && window._requiredGroups.length) {
+        errorDiv.style.display = 'block';
+      } else {
+        errorDiv.style.display = 'none';
+      }
+    }
+    
+    window._currentUnitPrice = unitPrice; // تخزين سعر الوحدة الحالي
+    return allRequiredSelected;
   };
+  
   document.querySelectorAll('#sheetContent input').forEach(inp => inp.addEventListener('change', updateTotal));
   window._currentQty = 1;
   updateTotal();
@@ -996,13 +1018,26 @@ function closeProductSheet() {
 
 function confirmAddToCart() {
   if (!currentProduct) return;
+  
+  // التحقق من اكتمال الخيارات الإجبارية
+  let allRequiredSelected = true;
+  window._requiredGroups.forEach(grpId => {
+    const selected = document.querySelector(`#sheetContent input[name="${grpId}"]:checked`);
+    if (!selected) allRequiredSelected = false;
+  });
+  
+  if (!allRequiredSelected) {
+    showToast('⚠️ يرجى اختيار جميع الخيارات الإجبارية');
+    return;
+  }
+  
   const product = currentProduct;
   const qty = window._currentQty || 1;
   const notes = document.getElementById('item-notes')?.value || '';
   const basePrice = product.basePrice || 0;
   const groups = product.groups || [];
   const selectedOptions = [];
-  let finalPrice = basePrice;
+  let finalPrice = basePrice; // سعر الوحدة النهائي
 
   groups.forEach(group => {
     if (group.type === 'single') {
@@ -1014,7 +1049,7 @@ function confirmAddToCart() {
           groupId: group.id,
           groupName: group.name,
           value: radio.parentElement.textContent.trim().split('(')[0].trim(),
-          price
+          price: price
         });
       }
     } else {
@@ -1026,7 +1061,7 @@ function confirmAddToCart() {
           groupId: group.id,
           groupName: group.name,
           value: cb.parentElement.textContent.trim().split('(')[0].trim(),
-          price
+          price: price
         });
       });
     }
@@ -1041,7 +1076,7 @@ function confirmAddToCart() {
       id: uniqueId,
       productId: product.id,
       name: product.name,
-      price: finalPrice,
+      price: finalPrice,           // سعر الوحدة النهائي (مع الخيارات)
       image: product.image,
       selectedOptions,
       quantity: qty,
@@ -1053,7 +1088,6 @@ function confirmAddToCart() {
   closeProductSheet();
   showToast('✅ تمت إضافة المنتج');
 }
-
 function addToCartSimple(product) {
   const existing = cart.find(i => i.id === product.id);
   if (existing) {
