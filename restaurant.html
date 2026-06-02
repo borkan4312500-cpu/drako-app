@@ -444,6 +444,7 @@ function openProductModal() {
     };
   });
 }
+// ========== المنتجات مع حساب أقل سعر للمتعدد ==========
 async function saveProduct() {
   const name = document.getElementById('prodName').value.trim();
   if (!name) return toast('اسم المنتج مطلوب', 'error');
@@ -452,31 +453,46 @@ async function saveProduct() {
   const description = document.getElementById('prodDesc').value;
   let basePrice = 0;
   let groups = collectGroups();
+  
   if (type === 'single') {
     basePrice = parseFloat(document.getElementById('basePrice').value) || 0;
-    // لا نضيف مجموعات افتراضية للمنتج الفردي إلا إذا أضافها المستخدم
   } else {
-    // للمنتج المتعدد: حساب أقل سعر من المجموعات
+    // للمنتج المتعدد: حساب أقل سعر من جميع المجموعات (من الخيارات الإجبارية أو كل الخيارات)
     basePrice = computeMinPriceFromGroups(groups);
   }
+  
   const formData = new FormData();
   formData.append('name', name);
   formData.append('description', description);
   formData.append('basePrice', basePrice);
   formData.append('category', category);
   formData.append('groups', JSON.stringify(groups));
+  
   const imageFile = document.getElementById('prodImageFile').files[0];
   if (imageFile) formData.append('image', imageFile);
   else {
     const imgUrl = document.getElementById('prodImageUrl').value;
     if (imgUrl) formData.append('image', imgUrl);
   }
+  
   const res = await apiFetch('/api/restaurant/products', { method: 'POST', body: formData });
   if (res && res.ok) {
     toast('تم إضافة المنتج');
     closeModal();
     renderProducts();
   } else toast('حدث خطأ', 'error');
+}
+
+// دالة حساب أقل سعر من المجموعات (للمنتج المتعدد)
+function computeMinPriceFromGroups(groups) {
+  let minPrice = Infinity;
+  groups.forEach(group => {
+    // نأخذ أقل سعر من خيارات كل مجموعة
+    group.options.forEach(opt => {
+      if (opt.price < minPrice) minPrice = opt.price;
+    });
+  });
+  return minPrice === Infinity ? 0 : minPrice;
 }
 async function editProduct(id) {
   const p = productsList.find(x => x.id === id);
