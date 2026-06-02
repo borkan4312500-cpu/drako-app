@@ -14,93 +14,38 @@
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
   <style>
+    /* جميع التنسيقات الأصلية كما هي - لم يتم تغيير أي شيء */
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
-    html, body {
-      overflow: hidden;
-      height: 100%;
-      overscroll-behavior: none;
-    }
-    body {
-      background: #fff; color: #1A1A1A; max-width: 430px; margin: auto;
-      height: 100%; position: relative; 
-    }
-    .app-container {
-      display: flex; flex-direction: column; height: 100%;
-    }
-    .header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 18px 16px 24px; 
-      background: rgba(255,255,255,0.92); backdrop-filter: blur(14px); 
-      position: fixed; top: 0; left: 50%; transform: translateX(-50%);
-      width: 100%; max-width: 430px; z-index: 100;
-      height: 70px;
-    }
-    .main-content {
-      flex: 1; overflow-y: auto; padding: 16px;
-      margin-top: 70px;
-      margin-bottom: 70px;
-      -webkit-overflow-scrolling: touch;
-    }
+    html, body { overflow: hidden; height: 100%; overscroll-behavior: none; }
+    body { background: #fff; color: #1A1A1A; max-width: 430px; margin: auto; height: 100%; position: relative; }
+    .app-container { display: flex; flex-direction: column; height: 100%; }
+    .header { display: flex; justify-content: space-between; align-items: center; padding: 18px 16px 24px; background: rgba(255,255,255,0.92); backdrop-filter: blur(14px); position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; z-index: 100; height: 70px; }
+    .main-content { flex: 1; overflow-y: auto; padding: 16px; margin-top: 70px; margin-bottom: 70px; -webkit-overflow-scrolling: touch; }
     .screen { display: none; animation: fade .25s ease; }
     .screen.active { display: block; }
     @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .logo { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
-    .logo-main {
-      font-size: 26px; font-weight: 900;
-      background: linear-gradient(135deg,#FF6B00,#ff9f5a);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: .5px;
-    }
+    .logo-main { font-size: 26px; font-weight: 900; background: linear-gradient(135deg,#FF6B00,#ff9f5a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: .5px; }
     .logo-sub { color: #999; font-size: 11px; font-weight: 600; letter-spacing: 1px; }
     .top-actions { display:flex; align-items:center; gap:10px; }
-    .icon-btn {
-      width: 40px; height: 40px; border-radius: 12px; border: none;
-      background: #F5F5F5; font-size: 20px; cursor: pointer; position: relative;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.07); transition:.25s;
-      display: flex; align-items: center; justify-content: center;
-    }
+    .icon-btn { width: 40px; height: 40px; border-radius: 12px; border: none; background: #F5F5F5; font-size: 20px; cursor: pointer; position: relative; box-shadow: 0 4px 14px rgba(0,0,0,0.07); transition:.25s; display: flex; align-items: center; justify-content: center; }
     .icon-btn:hover { transform: translateY(-2px); }
-    .badge {
-      position: absolute; top: -4px; left: -4px; width: 18px; height: 18px;
-      border-radius: 50%; background: #FF6B00; color: #fff;
-      font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold;
-    }
+    .badge { position: absolute; top: -4px; left: -4px; width: 18px; height: 18px; border-radius: 50%; background: #FF6B00; color: #fff; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; }
     .slogan { color: #888; font-size: 13px; margin-bottom: 16px; }
-    .search-box {
-      height: 48px; background: #F5F5F5; border-radius: 14px;
-      display: flex; align-items: center; padding: 0 14px; gap: 10px; margin-bottom: 20px;
-    }
+    .search-box { height: 48px; background: #F5F5F5; border-radius: 14px; display: flex; align-items: center; padding: 0 14px; gap: 10px; margin-bottom: 20px; }
     .search-box input { flex: 1; border: none; background: transparent; outline: none; font-size: 14px; }
     .section-title { font-size: 17px; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
-    .restaurant-card {
-      position: relative; background: linear-gradient(180deg, #ffffff 0%, #fffaf6 100%);
-      border: 1px solid #f0f0f0; border-radius: 22px; padding: 14px;
-      display: flex; gap: 14px; margin-bottom: 16px; align-items: center;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.06); overflow: hidden;
-    }
-    .restaurant-card::before {
-      content: ''; position: absolute; top: 0; right: 0;
-      width: 5px; height: 100%; background: linear-gradient(180deg,#FF6B00,#ff934d);
-    }
-    .restaurant-card img {
-      width: 110px; height: 110px; border-radius: 18px; object-fit: cover;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.12); border: 3px solid #fff;
-    }
+    .restaurant-card { position: relative; background: linear-gradient(180deg, #ffffff 0%, #fffaf6 100%); border: 1px solid #f0f0f0; border-radius: 22px; padding: 14px; display: flex; gap: 14px; margin-bottom: 16px; align-items: center; box-shadow: 0 8px 24px rgba(0,0,0,0.06); overflow: hidden; }
+    .restaurant-card::before { content: ''; position: absolute; top: 0; right: 0; width: 5px; height: 100%; background: linear-gradient(180deg,#FF6B00,#ff934d); }
+    .restaurant-card img { width: 110px; height: 110px; border-radius: 18px; object-fit: cover; box-shadow: 0 6px 18px rgba(0,0,0,0.12); border: 3px solid #fff; }
     .restaurant-content { flex: 1; display:flex; flex-direction:column; justify-content:center; }
     .restaurant-content h3 { font-size: 18px; margin-bottom: 8px; font-weight: 800; color: #1A1A1A; }
     .meta { display: flex; gap: 8px; color: #777; font-size: 12px; margin-bottom: 8px; flex-wrap: wrap; align-items:center; }
     .meta span { background:#fff; border:1px solid #eee; padding:4px 8px; border-radius:10px; }
     .minimum { color: #888; font-size: 12px; margin-bottom: 12px; font-weight:600; }
-    .btn {
-      border: none; background: linear-gradient(135deg,#FF6B00,#ff8a33);
-      color: white; border-radius: 14px; height: 52px; width: 100%;
-      font-size: 14px; font-weight: bold; cursor: pointer;
-      transition:.25s; box-shadow: 0 8px 18px rgba(255,107,0,.25);
-    }
+    .btn { border: none; background: linear-gradient(135deg,#FF6B00,#ff8a33); color: white; border-radius: 14px; height: 52px; width: 100%; font-size: 14px; font-weight: bold; cursor: pointer; transition:.25s; box-shadow: 0 8px 18px rgba(255,107,0,.25); }
     .btn:hover { transform: translateY(-2px); }
-    .menu-btn {
-      width: fit-content; padding: 10px 18px; height: auto;
-      border-radius: 12px; font-size:13px; display:flex; align-items:center; gap:8px;
-    }
+    .menu-btn { width: fit-content; padding: 10px 18px; height: auto; border-radius: 12px; font-size:13px; display:flex; align-items:center; gap:8px; }
     .outline-btn { background: transparent; border: 1.5px solid #FF6B00; color: #FF6B00; }
     .hero-image { width: 100%; height: 240px; object-fit: cover; border-radius: 18px; }
     .restaurant-info { background: white; border-radius: 20px 20px 0 0; margin-top: -18px; position: relative; padding: 18px 0 10px; }
@@ -125,11 +70,7 @@
     .summary { background: white; border-radius: 16px; padding: 16px; margin-top: 18px; }
     .summary-row { display: flex; justify-content: space-between; margin-bottom: 12px; color: #666; font-size: 14px; }
     .summary-total { color: #FF6B00; font-size: 20px; font-weight: bold; }
-    .area-item, .payment-item {
-      background: white; border-radius: 14px; padding: 16px;
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 12px; border: 1px solid #E0E0E0; cursor: pointer;
-    }
+    .area-item, .payment-item { background: white; border-radius: 14px; padding: 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border: 1px solid #E0E0E0; cursor: pointer; }
     .area-item.active, .payment-item.active { border-color: #FF6B00; background: #FFF3EB; }
     .radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; }
     .active .radio { border-color: #FF6B00; }
@@ -144,39 +85,19 @@
     .details { background: #F5F5F5; border-radius: 16px; padding: 16px; text-align: right; margin-bottom: 24px; }
     .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #E0E0E0; font-size: 14px; }
     .detail-row:last-child { border-bottom: none; }
-    .bottom-nav {
-      position: fixed; bottom: 0; right: 50%; transform: translateX(50%);
-      width: 100%; max-width: 430px;
-      background: rgba(255,255,255,0.94); backdrop-filter: blur(16px);
-      border-top: 1px solid rgba(0,0,0,0.05); box-shadow: 0 -4px 10px rgba(0,0,0,.05);
-      display: flex; justify-content: space-around; padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px));
-      z-index: 999; height: 65px;
-    }
+    .bottom-nav { position: fixed; bottom: 0; right: 50%; transform: translateX(50%); width: 100%; max-width: 430px; background: rgba(255,255,255,0.94); backdrop-filter: blur(16px); border-top: 1px solid rgba(0,0,0,0.05); box-shadow: 0 -4px 10px rgba(0,0,0,.05); display: flex; justify-content: space-around; padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px)); z-index: 999; height: 65px; }
     .nav-item { display: flex; flex-direction: column; align-items: center; justify-content:center; gap: 2px; font-size: 10px; color: #999; cursor: pointer; position: relative; transition:.25s; min-width:60px; }
     .nav-item:hover { transform: translateY(-2px); }
     .nav-item.active { color: #FF6B00; font-weight: bold; }
     .nav-item.active::before { content:''; position:absolute; top:-4px; width:30px; height:3px; border-radius:20px; background:#FF6B00; }
     .nav-item span:last-child { font-size:10px; font-weight:700; }
     .empty { text-align: center; color: #888; margin-top: 60px; }
-
-    .sheet-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1100;
-      display: none; align-items: flex-end; justify-content: center;
-    }
+    .sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1100; display: none; align-items: flex-end; justify-content: center; }
     .sheet-overlay.open { display: flex; }
-    .sheet-box {
-      background: white; border-radius: 20px 20px 0 0; width: 100%; max-width: 430px;
-      max-height: 80vh; overflow-y: auto; padding: 20px; animation: slideUp 0.3s ease;
-    }
+    .sheet-box { background: white; border-radius: 20px 20px 0 0; width: 100%; max-width: 430px; max-height: 80vh; overflow-y: auto; padding: 20px; animation: slideUp 0.3s ease; }
     @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-    .sheet-close {
-      width: 30px; height: 30px; background: #f5f5f5; border: none; border-radius: 50%;
-      font-size: 16px; cursor: pointer; float: left;
-    }
-    .option-label {
-      display: flex; align-items: center; gap: 10px; padding: 12px;
-      background: #f9f9f9; border-radius: 10px; margin-bottom: 6px; cursor: pointer;
-    }
+    .sheet-close { width: 30px; height: 30px; background: #f5f5f5; border: none; border-radius: 50%; font-size: 16px; cursor: pointer; float: left; }
+    .option-label { display: flex; align-items: center; gap: 10px; padding: 12px; background: #f9f9f9; border-radius: 10px; margin-bottom: 6px; cursor: pointer; }
     .option-label input { accent-color: #FF6B00; }
     .status-track { background: #fff; border-radius: 16px; padding: 20px; margin: 16px 0; box-shadow: 0 4px 12px rgba(0,0,0,.05); }
     .status-step { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
@@ -185,86 +106,24 @@
     .status-dot.done { background: #2ECC71; }
     .status-text { font-size: 14px; }
     .status-text.active { font-weight: bold; color: #FF6B00; }
-
-    .order-item {
-      background: white; border-radius: 14px; padding: 14px; margin-bottom: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,.05); display: flex; gap: 12px; align-items: center;
-    }
-    .order-item img {
-      width: 60px; height: 60px; border-radius: 12px; object-fit: cover; background: #f5f5f5;
-    }
+    .order-item { background: white; border-radius: 14px; padding: 14px; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(0,0,0,.05); display: flex; gap: 12px; align-items: center; }
+    .order-item img { width: 60px; height: 60px; border-radius: 12px; object-fit: cover; background: #f5f5f5; }
     .order-info { flex: 1; }
     .order-info h4 { font-size: 14px; margin-bottom: 4px; }
     .order-info .restaurant { font-size: 12px; color: #888; }
     .order-info .items-summary { font-size: 12px; color: #555; margin-top: 2px; }
-    .order-info .status-badge {
-      display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; margin-top: 4px;
-    }
+    .order-info .status-badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; margin-top: 4px; }
     .order-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 12px; color: #888; }
     .order-footer .total { font-weight: bold; color: #FF6B00; font-size: 14px; }
-    .track-btn {
-      background: none; border: 1px solid #FF6B00; color: #FF6B00;
-      padding: 6px 12px; border-radius: 10px; font-size: 12px; cursor: pointer; font-weight: 600;
-    }
-    /* Category filters for home */
-    .category-filters {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 20px;
-      overflow-x: auto;
-      padding-bottom: 8px;
-    }
-    .filter-btn {
-      background: #F5F5F5;
-      border: none;
-      padding: 8px 20px;
-      border-radius: 30px;
-      font-size: 14px;
-      font-weight: 600;
-      color: #666;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: all 0.2s;
-    }
-    .filter-btn.active {
-      background: #FF6B00;
-      color: white;
-      box-shadow: 0 4px 12px rgba(255,107,0,0.3);
-    }
-    /* Special order attachments */
-    .file-attachment {
-      margin: 16px 0;
-      padding: 12px;
-      background: #f9f9f9;
-      border-radius: 12px;
-      border: 1px dashed #ddd;
-      text-align: center;
-    }
-    .file-attachment input {
-      display: none;
-    }
-    .file-attachment label {
-      display: inline-block;
-      padding: 8px 16px;
-      background: #FF6B00;
-      color: white;
-      border-radius: 30px;
-      font-size: 13px;
-      cursor: pointer;
-    }
-    .preview-images {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 12px;
-    }
-    .preview-images img {
-      width: 70px;
-      height: 70px;
-      object-fit: cover;
-      border-radius: 10px;
-      border: 1px solid #ddd;
-    }
+    .track-btn { background: none; border: 1px solid #FF6B00; color: #FF6B00; padding: 6px 12px; border-radius: 10px; font-size: 12px; cursor: pointer; font-weight: 600; }
+    .category-filters { display: flex; gap: 12px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 8px; }
+    .filter-btn { background: #F5F5F5; border: none; padding: 8px 20px; border-radius: 30px; font-size: 14px; font-weight: 600; color: #666; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+    .filter-btn.active { background: #FF6B00; color: white; box-shadow: 0 4px 12px rgba(255,107,0,0.3); }
+    .file-attachment { margin: 16px 0; padding: 12px; background: #f9f9f9; border-radius: 12px; border: 1px dashed #ddd; text-align: center; }
+    .file-attachment input { display: none; }
+    .file-attachment label { display: inline-block; padding: 8px 16px; background: #FF6B00; color: white; border-radius: 30px; font-size: 13px; cursor: pointer; }
+    .preview-images { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .preview-images img { width: 70px; height: 70px; object-fit: cover; border-radius: 10px; border: 1px solid #ddd; }
   </style>
 </head>
 <body>
@@ -694,6 +553,7 @@ function showScreen(id) {
   if (id === 'areaScreen') { loadRegions(); preselectArea(); }
   if (id === 'checkoutScreen') renderCheckoutUserInfo();
   if (id === 'ordersScreen') loadMyOrders();
+  if (id === 'specialOrderScreen') updateSpecialDeliveryFee(); // تحديث رسوم التوصيل عند فتح شاشة الطلب الخاص
 }
 
 function renderCheckoutUserInfo() {
@@ -902,7 +762,7 @@ function openSpecialOrder(type, storeId) {
   document.getElementById('filePreview').innerHTML = '';
   selectedFiles = [];
   document.getElementById('attachFiles').value = '';
-  updateSpecialDeliveryFee();
+  updateSpecialDeliveryFee(); // تعيين رسوم التوصيل بناءً على المنطقة الحالية
   showScreen('specialOrderScreen');
 }
 
@@ -997,14 +857,36 @@ function filterProducts(category, el) {
   renderProducts(filtered);
 }
 
+// دالة لحساب أقل سعر لمنتج متعدد الخيارات (مع مراعاة الخيارات الإجبارية فقط)
+function calculateMinPrice(product) {
+  let base = product.basePrice || 0;
+  if (product.groups && product.groups.length) {
+    product.groups.forEach(group => {
+      if (group.required && group.options && group.options.length) {
+        let minOptionPrice = Math.min(...group.options.map(o => o.price));
+        base += minOptionPrice;
+      }
+    });
+  }
+  return base;
+}
+
 function renderProducts(list = products) {
   const container = document.getElementById('productsContainer');
   if (!list.length) { container.innerHTML = '<div class="empty">لا توجد منتجات</div>'; return; }
   container.innerHTML = list.map(p => {
     const hasGroups = p.groups && p.groups.length > 0;
-    const minPrice = hasGroups ? Math.min(...p.groups.flatMap(g => g.options.map(o => o.price))) : (p.price || p.basePrice || 0);
-    const displayPrice = (p.basePrice || 0) + minPrice;
-    const priceDisplay = hasGroups ? 'يبدأ من ' + displayPrice + ' ج' : displayPrice + ' ج';
+    let displayPrice;
+    let priceDisplay;
+    if (hasGroups) {
+      const minPrice = calculateMinPrice(p);
+      displayPrice = minPrice;
+      priceDisplay = 'يبدأ من ' + displayPrice + ' ج';
+    } else {
+      const price = p.price || p.basePrice || 0;
+      displayPrice = price;
+      priceDisplay = displayPrice + ' ج';
+    }
     const escapedProduct = JSON.stringify(p).replace(/'/g, "\\'").replace(/"/g, '&quot;');
     return `
       <div class="product-card">
@@ -1027,6 +909,15 @@ function openProductSheet(product) {
   if (!hasGroups) { addToCartSimple(product); return; }
 
   const basePrice = product.basePrice || 0;
+  // حساب السعر المقترح الأولي بناءً على الخيارات الإجبارية
+  let suggestedExtra = 0;
+  product.groups.forEach(group => {
+    if (group.required && group.options && group.options.length) {
+      suggestedExtra += Math.min(...group.options.map(o => o.price));
+    }
+  });
+  const suggestedTotal = basePrice + suggestedExtra;
+
   let html = `
     <div style="display:flex;gap:16px;margin-bottom:20px">
       <img src="${product.image || 'placeholder.jpg'}" style="width:100px;height:100px;border-radius:16px;object-fit:cover">
@@ -1072,7 +963,7 @@ function openProductSheet(product) {
       <textarea id="item-notes" style="width:100%;height:60px;border:1px solid #ddd;border-radius:10px;padding:8px;margin-top:4px" placeholder="مثلاً: بدون بصل، زيادة صوص..."></textarea>
     </div>
     <div style="font-size:20px;font-weight:900;margin-top:16px;color:#FF6B00">
-      الإجمالي: <span id="sheet-total">${basePrice}</span> ج
+      الإجمالي: <span id="sheet-total">${suggestedTotal}</span> ج
     </div>
     <button class="btn" style="margin-top:16px" onclick="confirmAddToCart()">🛒 أضف للطلب</button>
   `;
