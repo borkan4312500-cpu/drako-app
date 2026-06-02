@@ -15,92 +15,36 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
-    html, body {
-      overflow: hidden;
-      height: 100%;
-      overscroll-behavior: none;
-    }
-    body {
-      background: #fff; color: #1A1A1A; max-width: 430px; margin: auto;
-      height: 100%; position: relative; 
-    }
-    .app-container {
-      display: flex; flex-direction: column; height: 100%;
-    }
-    .header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 18px 16px 24px; 
-      background: rgba(255,255,255,0.92); backdrop-filter: blur(14px); 
-      position: fixed; top: 0; left: 50%; transform: translateX(-50%);
-      width: 100%; max-width: 430px; z-index: 100;
-      height: 70px;
-    }
-    .main-content {
-      flex: 1; overflow-y: auto; padding: 16px;
-      margin-top: 70px;
-      margin-bottom: 70px;
-      -webkit-overflow-scrolling: touch;
-    }
+    html, body { overflow: hidden; height: 100%; overscroll-behavior: none; }
+    body { background: #fff; color: #1A1A1A; max-width: 430px; margin: auto; height: 100%; position: relative; }
+    .app-container { display: flex; flex-direction: column; height: 100%; }
+    .header { display: flex; justify-content: space-between; align-items: center; padding: 18px 16px 24px; background: rgba(255,255,255,0.92); backdrop-filter: blur(14px); position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; z-index: 100; height: 70px; }
+    .main-content { flex: 1; overflow-y: auto; padding: 16px; margin-top: 70px; margin-bottom: 70px; -webkit-overflow-scrolling: touch; }
     .screen { display: none; animation: fade .25s ease; }
     .screen.active { display: block; }
     @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .logo { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
-    .logo-main {
-      font-size: 26px; font-weight: 900;
-      background: linear-gradient(135deg,#FF6B00,#ff9f5a);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: .5px;
-    }
+    .logo-main { font-size: 26px; font-weight: 900; background: linear-gradient(135deg,#FF6B00,#ff9f5a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: .5px; }
     .logo-sub { color: #999; font-size: 11px; font-weight: 600; letter-spacing: 1px; }
     .top-actions { display:flex; align-items:center; gap:10px; }
-    .icon-btn {
-      width: 40px; height: 40px; border-radius: 12px; border: none;
-      background: #F5F5F5; font-size: 20px; cursor: pointer; position: relative;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.07); transition:.25s;
-      display: flex; align-items: center; justify-content: center;
-    }
+    .icon-btn { width: 40px; height: 40px; border-radius: 12px; border: none; background: #F5F5F5; font-size: 20px; cursor: pointer; position: relative; box-shadow: 0 4px 14px rgba(0,0,0,0.07); transition:.25s; display: flex; align-items: center; justify-content: center; }
     .icon-btn:hover { transform: translateY(-2px); }
-    .badge {
-      position: absolute; top: -4px; left: -4px; width: 18px; height: 18px;
-      border-radius: 50%; background: #FF6B00; color: #fff;
-      font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold;
-    }
+    .badge { position: absolute; top: -4px; left: -4px; width: 18px; height: 18px; border-radius: 50%; background: #FF6B00; color: #fff; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; }
     .slogan { color: #888; font-size: 13px; margin-bottom: 16px; }
-    .search-box {
-      height: 48px; background: #F5F5F5; border-radius: 14px;
-      display: flex; align-items: center; padding: 0 14px; gap: 10px; margin-bottom: 20px;
-    }
+    .search-box { height: 48px; background: #F5F5F5; border-radius: 14px; display: flex; align-items: center; padding: 0 14px; gap: 10px; margin-bottom: 20px; }
     .search-box input { flex: 1; border: none; background: transparent; outline: none; font-size: 14px; }
     .section-title { font-size: 17px; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
-    .restaurant-card {
-      position: relative; background: linear-gradient(180deg, #ffffff 0%, #fffaf6 100%);
-      border: 1px solid #f0f0f0; border-radius: 22px; padding: 14px;
-      display: flex; gap: 14px; margin-bottom: 16px; align-items: center;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.06); overflow: hidden;
-    }
-    .restaurant-card::before {
-      content: ''; position: absolute; top: 0; right: 0;
-      width: 5px; height: 100%; background: linear-gradient(180deg,#FF6B00,#ff934d);
-    }
-    .restaurant-card img {
-      width: 110px; height: 110px; border-radius: 18px; object-fit: cover;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.12); border: 3px solid #fff;
-    }
+    .restaurant-card { position: relative; background: linear-gradient(180deg, #ffffff 0%, #fffaf6 100%); border: 1px solid #f0f0f0; border-radius: 22px; padding: 14px; display: flex; gap: 14px; margin-bottom: 16px; align-items: center; box-shadow: 0 8px 24px rgba(0,0,0,0.06); overflow: hidden; cursor: pointer; }
+    .restaurant-card::before { content: ''; position: absolute; top: 0; right: 0; width: 5px; height: 100%; background: linear-gradient(180deg,#FF6B00,#ff934d); }
+    .restaurant-card img { width: 110px; height: 110px; border-radius: 18px; object-fit: cover; box-shadow: 0 6px 18px rgba(0,0,0,0.12); border: 3px solid #fff; }
     .restaurant-content { flex: 1; display:flex; flex-direction:column; justify-content:center; }
     .restaurant-content h3 { font-size: 18px; margin-bottom: 8px; font-weight: 800; color: #1A1A1A; }
     .meta { display: flex; gap: 8px; color: #777; font-size: 12px; margin-bottom: 8px; flex-wrap: wrap; align-items:center; }
     .meta span { background:#fff; border:1px solid #eee; padding:4px 8px; border-radius:10px; }
     .minimum { color: #888; font-size: 12px; margin-bottom: 12px; font-weight:600; }
-    .btn {
-      border: none; background: linear-gradient(135deg,#FF6B00,#ff8a33);
-      color: white; border-radius: 14px; height: 52px; width: 100%;
-      font-size: 14px; font-weight: bold; cursor: pointer;
-      transition:.25s; box-shadow: 0 8px 18px rgba(255,107,0,.25);
-    }
+    .btn { border: none; background: linear-gradient(135deg,#FF6B00,#ff8a33); color: white; border-radius: 14px; height: 52px; width: 100%; font-size: 14px; font-weight: bold; cursor: pointer; transition:.25s; box-shadow: 0 8px 18px rgba(255,107,0,.25); }
     .btn:hover { transform: translateY(-2px); }
-    .menu-btn {
-      width: fit-content; padding: 10px 18px; height: auto;
-      border-radius: 12px; font-size:13px; display:flex; align-items:center; gap:8px;
-    }
+    .menu-btn { width: fit-content; padding: 10px 18px; height: auto; border-radius: 12px; font-size:13px; display:flex; align-items:center; gap:8px; }
     .outline-btn { background: transparent; border: 1.5px solid #FF6B00; color: #FF6B00; }
     .hero-image { width: 100%; height: 240px; object-fit: cover; border-radius: 18px; }
     .restaurant-info { background: white; border-radius: 20px 20px 0 0; margin-top: -18px; position: relative; padding: 18px 0 10px; }
@@ -125,11 +69,7 @@
     .summary { background: white; border-radius: 16px; padding: 16px; margin-top: 18px; }
     .summary-row { display: flex; justify-content: space-between; margin-bottom: 12px; color: #666; font-size: 14px; }
     .summary-total { color: #FF6B00; font-size: 20px; font-weight: bold; }
-    .area-item, .payment-item {
-      background: white; border-radius: 14px; padding: 16px;
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 12px; border: 1px solid #E0E0E0; cursor: pointer;
-    }
+    .area-item, .payment-item { background: white; border-radius: 14px; padding: 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border: 1px solid #E0E0E0; cursor: pointer; }
     .area-item.active, .payment-item.active { border-color: #FF6B00; background: #FFF3EB; }
     .radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; }
     .active .radio { border-color: #FF6B00; }
@@ -144,39 +84,19 @@
     .details { background: #F5F5F5; border-radius: 16px; padding: 16px; text-align: right; margin-bottom: 24px; }
     .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #E0E0E0; font-size: 14px; }
     .detail-row:last-child { border-bottom: none; }
-    .bottom-nav {
-      position: fixed; bottom: 0; right: 50%; transform: translateX(50%);
-      width: 100%; max-width: 430px;
-      background: rgba(255,255,255,0.94); backdrop-filter: blur(16px);
-      border-top: 1px solid rgba(0,0,0,0.05); box-shadow: 0 -4px 10px rgba(0,0,0,.05);
-      display: flex; justify-content: space-around; padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px));
-      z-index: 999; height: 65px;
-    }
+    .bottom-nav { position: fixed; bottom: 0; right: 50%; transform: translateX(50%); width: 100%; max-width: 430px; background: rgba(255,255,255,0.94); backdrop-filter: blur(16px); border-top: 1px solid rgba(0,0,0,0.05); box-shadow: 0 -4px 10px rgba(0,0,0,.05); display: flex; justify-content: space-around; padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px)); z-index: 999; height: 65px; }
     .nav-item { display: flex; flex-direction: column; align-items: center; justify-content:center; gap: 2px; font-size: 10px; color: #999; cursor: pointer; position: relative; transition:.25s; min-width:60px; }
     .nav-item:hover { transform: translateY(-2px); }
     .nav-item.active { color: #FF6B00; font-weight: bold; }
     .nav-item.active::before { content:''; position:absolute; top:-4px; width:30px; height:3px; border-radius:20px; background:#FF6B00; }
     .nav-item span:last-child { font-size:10px; font-weight:700; }
     .empty { text-align: center; color: #888; margin-top: 60px; }
-
-    .sheet-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1100;
-      display: none; align-items: flex-end; justify-content: center;
-    }
+    .sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1100; display: none; align-items: flex-end; justify-content: center; }
     .sheet-overlay.open { display: flex; }
-    .sheet-box {
-      background: white; border-radius: 20px 20px 0 0; width: 100%; max-width: 430px;
-      max-height: 80vh; overflow-y: auto; padding: 20px; animation: slideUp 0.3s ease;
-    }
+    .sheet-box { background: white; border-radius: 20px 20px 0 0; width: 100%; max-width: 430px; max-height: 80vh; overflow-y: auto; padding: 20px; animation: slideUp 0.3s ease; }
     @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-    .sheet-close {
-      width: 30px; height: 30px; background: #f5f5f5; border: none; border-radius: 50%;
-      font-size: 16px; cursor: pointer; float: left;
-    }
-    .option-label {
-      display: flex; align-items: center; gap: 10px; padding: 12px;
-      background: #f9f9f9; border-radius: 10px; margin-bottom: 6px; cursor: pointer;
-    }
+    .sheet-close { width: 30px; height: 30px; background: #f5f5f5; border: none; border-radius: 50%; font-size: 16px; cursor: pointer; float: left; }
+    .option-label { display: flex; align-items: center; gap: 10px; padding: 12px; background: #f9f9f9; border-radius: 10px; margin-bottom: 6px; cursor: pointer; }
     .option-label input { accent-color: #FF6B00; }
     .status-track { background: #fff; border-radius: 16px; padding: 20px; margin: 16px 0; box-shadow: 0 4px 12px rgba(0,0,0,.05); }
     .status-step { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
@@ -185,91 +105,28 @@
     .status-dot.done { background: #2ECC71; }
     .status-text { font-size: 14px; }
     .status-text.active { font-weight: bold; color: #FF6B00; }
-
-    .order-item {
-      background: white; border-radius: 14px; padding: 14px; margin-bottom: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,.05); display: flex; gap: 12px; align-items: center;
-    }
-    .order-item img {
-      width: 60px; height: 60px; border-radius: 12px; object-fit: cover; background: #f5f5f5;
-    }
+    .order-item { background: white; border-radius: 14px; padding: 14px; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(0,0,0,.05); display: flex; gap: 12px; align-items: center; }
+    .order-item img { width: 60px; height: 60px; border-radius: 12px; object-fit: cover; background: #f5f5f5; }
     .order-info { flex: 1; }
     .order-info h4 { font-size: 14px; margin-bottom: 4px; }
     .order-info .restaurant { font-size: 12px; color: #888; }
     .order-info .items-summary { font-size: 12px; color: #555; margin-top: 2px; }
-    .order-info .status-badge {
-      display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; margin-top: 4px;
-    }
+    .order-info .status-badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; margin-top: 4px; }
     .order-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 12px; color: #888; }
     .order-footer .total { font-weight: bold; color: #FF6B00; font-size: 14px; }
-    .track-btn {
-      background: none; border: 1px solid #FF6B00; color: #FF6B00;
-      padding: 6px 12px; border-radius: 10px; font-size: 12px; cursor: pointer; font-weight: 600;
-    }
-    /* Category filters for home */
-    .category-filters {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 20px;
-      overflow-x: auto;
-      padding-bottom: 8px;
-    }
-    .filter-btn {
-      background: #F5F5F5;
-      border: none;
-      padding: 8px 20px;
-      border-radius: 30px;
-      font-size: 14px;
-      font-weight: 600;
-      color: #666;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: all 0.2s;
-    }
-    .filter-btn.active {
-      background: #FF6B00;
-      color: white;
-      box-shadow: 0 4px 12px rgba(255,107,0,0.3);
-    }
-    /* Special order attachments */
-    .file-attachment {
-      margin: 16px 0;
-      padding: 12px;
-      background: #f9f9f9;
-      border-radius: 12px;
-      border: 1px dashed #ddd;
-      text-align: center;
-    }
-    .file-attachment input {
-      display: none;
-    }
-    .file-attachment label {
-      display: inline-block;
-      padding: 8px 16px;
-      background: #FF6B00;
-      color: white;
-      border-radius: 30px;
-      font-size: 13px;
-      cursor: pointer;
-    }
-    .preview-images {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 12px;
-    }
-    .preview-images img {
-      width: 70px;
-      height: 70px;
-      object-fit: cover;
-      border-radius: 10px;
-      border: 1px solid #ddd;
-    }
+    .track-btn { background: none; border: 1px solid #FF6B00; color: #FF6B00; padding: 6px 12px; border-radius: 10px; font-size: 12px; cursor: pointer; font-weight: 600; }
+    .category-filters { display: flex; gap: 12px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 8px; }
+    .filter-btn { background: #F5F5F5; border: none; padding: 8px 20px; border-radius: 30px; font-size: 14px; font-weight: 600; color: #666; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+    .filter-btn.active { background: #FF6B00; color: white; box-shadow: 0 4px 12px rgba(255,107,0,0.3); }
+    .file-attachment { margin: 16px 0; padding: 12px; background: #f9f9f9; border-radius: 12px; border: 1px dashed #ddd; text-align: center; }
+    .file-attachment input { display: none; }
+    .file-attachment label { display: inline-block; padding: 8px 16px; background: #FF6B00; color: white; border-radius: 30px; font-size: 13px; cursor: pointer; }
+    .preview-images { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .preview-images img { width: 70px; height: 70px; object-fit: cover; border-radius: 10px; border: 1px solid #ddd; }
   </style>
 </head>
 <body>
 <div class="app-container">
-  <!-- AUTH WRAPPER (Login/Register) - will be shown or hidden -->
   <div class="auth-wrapper" id="authWrapper" style="display:block; height:100%;">
     <div id="loginScreen" style="display:block;">
       <div style="text-align: center; padding: 40px 0 20px;">
@@ -300,23 +157,15 @@
     </div>
   </div>
 
-  <!-- MAIN APP WRAPPER (shown after login) -->
   <div class="main-app-wrapper" id="mainAppWrapper" style="display:none; flex-direction:column; height:100%;">
     <div class="header" id="mainHeader">
       <div class="top-actions"><button class="icon-btn">☰</button></div>
       <div class="logo"><div class="logo-main">دراكو</div><div class="logo-sub">FOOD DELIVERY</div></div>
-      <div class="top-actions">
-        <button class="icon-btn" onclick="showScreen('cartScreen')">🛒<span class="badge" id="headerBadge">0</span></button>
-      </div>
+      <div class="top-actions"><button class="icon-btn" onclick="showScreen('cartScreen')">🛒<span class="badge" id="headerBadge">0</span></button></div>
     </div>
-
     <div class="main-content" id="mainContent">
-      <!-- HOME SCREEN with categories -->
       <section class="screen active" id="homeScreen">
-        <div style="background:linear-gradient(135deg,#FF6B00,#ff9a4d);padding:20px;border-radius:24px;color:white;margin-bottom:20px;">
-          <div style="font-size:24px;font-weight:900;">اطلب أكلك المفضل 🚀</div>
-          <div class="slogan" style="color:#fff;">أفضل المطاعم والعروض والتوصيل السريع</div>
-        </div>
+        <div style="background:linear-gradient(135deg,#FF6B00,#ff9a4d);padding:20px;border-radius:24px;color:white;margin-bottom:20px;"><div style="font-size:24px;font-weight:900;">اطلب أكلك المفضل 🚀</div><div class="slogan" style="color:#fff;">أفضل المطاعم والعروض والتوصيل السريع</div></div>
         <div class="search-box">🔍<input type="text" placeholder="ابحث عن مطعم أو منتج" id="searchInput" oninput="filterHomeItems()" /></div>
         <div class="category-filters" id="categoryFilters">
           <button class="filter-btn active" data-cat="restaurants">🍔 مطاعم</button>
@@ -328,7 +177,6 @@
         <div id="restaurantsContainer"></div>
       </section>
 
-      <!-- RESTAURANT MENU SCREEN (original full design) -->
       <section class="screen" id="restaurantScreen">
         <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;">
           <button class="icon-btn" onclick="showScreen('homeScreen')">←</button>
@@ -344,7 +192,6 @@
         </div>
       </section>
 
-      <!-- SPECIAL ORDER SCREEN (markets, pharmacies, custom) -->
       <section class="screen" id="specialOrderScreen">
         <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;">
           <button class="icon-btn" onclick="showScreen('homeScreen')">←</button>
@@ -352,15 +199,8 @@
           <div></div>
         </div>
         <div style="background:white; border-radius:20px; padding:20px; margin-top:10px;">
-          <div class="input-group">
-            <label>📝 تفاصيل الطلب (المنتجات والكميات)</label>
-            <textarea id="specialOrderDetails" rows="5" style="width:100%; border:1px solid #ddd; border-radius:12px; padding:12px;"></textarea>
-          </div>
-          <div class="file-attachment">
-            <label for="attachFiles">📎 إرفاق ملفات (صور)</label>
-            <input type="file" id="attachFiles" multiple accept="image/*" onchange="previewFiles(this)">
-            <div class="preview-images" id="filePreview"></div>
-          </div>
+          <div class="input-group"><label>📝 تفاصيل الطلب (المنتجات والكميات)</label><textarea id="specialOrderDetails" rows="5" style="width:100%; border:1px solid #ddd; border-radius:12px; padding:12px;"></textarea></div>
+          <div class="file-attachment"><label for="attachFiles">📎 إرفاق ملفات (صور)</label><input type="file" id="attachFiles" multiple accept="image/*" onchange="previewFiles(this)"><div class="preview-images" id="filePreview"></div></div>
           <div class="summary">
             <div class="summary-row"><span>🚚 رسوم التوصيل</span><span id="specialDeliveryFee">0 ج</span></div>
             <div class="summary-row"><strong>الإجمالي</strong><strong class="summary-total" id="specialTotal">0 ج</strong></div>
@@ -369,7 +209,6 @@
         </div>
       </section>
 
-      <!-- CART SCREEN -->
       <section class="screen" id="cartScreen">
         <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;">
           <button class="icon-btn" onclick="showScreen('homeScreen')">←</button>
@@ -382,11 +221,9 @@
           <div class="summary-row"><span>رسوم التوصيل</span><span id="deliveryFee">0 ج</span></div>
           <div class="summary-row"><strong>الإجمالي النهائي</strong><strong class="summary-total" id="finalTotal">0 ج</strong></div>
         </div>
-        <br>
-        <button class="btn" onclick="proceedToCheckout()">إتمام الطلب</button>
+        <br><button class="btn" onclick="proceedToCheckout()">إتمام الطلب</button>
       </section>
 
-      <!-- AREA SCREEN -->
       <section class="screen" id="areaScreen">
         <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;">
           <button class="icon-btn" onclick="showScreen('cartScreen')">←</button>
@@ -398,7 +235,6 @@
         <button class="btn" onclick="confirmArea()">تأكيد المنطقة</button>
       </section>
 
-      <!-- CHECKOUT SCREEN -->
       <section class="screen" id="checkoutScreen">
         <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;">
           <button class="icon-btn" onclick="showScreen('areaScreen')">←</button>
@@ -414,53 +250,40 @@
           <div class="summary-row"><span>التوصيل</span><span id="checkoutDelivery"></span></div>
           <div class="summary-row"><strong>الإجمالي النهائي</strong><strong class="summary-total" id="checkoutFinal"></strong></div>
         </div>
-        <br>
-        <button class="btn" onclick="submitOrder()">تأكيد الطلب</button>
+        <br><button class="btn" onclick="submitOrder()">تأكيد الطلب</button>
       </section>
 
-      <!-- TRACK SCREEN -->
       <section class="screen" id="trackScreen">
         <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;">
           <button class="icon-btn" onclick="showScreen('homeScreen')">←</button>
           <div class="logo">تتبع الطلب</div>
           <div></div>
         </div>
-        <div style="text-align:center; margin: 20px 0;">
-          <h2>حالة الطلب</h2>
-          <div style="color: #FF6B00; font-weight: bold; font-size: 18px;" id="trackOrderId"></div>
-        </div>
+        <div style="text-align:center; margin: 20px 0;"><h2>حالة الطلب</h2><div style="color: #FF6B00; font-weight: bold; font-size: 18px;" id="trackOrderId"></div></div>
         <div class="status-track" id="trackStatusContainer"></div>
         <div class="details" id="trackDetails"></div>
         <button class="btn" onclick="showScreen('homeScreen')">العودة للرئيسية</button>
       </section>
 
-      <!-- ORDERS SCREEN -->
       <section class="screen" id="ordersScreen">
         <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;">
           <button class="icon-btn" onclick="showScreen('homeScreen')">←</button>
           <div class="logo">طلباتي</div>
           <div></div>
         </div>
-        <div class="tab-bar" id="orders-tab-bar" style="display:flex; gap: 10px; margin-bottom: 16px;">
-          <div class="tab active" onclick="switchOrdersTab('active')">🔄 النشطة</div>
-          <div class="tab" onclick="switchOrdersTab('archive')">📦 الأرشيف</div>
-        </div>
+        <div class="tab-bar" id="orders-tab-bar" style="display:flex; gap: 10px; margin-bottom: 16px;"><div class="tab active" onclick="switchOrdersTab('active')">🔄 النشطة</div><div class="tab" onclick="switchOrdersTab('archive')">📦 الأرشيف</div></div>
         <div id="myOrdersList"></div>
       </section>
 
-      <!-- ACCOUNT SCREEN -->
       <section class="screen" id="accountScreen">
         <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;">
           <button class="icon-btn" onclick="showScreen('homeScreen')">←</button>
           <div class="logo">حسابي</div>
           <div></div>
         </div>
-        <div style="padding: 16px;" id="accountInfo">
-          <button class="btn outline-btn" onclick="showLoginScreen()">تسجيل الدخول</button>
-        </div>
+        <div style="padding: 16px;" id="accountInfo"><button class="btn outline-btn" onclick="showLoginScreen()">تسجيل الدخول</button></div>
       </section>
     </div>
-
     <div class="bottom-nav">
       <div class="nav-item" onclick="navigateTo('homeScreen')">🏠<span>الرئيسية</span></div>
       <div class="nav-item" onclick="navigateTo('cartScreen')">🛒<span>السلة</span><span class="badge" id="cartBadge">0</span></div>
@@ -470,14 +293,7 @@
   </div>
 </div>
 
-<!-- PRODUCT SHEET (for restaurant items with options) -->
-<div class="sheet-overlay" id="productSheet">
-  <div class="sheet-box">
-    <button class="sheet-close" onclick="closeProductSheet()">✕</button>
-    <div id="sheetContent"></div>
-  </div>
-</div>
-
+<div class="sheet-overlay" id="productSheet"><div class="sheet-box"><button class="sheet-close" onclick="closeProductSheet()">✕</button><div id="sheetContent"></div></div></div>
 <div class="toast" id="toast" style="position:fixed; bottom:30px; left:50%; transform:translateX(-50%) translateY(80px); background:#1A1A1A; color:#fff; padding:12px 24px; border-radius:100px; z-index:9999; transition:0.35s; opacity:0;"></div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -508,7 +324,6 @@ window._trackingOrderId = null;
 window._currentQty = 1;
 window._currentUnitPrice = 0;
 
-// Mock data for markets and pharmacies
 let markets = [
   { id: 'market1', name: 'كارفور ماركت', logo: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200', type: 'market' },
   { id: 'market2', name: 'المانيا سوبر ماركت', logo: 'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=200', type: 'market' }
@@ -518,7 +333,7 @@ let pharmacies = [
   { id: 'pharm2', name: 'صيدليات دواء', logo: 'https://images.unsplash.com/photo-1631549916768-4119b2e5f926?w=200', type: 'pharmacy' }
 ];
 
-// ========== Sound Functions (same as original) ==========
+// ========== Sound Functions ==========
 function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
   const sampleRate = 44100;
   const numSamples = Math.floor(sampleRate * duration);
@@ -560,32 +375,17 @@ function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
   const blob = new Blob([bufferArray], { type: 'audio/wav' });
   return URL.createObjectURL(blob);
 }
-
 const soundInstances = {};
-function createSound(name, ...tones) {
-  soundInstances[name] = tones.map(t => new Howl({ src: [t], format: ['wav'], volume: 0.5 }));
-}
-function playSound(name) {
-  if (soundInstances[name]) {
-    soundInstances[name].forEach(h => h.play());
-  }
-}
-
-createSound('orderAccepted', generateToneWAV(600, 0.2, 'sine'));
-createSound('orderOnTheWay', generateToneWAV(800, 0.15, 'sine'), generateToneWAV(500, 0.15, 'sine'));
-createSound('orderDelivered', generateToneWAV(1000, 0.2, 'sine'));
-createSound('orderCancelled', generateToneWAV(400, 0.3, 'triangle'));
+function createSound(name, ...tones) { soundInstances[name] = tones.map(t => new Howl({ src: [t], format: ['wav'], volume: 0.5 })); }
+function playSound(name) { if(soundInstances[name]) soundInstances[name].forEach(h => h.play()); }
+createSound('orderAccepted', generateToneWAV(600,0.2,'sine'));
+createSound('orderOnTheWay', generateToneWAV(800,0.15,'sine'), generateToneWAV(500,0.15,'sine'));
+createSound('orderDelivered', generateToneWAV(1000,0.2,'sine'));
+createSound('orderCancelled', generateToneWAV(400,0.3,'triangle'));
 
 // ========== API Helper ==========
 async function apiFetch(url, options = {}) {
-  const res = await fetch(url, {
-    ...options,
-    credentials: 'include',
-    headers: {
-      ...(options.headers || {}),
-      'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
-    }
-  });
+  const res = await fetch(url, { ...options, credentials: 'include', headers: { ...(options.headers||{}), 'Content-Type': options.body instanceof FormData ? undefined : 'application/json' } });
   return res;
 }
 
@@ -595,21 +395,11 @@ async function loadRegionsForSelect() {
     const res = await apiFetch(API + '/regions');
     allRegions = await res.json();
     const regSelect = document.getElementById('regRegion');
-    if (regSelect) {
-      regSelect.innerHTML = '<option value="">اختر المنطقة</option>' +
-        allRegions.map(r => `<option value="${r.id}">${r.name} (${r.fee} ج)</option>`).join('');
-    }
-  } catch (e) {
-    allRegions = [
-      { id: 'reg_1', name: 'مساكن جمصة', fee: 10 },
-      { id: 'reg_2', name: '15 مايو', fee: 15 },
-      { id: 'reg_3', name: 'المنصورة الجديدة', fee: 20 }
-    ];
+    if (regSelect) regSelect.innerHTML = '<option value="">اختر المنطقة</option>' + allRegions.map(r => `<option value="${r.id}">${r.name} (${r.fee} ج)</option>`).join('');
+  } catch(e) {
+    allRegions = [{ id:'reg1', name:'مساكن جمصة', fee:10 }, { id:'reg2', name:'15 مايو', fee:15 }, { id:'reg3', name:'المنصورة الجديدة', fee:20 }];
     const regSelect = document.getElementById('regRegion');
-    if (regSelect) {
-      regSelect.innerHTML = '<option value="">اختر المنطقة</option>' +
-        allRegions.map(r => `<option value="${r.id}">${r.name} (${r.fee} ج)</option>`).join('');
-    }
+    if (regSelect) regSelect.innerHTML = '<option value="">اختر المنطقة</option>' + allRegions.map(r => `<option value="${r.id}">${r.name} (${r.fee} ج)</option>`).join('');
   }
 }
 
@@ -618,10 +408,7 @@ async function customerLogin() {
   const password = document.getElementById('loginPassword').value;
   if (!phone || !password) return showToast('أكمل الحقول');
   try {
-    const res = await apiFetch(API + '/customer/login', {
-      method: 'POST',
-      body: JSON.stringify({ phone, password })
-    });
+    const res = await apiFetch(API + '/customer/login', { method: 'POST', body: JSON.stringify({ phone, password }) });
     const data = await res.json();
     if (data.error) return showToast(data.error);
     currentUser = { name: data.name, phone: data.phone, regionId: data.regionId, address: data.address, token: data.token };
@@ -633,7 +420,7 @@ async function customerLogin() {
     renderCart();
     showScreen('homeScreen');
     showToast(`مرحباً ${data.name}`);
-  } catch (e) { showToast('حدث خطأ'); }
+  } catch(e) { showToast('حدث خطأ'); }
 }
 
 async function customerRegister() {
@@ -646,10 +433,7 @@ async function customerRegister() {
   if (!regionId) return showToast('اختر المنطقة');
   if (!address) return showToast('أدخل العنوان التفصيلي');
   try {
-    const res = await apiFetch(API + '/customer/register', {
-      method: 'POST',
-      body: JSON.stringify({ name, phone, password, regionId, address })
-    });
+    const res = await apiFetch(API + '/customer/register', { method: 'POST', body: JSON.stringify({ name, phone, password, regionId, address }) });
     const data = await res.json();
     if (data.error) return showToast(data.error);
     currentUser = { name: data.name, phone: data.phone, regionId: data.regionId, address: data.address, token: data.token };
@@ -661,71 +445,37 @@ async function customerRegister() {
     renderCart();
     showScreen('homeScreen');
     showToast('تم إنشاء الحساب');
-  } catch (e) { showToast('حدث خطأ'); }
+  } catch(e) { showToast('حدث خطأ'); }
 }
 
-function showLoginScreen() {
-  document.getElementById('loginScreen').style.display = 'block';
-  document.getElementById('registerScreen').style.display = 'none';
-}
-function showRegisterScreen() {
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('registerScreen').style.display = 'block';
-  loadRegionsForSelect();
-}
-
-function navigateTo(screenId) {
-  if ((screenId === 'ordersScreen' || screenId === 'accountScreen') && !currentUser) {
-    showLoginScreen();
-    return;
-  }
-  showScreen(screenId);
-}
+function showLoginScreen() { document.getElementById('loginScreen').style.display = 'block'; document.getElementById('registerScreen').style.display = 'none'; }
+function showRegisterScreen() { document.getElementById('loginScreen').style.display = 'none'; document.getElementById('registerScreen').style.display = 'block'; loadRegionsForSelect(); }
+function navigateTo(screenId) { if((screenId === 'ordersScreen' || screenId === 'accountScreen') && !currentUser) { showLoginScreen(); return; } showScreen(screenId); }
 
 function showScreen(id) {
   document.querySelectorAll('#mainAppWrapper .screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  document.querySelectorAll('.nav-item').forEach((n, i) => {
-    const navIds = ['homeScreen', 'cartScreen', 'ordersScreen', 'accountScreen'];
-    if (navIds[i] === id) n.classList.add('active');
-    else n.classList.remove('active');
-  });
+  document.querySelectorAll('.nav-item').forEach((n,i) => { const navIds = ['homeScreen','cartScreen','ordersScreen','accountScreen']; if(navIds[i] === id) n.classList.add('active'); else n.classList.remove('active'); });
   if (id === 'accountScreen') renderAccountScreen();
   if (id === 'areaScreen') { loadRegions(); preselectArea(); }
   if (id === 'checkoutScreen') renderCheckoutUserInfo();
   if (id === 'ordersScreen') loadMyOrders();
+  if (id === 'specialOrderScreen') updateSpecialDeliveryFee();
 }
 
 function renderCheckoutUserInfo() {
   const div = document.getElementById('checkoutUserInfo');
-  if (currentUser) {
-    div.innerHTML = `<p style="color:#888">مرحباً، ${currentUser.name}</p>`;
-  } else {
-    div.innerHTML = `
-      <div class="input-group"><label>الاسم</label><input id="customerName" placeholder="اكتب اسمك" /></div>
-      <div class="input-group"><label>رقم الهاتف</label><input id="customerPhone" placeholder="01xxxxxxxxx" /></div>
-    `;
-  }
+  if(currentUser) div.innerHTML = `<p style="color:#888">مرحباً، ${currentUser.name}</p>`;
+  else div.innerHTML = `<div class="input-group"><label>الاسم</label><input id="customerName" placeholder="اكتب اسمك" /></div><div class="input-group"><label>رقم الهاتف</label><input id="customerPhone" placeholder="01xxxxxxxxx" /></div>`;
 }
 
 function renderAccountScreen() {
   const container = document.getElementById('accountInfo');
-  if (currentUser) {
+  if(currentUser) {
     const regionName = allRegions.find(r => r.id === currentUser.regionId)?.name || 'غير محدد';
-    container.innerHTML = `
-      <div style="text-align:center; margin-bottom:20px;">
-        <div style="font-size:20px; font-weight:bold;">${currentUser.name}</div>
-        <div style="color:#888;">${currentUser.phone}</div>
-        <div style="color:#888;">📍 ${regionName}</div>
-        <div style="color:#888;">🏠 ${currentUser.address || ''}</div>
-      </div>
-      <button class="btn" onclick="logout()">تسجيل الخروج</button>
-    `;
+    container.innerHTML = `<div style="text-align:center; margin-bottom:20px;"><div style="font-size:20px; font-weight:bold;">${currentUser.name}</div><div style="color:#888;">${currentUser.phone}</div><div style="color:#888;">📍 ${regionName}</div><div style="color:#888;">🏠 ${currentUser.address || ''}</div></div><button class="btn" onclick="logout()">تسجيل الخروج</button>`;
   } else {
-    container.innerHTML = `
-      <button class="btn" onclick="showLoginScreen()">تسجيل الدخول</button>
-      <button class="btn outline-btn" style="margin-top:10px;" onclick="showRegisterScreen()">إنشاء حساب</button>
-    `;
+    container.innerHTML = `<button class="btn" onclick="showLoginScreen()">تسجيل الدخول</button><button class="btn outline-btn" style="margin-top:10px;" onclick="showRegisterScreen()">إنشاء حساب</button>`;
   }
 }
 
@@ -741,74 +491,34 @@ function logout() {
 }
 
 function initSocket() {
-  if (socket) return;
+  if(socket) return;
   socket = io();
   socket.on('orderStatusUpdate', (data) => {
-    if (window._trackingOrderId === data.orderId) {
-      trackOrder(data.orderId);
-      if (data.status === 'ACCEPTED') playSound('orderAccepted');
-      else if (data.status === 'ON_THE_WAY') playSound('orderOnTheWay');
-      else if (data.status === 'DELIVERED') playSound('orderDelivered');
-      else if (data.status === 'CANCELLED') playSound('orderCancelled');
-    }
-    if (currentUser) loadMyOrders();
+    if(window._trackingOrderId === data.orderId) { trackOrder(data.orderId); if(data.status === 'ACCEPTED') playSound('orderAccepted'); else if(data.status === 'ON_THE_WAY') playSound('orderOnTheWay'); else if(data.status === 'DELIVERED') playSound('orderDelivered'); else if(data.status === 'CANCELLED') playSound('orderCancelled'); }
+    if(currentUser) loadMyOrders();
   });
 }
 
 // ========== Regions ==========
-async function loadRegions() {
-  try {
-    const res = await apiFetch(API + '/regions');
-    allRegions = await res.json();
-  } catch (e) {}
-  renderAreas();
-}
-
-function renderAreas() {
-  const container = document.getElementById('areasContainer');
-  if (!allRegions.length) return;
-  container.innerHTML = allRegions.map(a => `
-    <div class="area-item ${selectedArea?.id === a.id ? 'active' : ''}" onclick="selectArea('${a.id}')">
-      <div><strong>${a.name}</strong></div>
-      <div style="display:flex;align-items:center;gap:12px;"><strong>${a.fee} ج</strong><div class="radio"></div></div>
-    </div>
-  `).join('');
-}
-
-function preselectArea() {
-  if (currentUser && currentUser.regionId && !selectedArea) {
-    selectedArea = allRegions.find(r => r.id === currentUser.regionId) || null;
-    renderAreas();
-  }
-}
-
+async function loadRegions() { try { const res = await apiFetch(API + '/regions'); allRegions = await res.json(); } catch(e) {} renderAreas(); }
+function renderAreas() { const container = document.getElementById('areasContainer'); if(!allRegions.length) return; container.innerHTML = allRegions.map(a => `<div class="area-item ${selectedArea?.id === a.id ? 'active' : ''}" onclick="selectArea('${a.id}')"><div><strong>${a.name}</strong></div><div style="display:flex;align-items:center;gap:12px;"><strong>${a.fee} ج</strong><div class="radio"></div></div></div>`).join(''); }
+function preselectArea() { if(currentUser && currentUser.regionId && !selectedArea) { selectedArea = allRegions.find(r => r.id === currentUser.regionId) || null; renderAreas(); } }
 function selectArea(id) { selectedArea = allRegions.find(a => a.id === id); renderAreas(); }
-
-function confirmArea() {
-  if (!selectedArea) { showToast('اختر منطقة'); return; }
-  document.getElementById('selectedAreaName').innerText = selectedArea.name + ' - ' + selectedArea.fee + ' ج';
-  updateTotals();
-  showScreen('checkoutScreen');
-}
-
-function selectPayment(el, method) {
-  document.querySelectorAll('.payment-item').forEach(i => i.classList.remove('active'));
-  el.classList.add('active');
-  paymentMethod = method;
-}
+function confirmArea() { if(!selectedArea) { showToast('اختر منطقة'); return; } document.getElementById('selectedAreaName').innerText = selectedArea.name + ' - ' + selectedArea.fee + ' ج'; updateTotals(); showScreen('checkoutScreen'); }
+function selectPayment(el, method) { document.querySelectorAll('.payment-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); paymentMethod = method; }
 
 // ========== Home Screen Category Logic ==========
 function initCategoryFilters() {
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
       currentCategory = btn.dataset.cat;
       let title = '';
-      if (currentCategory === 'restaurants') title = '🍔 المطاعم';
-      else if (currentCategory === 'markets') title = '🛒 الماركت';
-      else if (currentCategory === 'pharmacies') title = '💊 الصيدليات';
-      else if (currentCategory === 'special') title = '✨ طلب خاص';
+      if(currentCategory === 'restaurants') title = '🍔 المطاعم';
+      else if(currentCategory === 'markets') title = '🛒 الماركت';
+      else if(currentCategory === 'pharmacies') title = '💊 الصيدليات';
+      else if(currentCategory === 'special') title = '✨ طلب خاص';
       document.getElementById('homeSectionTitle').innerHTML = title;
       renderHomeItems();
     });
@@ -817,79 +527,28 @@ function initCategoryFilters() {
 
 function renderHomeItems() {
   const container = document.getElementById('restaurantsContainer');
-  if (currentCategory === 'restaurants') {
-    if (!restaurants.length) { container.innerHTML = '<div class="empty">لا توجد مطاعم</div>'; return; }
-    container.innerHTML = restaurants.map(r => `
-      <div class="restaurant-card" onclick="openRestaurant('${r.id}')">
-        <img src="${(r.logo && r.logo.startsWith('/uploads')) ? r.logo : (r.logo || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200')}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'">
-        <div class="restaurant-content">
-          <h3>${r.name}</h3>
-          <div class="meta"><span>⭐ 4.8</span><span>⏱ 30-45 دقيقة</span></div>
-          <div class="minimum">🚚 توصيل سريع • حد أدنى 50 ج</div>
-          <button class="btn menu-btn" onclick="event.stopPropagation(); openRestaurant('${r.id}')">🍽 عرض المنيو</button>
-        </div>
-      </div>
-    `).join('');
-  } else if (currentCategory === 'markets') {
-    if (!markets.length) { container.innerHTML = '<div class="empty">لا توجد أسواق</div>'; return; }
-    container.innerHTML = markets.map(m => `
-      <div class="restaurant-card" onclick="openSpecialOrder('market', '${m.id}')">
-        <img src="${m.logo}">
-        <div class="restaurant-content">
-          <h3>${m.name}</h3>
-          <div class="meta"><span>⭐ 4.5</span><span>⏱ توصيل سريع</span></div>
-          <div class="minimum">🛒 أضف طلبك بالتفاصيل والصور</div>
-          <button class="btn menu-btn" onclick="event.stopPropagation(); openSpecialOrder('market', '${m.id}')">📝 طلب الآن</button>
-        </div>
-      </div>
-    `).join('');
-  } else if (currentCategory === 'pharmacies') {
-    if (!pharmacies.length) { container.innerHTML = '<div class="empty">لا توجد صيدليات</div>'; return; }
-    container.innerHTML = pharmacies.map(p => `
-      <div class="restaurant-card" onclick="openSpecialOrder('pharmacy', '${p.id}')">
-        <img src="${p.logo}">
-        <div class="restaurant-content">
-          <h3>${p.name}</h3>
-          <div class="meta"><span>⭐ 4.7</span><span>⏱ توصيل فوري</span></div>
-          <div class="minimum">💊 اطلب أدويتك ومستلزماتك</div>
-          <button class="btn menu-btn" onclick="event.stopPropagation(); openSpecialOrder('pharmacy', '${p.id}')">📝 طلب الآن</button>
-        </div>
-      </div>
-    `).join('');
-  } else if (currentCategory === 'special') {
-    container.innerHTML = `
-      <div class="restaurant-card" onclick="openSpecialOrder('custom', null)">
-        <img src="https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=200">
-        <div class="restaurant-content">
-          <h3>طلب خاص</h3>
-          <div class="meta"><span>✨ مخصص</span><span>📝 اكتب طلبك</span></div>
-          <div class="minimum">أي طلب غير موجود في القوائم - أرفق الصور والتفاصيل</div>
-          <button class="btn menu-btn" onclick="event.stopPropagation(); openSpecialOrder('custom', null)">📝 تقديم طلب</button>
-        </div>
-      </div>
-    `;
+  if(currentCategory === 'restaurants') {
+    if(!restaurants.length) { container.innerHTML = '<div class="empty">لا توجد مطاعم</div>'; return; }
+    container.innerHTML = restaurants.map(r => `<div class="restaurant-card" onclick="openRestaurant('${r.id}')"><img src="${(r.logo && r.logo.startsWith('/uploads')) ? r.logo : (r.logo || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200')}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'"><div class="restaurant-content"><h3>${r.name}</h3><div class="meta"><span>⭐ 4.8</span><span>⏱ 30-45 دقيقة</span></div><div class="minimum">🚚 توصيل سريع • حد أدنى 50 ج</div><button class="btn menu-btn" onclick="event.stopPropagation(); openRestaurant('${r.id}')">🍽 عرض المنيو</button></div></div>`).join('');
+  } else if(currentCategory === 'markets') {
+    if(!markets.length) { container.innerHTML = '<div class="empty">لا توجد أسواق</div>'; return; }
+    container.innerHTML = markets.map(m => `<div class="restaurant-card" onclick="openSpecialOrder('market', '${m.id}')"><img src="${m.logo}"><div class="restaurant-content"><h3>${m.name}</h3><div class="meta"><span>⭐ 4.5</span><span>⏱ توصيل سريع</span></div><div class="minimum">🛒 أضف طلبك بالتفاصيل والصور</div><button class="btn menu-btn" onclick="event.stopPropagation(); openSpecialOrder('market', '${m.id}')">📝 طلب الآن</button></div></div>`).join('');
+  } else if(currentCategory === 'pharmacies') {
+    if(!pharmacies.length) { container.innerHTML = '<div class="empty">لا توجد صيدليات</div>'; return; }
+    container.innerHTML = pharmacies.map(p => `<div class="restaurant-card" onclick="openSpecialOrder('pharmacy', '${p.id}')"><img src="${p.logo}"><div class="restaurant-content"><h3>${p.name}</h3><div class="meta"><span>⭐ 4.7</span><span>⏱ توصيل فوري</span></div><div class="minimum">💊 اطلب أدويتك ومستلزماتك</div><button class="btn menu-btn" onclick="event.stopPropagation(); openSpecialOrder('pharmacy', '${p.id}')">📝 طلب الآن</button></div></div>`).join('');
+  } else if(currentCategory === 'special') {
+    container.innerHTML = `<div class="restaurant-card" onclick="openSpecialOrder('custom', null)"><img src="https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=200"><div class="restaurant-content"><h3>طلب خاص</h3><div class="meta"><span>✨ مخصص</span><span>📝 اكتب طلبك</span></div><div class="minimum">أي طلب غير موجود في القوائم - أرفق الصور والتفاصيل</div><button class="btn menu-btn" onclick="event.stopPropagation(); openSpecialOrder('custom', null)">📝 تقديم طلب</button></div></div>`;
   }
 }
 
 function filterHomeItems() {
   const q = document.getElementById('searchInput').value.trim().toLowerCase();
-  if (currentCategory === 'restaurants') {
+  if(currentCategory === 'restaurants') {
     const filtered = restaurants.filter(r => r.name.toLowerCase().includes(q));
     const container = document.getElementById('restaurantsContainer');
-    if (!filtered.length) { container.innerHTML = '<div class="empty">لا توجد مطاعم</div>'; return; }
-    container.innerHTML = filtered.map(r => `
-      <div class="restaurant-card" onclick="openRestaurant('${r.id}')">
-        <img src="${(r.logo && r.logo.startsWith('/uploads')) ? r.logo : (r.logo || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200')}">
-        <div class="restaurant-content">
-          <h3>${r.name}</h3>
-          <div class="meta"><span>⭐ 4.8</span><span>⏱ 30-45 دقيقة</span></div>
-          <button class="btn menu-btn" onclick="event.stopPropagation(); openRestaurant('${r.id}')">🍽 عرض المنيو</button>
-        </div>
-      </div>
-    `).join('');
-  } else {
-    renderHomeItems(); // no search for other categories
-  }
+    if(!filtered.length) { container.innerHTML = '<div class="empty">لا توجد مطاعم</div>'; return; }
+    container.innerHTML = filtered.map(r => `<div class="restaurant-card" onclick="openRestaurant('${r.id}')"><img src="${(r.logo && r.logo.startsWith('/uploads')) ? r.logo : (r.logo || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200')}"><div class="restaurant-content"><h3>${r.name}</h3><div class="meta"><span>⭐ 4.8</span><span>⏱ 30-45 دقيقة</span></div><button class="btn menu-btn" onclick="event.stopPropagation(); openRestaurant('${r.id}')">🍽 عرض المنيو</button></div></div>`).join('');
+  } else { renderHomeItems(); }
 }
 
 // ========== Special Order ==========
@@ -907,7 +566,7 @@ function openSpecialOrder(type, storeId) {
 }
 
 function updateSpecialDeliveryFee() {
-  let fee = selectedArea ? selectedArea.fee : 10;
+  let fee = (selectedArea && selectedArea.fee) ? selectedArea.fee : (allRegions.length ? allRegions[0].fee : 10);
   document.getElementById('specialDeliveryFee').innerText = fee + ' ج';
   document.getElementById('specialTotal').innerText = fee + ' ج';
 }
@@ -918,43 +577,29 @@ function previewFiles(input) {
   selectedFiles = Array.from(input.files);
   selectedFiles.forEach(file => {
     let reader = new FileReader();
-    reader.onload = e => {
-      let img = document.createElement('img');
-      img.src = e.target.result;
-      preview.appendChild(img);
-    };
+    reader.onload = e => { let img = document.createElement('img'); img.src = e.target.result; preview.appendChild(img); };
     reader.readAsDataURL(file);
   });
 }
 
 async function submitSpecialOrder() {
-  if (!currentUser) { showToast('يرجى تسجيل الدخول أولاً'); return; }
+  if(!currentUser) { showToast('يرجى تسجيل الدخول أولاً'); return; }
   let details = document.getElementById('specialOrderDetails').value.trim();
-  if (!details && specialOrderType !== 'custom') { showToast('اكتب تفاصيل طلبك'); return; }
-  let fee = selectedArea ? selectedArea.fee : 10;
+  if(!details && specialOrderType !== 'custom') { showToast('اكتب تفاصيل طلبك'); return; }
+  let fee = selectedArea ? selectedArea.fee : (allRegions.length ? allRegions[0].fee : 10);
   let total = fee;
   let orderData = {
-    restaurantId: null,
-    items: [],
-    total: total,
-    customerName: currentUser.name,
-    customerPhone: currentUser.phone,
-    address: currentUser.address || (selectedArea ? selectedArea.name : ''),
-    regionName: selectedArea ? selectedArea.name : '',
-    paymentMethod: paymentMethod,
-    deliveryFee: fee,
-    specialOrder: true,
-    orderType: specialOrderType,
-    storeId: specialOrderStoreId,
-    orderDetails: details
+    restaurantId: null, items: [], total: total, customerName: currentUser.name, customerPhone: currentUser.phone,
+    address: currentUser.address || (selectedArea ? selectedArea.name : ''), regionName: selectedArea ? selectedArea.name : '',
+    paymentMethod: paymentMethod, deliveryFee: fee, specialOrder: true, orderType: specialOrderType, storeId: specialOrderStoreId, orderDetails: details
   };
   try {
     let formData = new FormData();
     formData.append('orderData', JSON.stringify(orderData));
-    for (let file of selectedFiles) formData.append('files', file);
+    for(let file of selectedFiles) formData.append('files', file);
     const res = await fetch('/api/orders/special', { method: 'POST', body: formData, credentials: 'include' });
     const data = await res.json();
-    if (data.error) return showToast(data.error);
+    if(data.error) return showToast(data.error);
     showToast('تم إرسال الطلب بنجاح');
     showScreen('homeScreen');
     loadMyOrders();
@@ -962,149 +607,71 @@ async function submitSpecialOrder() {
 }
 
 // ========== Restaurants ==========
-async function loadRestaurants() {
-  try {
-    const res = await apiFetch(API + '/restaurants');
-    restaurants = await res.json();
-    renderHomeItems();
-  } catch (e) { console.log(e); }
-}
-
+async function loadRestaurants() { try { const res = await apiFetch(API + '/restaurants'); restaurants = await res.json(); renderHomeItems(); } catch(e) { console.log(e); } }
 async function openRestaurant(id) {
   selectedRestaurant = restaurants.find(r => r.id === id);
   document.getElementById('restaurantName').innerText = selectedRestaurant.name;
   document.getElementById('restaurantTitleHeader').innerText = selectedRestaurant.name;
   document.getElementById('restaurantHero').src = (selectedRestaurant.logo && selectedRestaurant.logo.startsWith('/uploads')) ? selectedRestaurant.logo : (selectedRestaurant.logo || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600');
-  try {
-    const res = await apiFetch(API + '/restaurants/' + id + '/menu');
-    products = await res.json();
-    renderTabs();
-    showScreen('restaurantScreen');
-  } catch (e) { console.log(e); }
+  try { const res = await apiFetch(API + '/restaurants/' + id + '/menu'); products = await res.json(); renderTabs(); showScreen('restaurantScreen'); } catch(e) { console.log(e); }
 }
-
-function renderTabs() {
-  const categories = [...new Set(products.map(p => p.category || 'عام'))];
-  const tabs = document.getElementById('tabsContainer');
-  tabs.innerHTML = categories.map((c, i) => `<div class="tab ${i===0?'active':''}" onclick="filterProducts('${c}', this)">${c}</div>`).join('');
-  filterProducts(categories[0], document.querySelector('.tab'));
-}
-
-function filterProducts(category, el) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  if (el) el.classList.add('active');
-  const filtered = category ? products.filter(p => (p.category||'عام') === category) : products;
-  renderProducts(filtered);
-}
+function renderTabs() { const categories = [...new Set(products.map(p => p.category || 'عام'))]; const tabs = document.getElementById('tabsContainer'); tabs.innerHTML = categories.map((c,i) => `<div class="tab ${i===0?'active':''}" onclick="filterProducts('${c}', this)">${c}</div>`).join(''); filterProducts(categories[0], document.querySelector('.tab')); }
+function filterProducts(category, el) { document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); if(el) el.classList.add('active'); const filtered = category ? products.filter(p => (p.category||'عام') === category) : products; renderProducts(filtered); }
 
 function renderProducts(list = products) {
   const container = document.getElementById('productsContainer');
-  if (!list.length) { container.innerHTML = '<div class="empty">لا توجد منتجات</div>'; return; }
+  if(!list.length) { container.innerHTML = '<div class="empty">لا توجد منتجات</div>'; return; }
   container.innerHTML = list.map(p => {
     const hasGroups = p.groups && p.groups.length > 0;
-    const minPrice = hasGroups ? Math.min(...p.groups.flatMap(g => g.options.map(o => o.price))) : (p.price || p.basePrice || 0);
-    const displayPrice = (p.basePrice || 0) + minPrice;
-    const priceDisplay = hasGroups ? 'يبدأ من ' + displayPrice + ' ج' : displayPrice + ' ج';
+    let displayPrice = 0;
+    let priceDisplay = '';
+    if(hasGroups) {
+      let minPrice = p.basePrice || 0;
+      p.groups.forEach(group => { if(group.required && group.options && group.options.length) { const minOptionPrice = Math.min(...group.options.map(o => o.price)); minPrice += minOptionPrice; } });
+      displayPrice = minPrice;
+      priceDisplay = 'يبدأ من ' + displayPrice + ' ج';
+    } else {
+      const price = p.price || p.basePrice || 0;
+      displayPrice = price;
+      priceDisplay = displayPrice + ' ج';
+    }
     const escapedProduct = JSON.stringify(p).replace(/'/g, "\\'").replace(/"/g, '&quot;');
-    return `
-      <div class="product-card">
-        <img src="${(p.image && p.image.startsWith('/uploads')) ? p.image : (p.image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500')}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'">
-        <div class="product-content">
-          <h4>${p.name}</h4>
-          <p>${p.description || 'وجبة لذيذة من دراكو'}</p>
-          <div class="price">${priceDisplay}</div>
-        </div>
-        <button class="plus-btn" onclick='openProductSheet(${escapedProduct})'>+</button>
-      </div>
-    `;
+    return `<div class="product-card"><img src="${(p.image && p.image.startsWith('/uploads')) ? p.image : (p.image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500')}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'"><div class="product-content"><h4>${p.name}</h4><p>${p.description || 'وجبة لذيذة من دراكو'}</p><div class="price">${priceDisplay}</div></div><button class="plus-btn" onclick='openProductSheet(${escapedProduct})'>+</button></div>`;
   }).join('');
 }
 
-// ========== Product Sheet (with groups) ==========
+// ========== Product Sheet ==========
 function openProductSheet(product) {
   currentProduct = product;
   const hasGroups = product.groups && product.groups.length > 0;
-  if (!hasGroups) { addToCartSimple(product); return; }
-
+  if(!hasGroups) { addToCartSimple(product); return; }
   const basePrice = product.basePrice || 0;
-  let html = `
-    <div style="display:flex;gap:16px;margin-bottom:20px">
-      <img src="${product.image || 'placeholder.jpg'}" style="width:100px;height:100px;border-radius:16px;object-fit:cover">
-      <div>
-        <h3>${product.name}</h3>
-        <p style="color:#666">${product.description || ''}</p>
-      </div>
-    </div>
-  `;
-
+  let minExtra = 0;
+  product.groups.forEach(group => { if(group.required && group.options && group.options.length) { minExtra += Math.min(...group.options.map(o => o.price)); } });
+  const suggestedTotal = basePrice + minExtra;
+  let html = `<div style="display:flex;gap:16px;margin-bottom:20px"><img src="${product.image || 'placeholder.jpg'}" style="width:100px;height:100px;border-radius:16px;object-fit:cover"><div><h3>${product.name}</h3><p style="color:#666">${product.description || ''}</p></div></div>`;
   product.groups.forEach(group => {
     html += `<div style="margin-top:16px"><strong>${group.name} ${group.required ? '*' : ''}</strong>`;
-    if (group.type === 'single') {
-      group.options.forEach(opt => {
-        html += `<label class="option-label">
-          <input type="radio" name="${group.id}" value="${opt.price}" data-extra="${opt.price}" ${opt.price === 0 && group.required ? 'checked' : ''}>
-          <span style="flex:1">${opt.value}</span>
-          <span style="color:#FF6B00;font-weight:bold">${opt.price > 0 ? '+' + opt.price + ' ج' : 'مجاني'}</span>
-        </label>`;
-      });
+    if(group.type === 'single') {
+      group.options.forEach(opt => { html += `<label class="option-label"><input type="radio" name="${group.id}" value="${opt.price}" data-extra="${opt.price}" ${opt.price === 0 && group.required ? 'checked' : ''}><span style="flex:1">${opt.value}</span><span style="color:#FF6B00;font-weight:bold">${opt.price > 0 ? '+' + opt.price + ' ج' : 'مجاني'}</span></label>`; });
     } else {
-      group.options.forEach(opt => {
-        html += `<label class="option-label">
-          <input type="checkbox" name="${group.id}" value="${opt.price}" data-extra="${opt.price}">
-          <span style="flex:1">${opt.value}</span>
-          <span style="color:#FF6B00;font-weight:bold">+${opt.price} ج</span>
-        </label>`;
-      });
+      group.options.forEach(opt => { html += `<label class="option-label"><input type="checkbox" name="${group.id}" value="${opt.price}" data-extra="${opt.price}"><span style="flex:1">${opt.value}</span><span style="color:#FF6B00;font-weight:bold">+${opt.price} ج</span></label>`; });
     }
-    if (group.maxSelection) html += `<small style="color:#888">الحد الأقصى ${group.maxSelection} اختيارات</small>`;
+    if(group.maxSelection) html += `<small style="color:#888">الحد الأقصى ${group.maxSelection} اختيارات</small>`;
     html += `</div>`;
   });
-
-  html += `
-    <div style="margin-top:20px;display:flex;gap:12px;align-items:center">
-      <span>الكمية:</span>
-      <button class="qty-btn qty-minus" onclick="changeQty(-1)">-</button>
-      <strong id="item-qty">1</strong>
-      <button class="qty-btn qty-plus" onclick="changeQty(1)">+</button>
-    </div>
-    <div style="margin-top:16px">
-      <label style="font-size:13px;color:#666">ملاحظات للطلب</label>
-      <textarea id="item-notes" style="width:100%;height:60px;border:1px solid #ddd;border-radius:10px;padding:8px;margin-top:4px" placeholder="مثلاً: بدون بصل، زيادة صوص..."></textarea>
-    </div>
-    <div style="font-size:20px;font-weight:900;margin-top:16px;color:#FF6B00">
-      الإجمالي: <span id="sheet-total">${basePrice}</span> ج
-    </div>
-    <button class="btn" style="margin-top:16px" onclick="confirmAddToCart()">🛒 أضف للطلب</button>
-  `;
-
+  html += `<div style="margin-top:20px;display:flex;gap:12px;align-items:center"><span>الكمية:</span><button class="qty-btn qty-minus" onclick="changeQty(-1)">-</button><strong id="item-qty">1</strong><button class="qty-btn qty-plus" onclick="changeQty(1)">+</button></div><div style="margin-top:16px"><label style="font-size:13px;color:#666">ملاحظات للطلب</label><textarea id="item-notes" style="width:100%;height:60px;border:1px solid #ddd;border-radius:10px;padding:8px;margin-top:4px" placeholder="مثلاً: بدون بصل، زيادة صوص..."></textarea></div><div style="font-size:20px;font-weight:900;margin-top:16px;color:#FF6B00">الإجمالي: <span id="sheet-total">${suggestedTotal}</span> ج</div><button class="btn" style="margin-top:16px" onclick="confirmAddToCart()">🛒 أضف للطلب</button>`;
   document.getElementById('sheetContent').innerHTML = html;
   document.getElementById('productSheet').classList.add('open');
-
-  const updateTotal = () => {
-    let total = basePrice;
-    document.querySelectorAll('#sheetContent input:checked').forEach(inp => total += Number(inp.value) || 0);
-    window._currentUnitPrice = total;
-    document.getElementById('sheet-total').textContent = total * (window._currentQty || 1);
-  };
+  const updateTotal = () => { let total = basePrice; document.querySelectorAll('#sheetContent input:checked').forEach(inp => total += Number(inp.value) || 0); window._currentUnitPrice = total; document.getElementById('sheet-total').textContent = total * (window._currentQty || 1); };
   document.querySelectorAll('#sheetContent input').forEach(inp => inp.addEventListener('change', updateTotal));
   window._currentQty = 1;
   updateTotal();
 }
-
-function changeQty(delta) {
-  window._currentQty = Math.max(1, (window._currentQty || 1) + delta);
-  document.getElementById('item-qty').textContent = window._currentQty;
-  const unitPrice = window._currentUnitPrice || 0;
-  document.getElementById('sheet-total').textContent = unitPrice * window._currentQty;
-}
-
-function closeProductSheet() {
-  document.getElementById('productSheet').classList.remove('open');
-  currentProduct = null;
-}
-
+function changeQty(delta) { window._currentQty = Math.max(1, (window._currentQty||1) + delta); document.getElementById('item-qty').textContent = window._currentQty; const unitPrice = window._currentUnitPrice || 0; document.getElementById('sheet-total').textContent = unitPrice * window._currentQty; }
+function closeProductSheet() { document.getElementById('productSheet').classList.remove('open'); currentProduct = null; }
 function confirmAddToCart() {
-  if (!currentProduct) return;
+  if(!currentProduct) return;
   const product = currentProduct;
   const qty = window._currentQty || 1;
   const notes = document.getElementById('item-notes')?.value || '';
@@ -1112,223 +679,55 @@ function confirmAddToCart() {
   const groups = product.groups || [];
   const selectedOptions = [];
   let finalPrice = basePrice;
-
   groups.forEach(group => {
-    if (group.type === 'single') {
+    if(group.type === 'single') {
       const radio = document.querySelector(`#sheetContent input[name="${group.id}"]:checked`);
-      if (radio) {
-        const price = Number(radio.value) || 0;
-        finalPrice += price;
-        selectedOptions.push({
-          groupId: group.id,
-          groupName: group.name,
-          value: radio.parentElement.textContent.trim().split('(')[0].trim(),
-          price
-        });
-      }
+      if(radio) { const price = Number(radio.value) || 0; finalPrice += price; selectedOptions.push({ groupId: group.id, groupName: group.name, value: radio.parentElement.textContent.trim().split('(')[0].trim(), price }); }
     } else {
       const checkboxes = document.querySelectorAll(`#sheetContent input[name="${group.id}"]:checked`);
-      checkboxes.forEach(cb => {
-        const price = Number(cb.value) || 0;
-        finalPrice += price;
-        selectedOptions.push({
-          groupId: group.id,
-          groupName: group.name,
-          value: cb.parentElement.textContent.trim().split('(')[0].trim(),
-          price
-        });
-      });
+      checkboxes.forEach(cb => { const price = Number(cb.value) || 0; finalPrice += price; selectedOptions.push({ groupId: group.id, groupName: group.name, value: cb.parentElement.textContent.trim().split('(')[0].trim(), price }); });
     }
   });
-
   const uniqueId = product.id + '_' + JSON.stringify(selectedOptions);
   const existing = cart.find(i => i.id === uniqueId);
-  if (existing) {
-    existing.quantity = (existing.quantity || 1) + qty;
-  } else {
-    cart.push({
-      id: uniqueId,
-      productId: product.id,
-      name: product.name,
-      price: finalPrice,
-      image: product.image,
-      selectedOptions,
-      quantity: qty,
-      notes
-    });
-  }
-  saveCart();
-  renderCart();
-  closeProductSheet();
-  showToast('✅ تمت إضافة المنتج');
+  if(existing) existing.quantity = (existing.quantity || 1) + qty;
+  else cart.push({ id: uniqueId, productId: product.id, name: product.name, price: finalPrice, image: product.image, selectedOptions, quantity: qty, notes });
+  saveCart(); renderCart(); closeProductSheet(); showToast('✅ تمت إضافة المنتج');
 }
-
 function addToCartSimple(product) {
   const existing = cart.find(i => i.id === product.id);
-  if (existing) {
-    existing.quantity = (existing.quantity || 1) + 1;
-  } else {
-    cart.push({
-      id: product.id,
-      productId: product.id,
-      name: product.name,
-      price: product.price || product.basePrice || 0,
-      image: product.image,
-      selectedOptions: [],
-      quantity: 1,
-      notes: ''
-    });
-  }
-  saveCart();
-  renderCart();
-  showToast('✅ تمت إضافة المنتج');
+  if(existing) existing.quantity = (existing.quantity || 1) + 1;
+  else cart.push({ id: product.id, productId: product.id, name: product.name, price: product.price || product.basePrice || 0, image: product.image, selectedOptions: [], quantity: 1, notes: '' });
+  saveCart(); renderCart(); showToast('✅ تمت إضافة المنتج');
 }
 
 // ========== Cart ==========
-function saveCart() {
-  localStorage.setItem('drako_cart', JSON.stringify(cart));
-  const count = cart.reduce((a,b) => a + (b.quantity || 1), 0);
-  document.getElementById('cartBadge').innerText = count;
-  document.getElementById('headerBadge').innerText = count;
-}
-
+function saveCart() { localStorage.setItem('drako_cart', JSON.stringify(cart)); const count = cart.reduce((a,b) => a + (b.quantity || 1), 0); document.getElementById('cartBadge').innerText = count; document.getElementById('headerBadge').innerText = count; }
 function renderCart() {
   const container = document.getElementById('cartItems');
-  if (!cart.length) { container.innerHTML = '<div class="empty">السلة فارغة</div>'; updateTotals(); return; }
-  container.innerHTML = cart.map((item, index) => {
-    const optionsText = (item.selectedOptions || []).map(o => o.value).join(', ');
-    const notesText = item.notes ? `<div style="font-size:11px;color:#888">📝 ${item.notes}</div>` : '';
-    return `
-      <div class="cart-item">
-        <img src="${(item.image && item.image.startsWith('/uploads')) ? item.image : (item.image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500')}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'">
-        <div class="cart-content">
-          <h4>${item.name}</h4>
-          ${optionsText ? `<div style="font-size:11px;color:#888">${optionsText}</div>` : ''}
-          ${notesText}
-          <div>${item.price} ج</div>
-          <div class="qty-box">
-            <button class="qty-btn qty-minus" data-action="decrease" data-index="${index}">-</button>
-            <strong>${item.quantity || 1}</strong>
-            <button class="qty-btn qty-plus" data-action="increase" data-index="${index}">+</button>
-          </div>
-        </div>
-        <button class="icon-btn" data-action="remove" data-index="${index}">🗑</button>
-      </div>
-    `;
-  }).join('');
+  if(!cart.length) { container.innerHTML = '<div class="empty">السلة فارغة</div>'; updateTotals(); return; }
+  container.innerHTML = cart.map((item, index) => { const optionsText = (item.selectedOptions || []).map(o => o.value).join(', '); const notesText = item.notes ? `<div style="font-size:11px;color:#888">📝 ${item.notes}</div>` : ''; return `<div class="cart-item"><img src="${(item.image && item.image.startsWith('/uploads')) ? item.image : (item.image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500')}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'"><div class="cart-content"><h4>${item.name}</h4>${optionsText ? `<div style="font-size:11px;color:#888">${optionsText}</div>` : ''}${notesText}<div>${item.price} ج</div><div class="qty-box"><button class="qty-btn qty-minus" data-action="decrease" data-index="${index}">-</button><strong>${item.quantity || 1}</strong><button class="qty-btn qty-plus" data-action="increase" data-index="${index}">+</button></div></div><button class="icon-btn" data-action="remove" data-index="${index}">🗑</button></div>`; }).join('');
   updateTotals();
 }
-
-document.getElementById('cartItems').addEventListener('click', function(e) {
-  const btn = e.target.closest('button');
-  if (!btn || !btn.dataset.action) return;
-  const index = parseInt(btn.dataset.index, 10);
-  if (isNaN(index) || index < 0 || index >= cart.length) return;
-  if (btn.dataset.action === 'increase') {
-    cart[index].quantity = (cart[index].quantity || 1) + 1;
-  } else if (btn.dataset.action === 'decrease') {
-    cart[index].quantity = (cart[index].quantity || 1) - 1;
-    if (cart[index].quantity <= 0) cart.splice(index, 1);
-  } else if (btn.dataset.action === 'remove') {
-    cart.splice(index, 1);
-  }
-  saveCart();
-  renderCart();
-});
-
-function updateTotals() {
-  const itemsTotal = cart.reduce((a,b) => a + (b.price * (b.quantity || 1)), 0);
-  const fee = selectedArea ? selectedArea.fee : 0;
-  const final = itemsTotal + fee;
-  document.getElementById('itemsTotal').innerText = itemsTotal + ' ج';
-  document.getElementById('deliveryFee').innerText = fee + ' ج';
-  document.getElementById('finalTotal').innerText = final + ' ج';
-  document.getElementById('checkoutItemsTotal').innerText = itemsTotal + ' ج';
-  document.getElementById('checkoutDelivery').innerText = fee + ' ج';
-  document.getElementById('checkoutFinal').innerText = final + ' ج';
-}
-
-function proceedToCheckout() {
-  if (!cart.length) return showToast('السلة فارغة');
-
-  if (currentUser && currentUser.regionId && allRegions.length) {
-    const region = allRegions.find(r => r.id === currentUser.regionId);
-    if (region) {
-      selectedArea = region;
-      updateTotals();
-      document.getElementById('selectedAreaName').innerText = region.name + ' - ' + region.fee + ' ج';
-      renderCheckoutUserInfo();
-      showScreen('checkoutScreen');
-      return;
-    }
-  }
-  showScreen('areaScreen');
-}
+document.getElementById('cartItems').addEventListener('click', function(e) { const btn = e.target.closest('button'); if(!btn || !btn.dataset.action) return; const index = parseInt(btn.dataset.index,10); if(isNaN(index) || index<0 || index>=cart.length) return; if(btn.dataset.action === 'increase') { cart[index].quantity = (cart[index].quantity || 1)+1; } else if(btn.dataset.action === 'decrease') { cart[index].quantity = (cart[index].quantity || 1)-1; if(cart[index].quantity <=0) cart.splice(index,1); } else if(btn.dataset.action === 'remove') { cart.splice(index,1); } saveCart(); renderCart(); });
+function updateTotals() { const itemsTotal = cart.reduce((a,b) => a + (b.price * (b.quantity || 1)), 0); const fee = selectedArea ? selectedArea.fee : 0; const final = itemsTotal + fee; document.getElementById('itemsTotal').innerText = itemsTotal + ' ج'; document.getElementById('deliveryFee').innerText = fee + ' ج'; document.getElementById('finalTotal').innerText = final + ' ج'; document.getElementById('checkoutItemsTotal').innerText = itemsTotal + ' ج'; document.getElementById('checkoutDelivery').innerText = fee + ' ج'; document.getElementById('checkoutFinal').innerText = final + ' ج'; }
+function proceedToCheckout() { if(!cart.length) return showToast('السلة فارغة'); if(currentUser && currentUser.regionId && allRegions.length) { const region = allRegions.find(r => r.id === currentUser.regionId); if(region) { selectedArea = region; updateTotals(); document.getElementById('selectedAreaName').innerText = region.name + ' - ' + region.fee + ' ج'; renderCheckoutUserInfo(); showScreen('checkoutScreen'); return; } } showScreen('areaScreen'); }
 
 // ========== Order Submit & Track ==========
 async function submitOrder() {
-  if (!selectedArea) {
-    showToast('يرجى اختيار المنطقة أولاً');
-    showScreen('areaScreen');
-    return;
-  }
-
+  if(!selectedArea) { showToast('يرجى اختيار المنطقة أولاً'); showScreen('areaScreen'); return; }
   let name, phone, address;
-  if (currentUser) {
-    name = currentUser.name;
-    phone = currentUser.phone;
-    address = currentUser.address;
-  } else {
-    name = document.getElementById('customerName').value.trim();
-    phone = document.getElementById('customerPhone').value.trim();
-    if (!name || !phone) { showToast('اكمل البيانات'); return; }
-  }
-
+  if(currentUser) { name = currentUser.name; phone = currentUser.phone; address = currentUser.address; }
+  else { name = document.getElementById('customerName').value.trim(); phone = document.getElementById('customerPhone').value.trim(); if(!name || !phone) { showToast('اكمل البيانات'); return; } }
   const itemsTotal = cart.reduce((a,b) => a + (b.price * (b.quantity || 1)), 0);
   const total = itemsTotal + (selectedArea.fee || 0);
-
-  const orderData = {
-    restaurantId: selectedRestaurant?.id,
-    items: cart.map(i => ({
-      productId: i.productId,
-      name: i.name,
-      price: i.price,
-      quantity: i.quantity || 1,
-      selectedOptions: i.selectedOptions || [],
-      notes: i.notes || ''
-    })),
-    total,
-    customerName: name,
-    customerPhone: phone,
-    address: address || selectedArea.name,
-    regionName: selectedArea.name,
-    paymentMethod,
-    deliveryFee: selectedArea.fee || 0
-  };
-
-  try {
-    const res = await apiFetch(API + '/orders', {
-      method: 'POST',
-      body: JSON.stringify(orderData)
-    });
-    const data = await res.json();
-    if (data.error) { showToast('خطأ: ' + data.error); return; }
-    cart = [];
-    saveCart();
-    renderCart();
-    trackOrder(data.orderId);
-    showToast('تم إرسال الطلب بنجاح');
-  } catch (e) {
-    console.error(e);
-    showToast('فشل في الاتصال بالسيرفر');
-  }
+  const orderData = { restaurantId: selectedRestaurant?.id, items: cart.map(i => ({ productId: i.productId, name: i.name, price: i.price, quantity: i.quantity || 1, selectedOptions: i.selectedOptions || [], notes: i.notes || '' })), total, customerName: name, customerPhone: phone, address: address || selectedArea.name, regionName: selectedArea.name, paymentMethod, deliveryFee: selectedArea.fee || 0 };
+  try { const res = await apiFetch(API + '/orders', { method: 'POST', body: JSON.stringify(orderData) }); const data = await res.json(); if(data.error) { showToast('خطأ: ' + data.error); return; } cart = []; saveCart(); renderCart(); trackOrder(data.orderId); showToast('تم إرسال الطلب بنجاح'); } catch(e) { console.error(e); showToast('فشل في الاتصال بالسيرفر'); }
 }
-
 async function trackOrder(orderId) {
   window._trackingOrderId = orderId;
   document.getElementById('trackOrderId').innerText = '#' + orderId.slice(-6).toUpperCase();
   showScreen('trackScreen');
-  
   const updateTrack = async () => {
     try {
       const res = await apiFetch(API + '/orders/' + orderId + '/track');
@@ -1336,83 +735,30 @@ async function trackOrder(orderId) {
       const steps = ['PENDING','ACCEPTED','PREPARING','INVOICE_ADDED','READY','DRIVER_ASSIGNED','ON_THE_WAY','DELIVERED'];
       const currentIdx = steps.indexOf(order.status);
       let html = '';
-      steps.forEach((s, i) => {
-        if (i <= currentIdx) {
-          html += `<div class="status-step"><div class="status-dot done"></div><div class="status-text">${i===currentIdx?'<span class="active">'+getStatusText(s)+'</span>':getStatusText(s)}</div></div>`;
-        } else {
-          html += `<div class="status-step"><div class="status-dot"></div><div class="status-text">${getStatusText(s)}</div></div>`;
-        }
-      });
+      steps.forEach((s,i) => { if(i <= currentIdx) html += `<div class="status-step"><div class="status-dot done"></div><div class="status-text">${i===currentIdx?'<span class="active">'+getStatusText(s)+'</span>':getStatusText(s)}</div></div>`; else html += `<div class="status-step"><div class="status-dot"></div><div class="status-text">${getStatusText(s)}</div></div>`; });
       document.getElementById('trackStatusContainer').innerHTML = html;
-      let invoiceHtml = '';
-      if (order.invoiceAmount) {
-        invoiceHtml = `<div class="detail-row"><span>💵 قيمة الفاتورة</span><strong>${order.invoiceAmount} ج</strong></div>`;
-      }
-      document.getElementById('trackDetails').innerHTML = `
-        <div class="detail-row"><span>المطعم/المتجر</span><strong>${order.restaurantName || order.storeName || 'طلب خاص'}</strong></div>
-        ${invoiceHtml}
-        <div class="detail-row"><span>الإجمالي النهائي</span><strong>${order.total} ج</strong></div>
-        <div class="detail-row"><span>رسوم التوصيل</span><strong>${order.deliveryFee} ج</strong></div>
-        <div class="detail-row"><span>العميل</span><strong>${order.customerName}</strong></div>
-        <div class="detail-row"><span>العنوان</span><strong>${order.address || '—'}</strong></div>
-        <div class="detail-row"><span>وقت الطلب</span><strong>${new Date(order.createdAt).toLocaleString('ar-EG')}</strong></div>
-      `;
-      if (order.status !== 'DELIVERED' && order.status !== 'CANCELLED') {
-        setTimeout(updateTrack, 10000);
-      }
-    } catch (e) { console.log(e); }
+      let invoiceHtml = order.invoiceAmount ? `<div class="detail-row"><span>💵 قيمة الفاتورة</span><strong>${order.invoiceAmount} ج</strong></div>` : '';
+      document.getElementById('trackDetails').innerHTML = `<div class="detail-row"><span>المطعم/المتجر</span><strong>${order.restaurantName || order.storeName || 'طلب خاص'}</strong></div>${invoiceHtml}<div class="detail-row"><span>الإجمالي النهائي</span><strong>${order.total} ج</strong></div><div class="detail-row"><span>رسوم التوصيل</span><strong>${order.deliveryFee} ج</strong></div><div class="detail-row"><span>العميل</span><strong>${order.customerName}</strong></div><div class="detail-row"><span>العنوان</span><strong>${order.address || '—'}</strong></div><div class="detail-row"><span>وقت الطلب</span><strong>${new Date(order.createdAt).toLocaleString('ar-EG')}</strong></div>`;
+      if(order.status !== 'DELIVERED' && order.status !== 'CANCELLED') setTimeout(updateTrack, 10000);
+    } catch(e) { console.log(e); }
   };
   updateTrack();
 }
-
-function getStatusText(s) {
-  const map = {
-    PENDING: 'في الانتظار',
-    ACCEPTED: 'مقبول',
-    PREPARING: 'قيد التحضير',
-    INVOICE_ADDED: 'تم إضافة الفاتورة',
-    READY: 'جاهز للتوصيل',
-    DRIVER_ASSIGNED: 'تم تعيين طيار',
-    ON_THE_WAY: 'في الطريق',
-    DELIVERED: 'تم التوصيل',
-    CANCELLED: 'ملغي'
-  };
-  return map[s] || s;
-}
+function getStatusText(s) { const map = { PENDING:'في الانتظار', ACCEPTED:'مقبول', PREPARING:'قيد التحضير', INVOICE_ADDED:'تم إضافة الفاتورة', READY:'جاهز للتوصيل', DRIVER_ASSIGNED:'تم تعيين طيار', ON_THE_WAY:'في الطريق', DELIVERED:'تم التوصيل', CANCELLED:'ملغي' }; return map[s]||s; }
 
 // ========== My Orders ==========
-function switchOrdersTab(tab) {
-  window._ordersTab = tab;
-  document.querySelectorAll('#orders-tab-bar .tab').forEach(t => t.classList.remove('active'));
-  if (event && event.target) event.target.classList.add('active');
-  loadMyOrders();
-}
-
+function switchOrdersTab(tab) { window._ordersTab = tab; document.querySelectorAll('#orders-tab-bar .tab').forEach(t=>t.classList.remove('active')); if(event && event.target) event.target.classList.add('active'); loadMyOrders(); }
 async function loadMyOrders() {
   const container = document.getElementById('myOrdersList');
-  if (!currentUser) {
-    container.innerHTML = '<div class="empty">سجل دخولك أولاً</div>';
-    return;
-  }
+  if(!currentUser) { container.innerHTML = '<div class="empty">سجل دخولك أولاً</div>'; return; }
   try {
     const res = await apiFetch(API + '/orders?customerPhone=' + encodeURIComponent(currentUser.phone));
     let orders = await res.json();
     orders = orders.filter(o => o.customerPhone === currentUser.phone);
-    if (!orders.length) { container.innerHTML = '<div class="empty">لا توجد طلبات سابقة</div>'; return; }
-
+    if(!orders.length) { container.innerHTML = '<div class="empty">لا توجد طلبات سابقة</div>'; return; }
     const tab = window._ordersTab || 'active';
-    let filtered = [];
-    if (tab === 'active') {
-      filtered = orders.filter(o => !['DELIVERED', 'CANCELLED'].includes(o.status));
-    } else {
-      filtered = orders.filter(o => ['DELIVERED', 'CANCELLED'].includes(o.status));
-    }
-
-    if (!filtered.length) {
-      container.innerHTML = '<div class="empty">لا توجد طلبات في هذا القسم</div>';
-      return;
-    }
-
+    let filtered = tab === 'active' ? orders.filter(o => !['DELIVERED','CANCELLED'].includes(o.status)) : orders.filter(o => ['DELIVERED','CANCELLED'].includes(o.status));
+    if(!filtered.length) { container.innerHTML = '<div class="empty">لا توجد طلبات في هذا القسم</div>'; return; }
     container.innerHTML = filtered.reverse().map(order => {
       const firstItem = order.items?.[0];
       const imgSrc = (firstItem && firstItem.image && firstItem.image.startsWith('/uploads')) ? firstItem.image : 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200';
@@ -1421,30 +767,14 @@ async function loadMyOrders() {
       const statusLabel = getStatusText(order.status);
       const total = order.total || 0;
       const date = new Date(order.createdAt).toLocaleDateString('ar-EG');
-      const time = new Date(order.createdAt).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'});
-
-      return `
-        <div class="order-item">
-          <img src="${imgSrc}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'">
-          <div class="order-info">
-            <h4>${itemNames}</h4>
-            <div class="restaurant">🍽️ ${order.restaurantName || order.storeName || 'طلب خاص'}</div>
-            <div class="items-summary">${(order.items||[]).length} أصناف</div>
-            <span class="status-badge" style="background:${statusColor}20; color:${statusColor}">${statusLabel}</span>
-            <div class="order-footer">
-              <span>${date} - ${time}</span>
-              <span class="total">${total} ج</span>
-            </div>
-          </div>
-          <button class="track-btn" onclick="trackOrder('${order.id}')">📋 تتبع</button>
-        </div>
-      `;
+      const time = new Date(order.createdAt).toLocaleTimeString('ar-EG', {hour:'2-digit',minute:'2-digit'});
+      return `<div class="order-item"><img src="${imgSrc}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'"><div class="order-info"><h4>${itemNames}</h4><div class="restaurant">🍽️ ${order.restaurantName || order.storeName || 'طلب خاص'}</div><div class="items-summary">${(order.items||[]).length} أصناف</div><span class="status-badge" style="background:${statusColor}20; color:${statusColor}">${statusLabel}</span><div class="order-footer"><span>${date} - ${time}</span><span class="total">${total} ج</span></div></div><button class="track-btn" onclick="trackOrder('${order.id}')">📋 تتبع</button></div>`;
     }).join('');
-  } catch (e) { container.innerHTML = '<div class="empty">تعذر تحميل الطلبات</div>'; }
+  } catch(e) { container.innerHTML = '<div class="empty">تعذر تحميل الطلبات</div>'; }
 }
 
 // ========== Initialization ==========
-if (currentUser) {
+if(currentUser) {
   document.getElementById('authWrapper').style.display = 'none';
   document.getElementById('mainAppWrapper').style.display = 'flex';
   initSocket();
