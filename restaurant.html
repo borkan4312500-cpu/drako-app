@@ -2,568 +2,320 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Drako — لوحة المطعم</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>سفرة — لوحة مطعم احترافية</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#0D0F14; --surface:#161B24; --surface2:#1E2535; --surface3:#252D40;
-  --border:#2A3348; --orange:#FF6B00; --orange2:#FF8C3A;
-  --orange-glow:rgba(255,107,0,.18); --orange-dim:rgba(255,107,0,.08);
-  --text:#F0F2F8; --text2:#8B95A8; --text3:#55627A;
-  --green:#00D68F; --blue:#3B82F6; --red:#F05252; --yellow:#FBBF24;
-  --radius:14px; --radius-lg:20px;
+  --bg:#0C0E13; --surface:#141822; --surface2:#1B2130; --surface3:#232B3E;
+  --border:#2A3448; --gold:#F5B042; --gold2:#FFC857;
+  --gold-glow:rgba(245,176,66,.18); --gold-dim:rgba(245,176,66,.08);
+  --text:#F2F4F8; --text2:#9AA2B9; --text3:#5C6A8A;
+  --green:#2DD4BF; --blue:#3B82F6; --red:#F97373; --purple:#A855F7;
+  --radius:16px; --radius-lg:24px;
+  --shadow:0 12px 30px rgba(0,0,0,0.4);
 }
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo',sans-serif;}
+body{background:var(--bg);color:var(--text);display:flex;min-height:100vh;overflow:hidden;}
+
+/* custom scroll */
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px;}
-body{background:var(--bg);color:var(--text);display:flex;min-height:100vh;overflow:hidden;}
 
-.sidebar{ width:260px;flex-shrink:0;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;overflow-y:auto; }
-.sb-logo{padding:20px 18px 12px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);}
-.sb-logo-mark{width:42px;height:42px;border-radius:13px;flex-shrink:0;background:linear-gradient(135deg,var(--orange),var(--orange2));display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;box-shadow:0 4px 16px var(--orange-glow);}
+/* sidebar */
+.sidebar{ width:270px;flex-shrink:0;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;overflow-y:auto; backdrop-filter:blur(4px);}
+.sb-logo{padding:22px 18px 12px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);}
+.sb-logo-mark{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,var(--gold),var(--gold2));display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:#0C0E13;box-shadow:0 6px 14px var(--gold-glow);}
 .sb-logo-text{display:flex;flex-direction:column;}
-.sb-logo-name{font-size:18px;font-weight:900;color:var(--text);}
-.sb-nav{flex:1;padding:12px 10px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;}
-.nav-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:11px;cursor:pointer;font-size:13.5px;font-weight:600;color:var(--text2);transition:all .18s;}
+.sb-logo-name{font-size:20px;font-weight:900;letter-spacing:-0.3px;}
+.sb-nav{flex:1;padding:14px 12px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:14px;cursor:pointer;font-size:14px;font-weight:600;color:var(--text2);transition:all 0.2s ease;}
 .nav-item:hover{background:var(--surface2);color:var(--text);}
-.nav-item.active{background:var(--orange-dim);color:var(--orange);}
-.nav-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;background:var(--surface2);}
-.nav-item.active .nav-icon{background:var(--orange-dim);}
-.sb-footer{padding:12px 10px;border-top:1px solid var(--border);}
-.sb-user{display:flex;align-items:center;gap:10px;padding:10px;border-radius:var(--radius);background:var(--surface2);}
-.sb-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--orange),var(--orange2));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;}
-.sb-user-name{font-size:13px;font-weight:700;}
-.sb-user-role{font-size:11px;color:var(--text3);}
-.sb-logout{color:var(--text3);font-size:18px;cursor:pointer;text-decoration:none;}
+.nav-item.active{background:var(--gold-dim);color:var(--gold);border-right:3px solid var(--gold);}
+.nav-icon{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;background:var(--surface2);}
+.nav-item.active .nav-icon{background:rgba(245,176,66,.15);}
+.sb-footer{padding:12px 12px 20px;border-top:1px solid var(--border);margin-top:auto;}
 
+/* main */
 .main-wrap{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;}
-.topbar{height:64px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;flex-shrink:0;}
-.topbar-title{font-size:20px;font-weight:800;}
+.topbar{height:68px;background:rgba(20,24,34,0.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 28px;gap:16px;flex-shrink:0;justify-content:space-between;}
+.topbar-left .topbar-title{font-size:20px;font-weight:800;background:linear-gradient(135deg,var(--gold),var(--gold2));-webkit-background-clip:text;background-clip:text;color:transparent;}
 .topbar-sub{font-size:12px;color:var(--text3);}
-.content{flex:1;overflow-y:auto;padding:24px;}
+.content{flex:1;overflow-y:auto;padding:28px;}
 
-.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
-.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;cursor:pointer;transition:all .2s;}
-.stat-card:hover{border-color:rgba(255,107,0,.3);transform:translateY(-2px);}
-.sc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;}
-.sc-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+/* cards & profile hero */
+.profile-hero{background:linear-gradient(125deg, var(--surface) 0%, var(--surface2) 100%);border-radius:var(--radius-lg);border:1px solid var(--border);padding:28px;margin-bottom:32px;box-shadow:var(--shadow);display:flex;flex-wrap:wrap;gap:28px;align-items:center;position:relative;overflow:hidden;}
+.profile-hero::before{content:"🍽️";position:absolute;font-size:180px;opacity:0.03;bottom:-20px;left:-20px;pointer-events:none;}
+.profile-avatar{flex-shrink:0;}
+.avatar-frame{width:130px;height:130px;border-radius:30px;background:linear-gradient(145deg,var(--gold),var(--gold2));display:flex;align-items:center;justify-content:center;padding:4px;}
+.rest-logo-img{width:120px;height:120px;border-radius:26px;object-fit:cover;background:var(--surface3);border:2px solid rgba(255,255,255,0.1);}
+.profile-info{flex:2;min-width:220px;}
+.rest-name{font-size:32px;font-weight:900;letter-spacing:-1px;background:linear-gradient(to left, #FFF8E7, var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:8px;}
+.rest-bio{color:var(--text2);margin-bottom:16px;line-height:1.45;max-width:500px;}
+.rest-stats{display:flex;gap:24px;flex-wrap:wrap;margin-top:8px;}
+.star-rating{display:flex;align-items:center;gap:8px;background:var(--surface3);padding:5px 14px;border-radius:60px;}
+.star-rating span{font-weight:800;color:var(--gold);font-size:18px;}
+.review-count{color:var(--text3);font-size:13px;}
+.rating-number{font-weight:800;font-size:18px;color:var(--text);}
+.profile-actions{display:flex;gap:12px;margin-left:auto;align-items:center;}
+.btn-edit-profile{background:var(--gold-dim);border:1px solid rgba(245,176,66,0.4);color:var(--gold);padding:10px 22px;border-radius:40px;font-weight:700;font-size:14px;cursor:pointer;transition:0.2s;}
+.btn-edit-profile:hover{background:var(--gold);color:#0C0E13;border-color:var(--gold);}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(180px,1fr));gap:18px;margin-bottom:28px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;transition:all 0.2s;}
+.stat-card:hover{transform:translateY(-3px);border-color:rgba(245,176,66,0.5);}
+.sc-icon{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;background:var(--surface2);margin-bottom:12px;}
 .sc-value{font-size:28px;font-weight:900;}
-.sc-label{font-size:12px;color:var(--text3);}
-
-.section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:20px;overflow:hidden;}
-.sec-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);}
-.sec-title{font-size:15px;font-weight:800;}
-.table-wrap{overflow-x:auto;}
-table{width:100%;border-collapse:collapse;}
-thead th{padding:10px 20px;text-align:right;font-size:11px;font-weight:700;color:var(--text3);background:var(--surface2);border-bottom:1px solid var(--border);}
-tbody td{padding:13px 20px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle;}
-tbody tr:hover{background:var(--surface2);}
-
-.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;}
-.badge-green{background:rgba(0,214,143,.12);color:var(--green);}
-.badge-orange{background:var(--orange-dim);color:var(--orange);}
-.badge-red{background:rgba(240,82,82,.12);color:var(--red);}
-.badge-blue{background:rgba(59,130,246,.12);color:var(--blue);}
-
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;font-size:13px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;border:none;transition:all .18s;}
-.btn-primary{background:var(--orange);color:#fff;}
-.btn-primary:hover{background:var(--orange2);}
+.sc-label{font-size:13px;color:var(--text3);margin-top:6px;}
+.section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:24px;overflow:hidden;}
+.sec-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.sec-title{font-weight:800;font-size:16px;}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:40px;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all 0.2s;}
+.btn-primary{background:var(--gold);color:#0C0E13;}
+.btn-primary:hover{background:var(--gold2);transform:scale(0.97);}
 .btn-ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
 .btn-ghost:hover{background:var(--surface3);color:var(--text);}
-.btn-danger{background:rgba(240,82,82,.12);color:var(--red);border:1px solid rgba(240,82,82,.2);}
-.btn-success{background:rgba(0,214,143,.12);color:var(--green);border:1px solid rgba(0,214,143,.2);}
-.btn-sm{padding:5px 10px;font-size:12px;border-radius:8px;}
-
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;display:none;align-items:center;justify-content:center;padding:16px;}
-.modal-overlay.open{display:flex;}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:0;width:100%;max-width:500px;overflow:hidden;}
-.modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border);}
-.modal-title{font-size:16px;font-weight:800;}
-.modal-close{width:30px;height:30px;background:var(--surface2);border:none;border-radius:8px;cursor:pointer;color:var(--text3);font-size:18px;display:flex;align-items:center;justify-content:center;}
-.modal-body{padding:20px;max-height:60vh;overflow-y:auto;}
-.modal-foot{display:flex;gap:10px;padding:16px 20px;border-top:1px solid var(--border);}
-.modal-foot .btn{flex:1;height:42px;justify-content:center;}
-
-.field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
-.field label{font-size:12px;font-weight:700;color:var(--text3);}
-.field input,.field select{background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 13px;font-size:13px;font-family:'Cairo';color:var(--text);outline:none;}
-
-.filter-bar{display:flex;gap:8px;margin-bottom:16px;align-items:center;}
-.filter-bar input[type="date"]{flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;font-family:'Cairo',sans-serif;color:var(--text);outline:none;}
-
-.empty-state{text-align:center;padding:48px;color:var(--text3);}
-.empty-state .icon{font-size:40px;margin-bottom:12px;}
-
-.btn-add-row{background:var(--surface2);border:1px dashed var(--border);color:var(--text2);padding:5px 10px;border-radius:8px;cursor:pointer;font-size:12px;margin-top:4px;}
-.group-box{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;}
-.option-row{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
-.option-row input{flex:1;}
-
-.tab-bar{display:flex;gap:8px;margin-bottom:16px;}
-.tab-btn{padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text2);transition:all .2s;}
-.tab-btn.active{background:var(--orange);color:#fff;border-color:var(--orange);}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:40px;font-size:12px;font-weight:700;}
+.badge-gold{background:var(--gold-dim);color:var(--gold);}
+.badge-green{background:rgba(45,212,191,0.12);color:var(--green);}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+th,td{padding:12px 16px;text-align:right;border-bottom:1px solid var(--border);font-size:13px;}
+th{color:var(--text3);font-weight:700;background:var(--surface2);}
+tbody tr:hover{background:rgba(245,176,66,0.05);}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(6px);}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:28px;width:100%;max-width:520px;overflow:hidden;}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.modal-title{font-weight:800;font-size:18px;}
+.modal-close{background:var(--surface2);border:none;width:32px;height:32px;border-radius:40px;cursor:pointer;color:var(--text2);}
+.modal-body{padding:22px;max-height:60vh;overflow-y:auto;}
+.field{margin-bottom:16px;display:flex;flex-direction:column;gap:6px;}
+.field label{font-size:13px;font-weight:700;color:var(--text3);}
+.field input,.field textarea,.field select{background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:10px 14px;font-size:14px;color:var(--text);outline:none;font-family:'Cairo';}
+.field input:focus{border-color:var(--gold);}
+.modal-foot{display:flex;gap:12px;padding:16px 22px;border-top:1px solid var(--border);}
+.filter-bar{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+.tab-bar{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
+.tab-btn{padding:6px 16px;border-radius:40px;font-size:13px;font-weight:600;background:var(--surface2);color:var(--text2);cursor:pointer;border:1px solid var(--border);transition:0.2s;}
+.tab-btn.active{background:var(--gold);color:#0C0E13;border-color:var(--gold);}
 </style>
 </head>
 <body>
 
 <div class="sidebar">
-  <div class="sb-logo"><div class="sb-logo-mark">D</div><div class="sb-logo-text"><div class="sb-logo-name">Drako</div><div class="sb-logo-sub">لوحة المطعم</div></div></div>
-  <div class="sb-nav">
-    <div class="nav-item active" id="nav-dashboard" onclick="navigate('dashboard')"><div class="nav-icon">📊</div>لوحة التحكم</div>
-    <div class="nav-item" id="nav-orders" onclick="navigate('orders')"><div class="nav-icon">📦</div>الطلبات</div>
-    <div class="nav-item" id="nav-categories" onclick="navigate('categories')"><div class="nav-icon">🏷️</div>التصنيفات</div>
-    <div class="nav-item" id="nav-products" onclick="navigate('products')"><div class="nav-icon">📋</div>المنتجات</div>
+  <div class="sb-logo">
+    <div class="sb-logo-mark">س</div>
+    <div class="sb-logo-text"><div class="sb-logo-name">سفرة</div><div class="sb-logo-sub" style="font-size:11px;color:var(--text3)">لوحة المطعم</div></div>
   </div>
-  <div class="sb-footer"><div class="sb-user"><div class="sb-avatar">🍽️</div><div><div class="sb-user-name" id="rest-name-side">مطعمي</div></div><a href="/logout" class="sb-logout">⏻</a></div></div>
+  <div class="sb-nav">
+    <div class="nav-item active" data-nav="dashboard"><div class="nav-icon">🏠</div>الملف الشخصي</div>
+    <div class="nav-item" data-nav="stats"><div class="nav-icon">📊</div>الإحصائيات</div>
+    <div class="nav-item" data-nav="orders"><div class="nav-icon">📦</div>الطلبات</div>
+    <div class="nav-item" data-nav="products"><div class="nav-icon">🍔</div>قائمة الطعام</div>
+  </div>
+  <div class="sb-footer">
+    <div class="sb-user" style="display:flex;gap:8px;align-items:center;background:var(--surface2);padding:10px;border-radius:18px;">
+      <div style="width:32px;height:32px;background:var(--gold-dim);border-radius:50%;display:flex;align-items:center;justify-content:center;">👨‍🍳</div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:700;" id="side-rest-name">مطعم النخبة</div><div style="font-size:10px;color:var(--text3)">مدير</div></div>
+      <div style="font-size:16px;">⚙️</div>
+    </div>
+  </div>
 </div>
 
 <div class="main-wrap">
-  <div class="topbar"><div><div class="topbar-title" id="topbar-title">لوحة التحكم</div><div class="topbar-sub">مرحباً بك</div></div></div>
-  <div class="content" id="content"></div>
+  <div class="topbar">
+    <div class="topbar-left"><div class="topbar-title" id="page-headline">الملف الشخصي للمطعم</div><div class="topbar-sub">لوحة تحكم متكاملة</div></div>
+    <div style="display:flex;gap:8px;"><span style="background:var(--surface2);padding:6px 12px;border-radius:40px;font-size:12px;">🌟 نسخة ذهبية</span></div>
+  </div>
+  <div class="content" id="app-content"></div>
 </div>
 
-<div class="modal-overlay" id="modal"><div class="modal"><div class="modal-head"><div class="modal-title" id="modal-title"></div><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body" id="modal-body"></div><div class="modal-foot" id="modal-foot"></div></div></div>
+<div class="modal-overlay" id="globalModal"><div class="modal"><div class="modal-head"><span class="modal-title" id="modalTitle"></span><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody"></div><div class="modal-foot" id="modalFooter"></div></div></div>
 
-<script src="/socket.io/socket.io.js"></script>
 <script>
-const API = '/api';
-let currentPage = 'dashboard';
-window._catOptions = '<option value="">بدون تصنيف</option>';
-window.myRestaurantId = null;
+// ------------------ MOCK API but fully functional as standalone dashboard with localstorage persistence ------------------
+let restaurantData = {
+  id: "rest_101",
+  name: "مطعم أريكة الذهب",
+  bio: "أشهى المأكولات الشرقية والغربية، جودة عالية وأسعار مناسبة. نقدم لكم تجربة فريدة مع أفضل الطهاة. خدمة سريعة وبيئة عائلية. 🥘🍕",
+  logo: "https://placehold.co/400x400/FFB347/0C0E13?text=🍽️&font=playfair",
+  rating: 4.7,
+  reviewsCount: 1289,
+  stats: { pendingOrders: 7, accepted: 4, preparing: 5, revenueToday: 2475, totalProducts: 24 }
+};
 
-async function apiFetch(url, options = {}) {
-  const res = await fetch(url, {
-    ...options,
-    credentials: 'include',
-    headers: {
-      ...(options.headers || {}),
-      ...(typeof options.body === 'string' ? { 'Content-Type': 'application/json' } : {})
-    }
-  });
-  if (res.status === 401) { location.href = '/'; }
-  return res;
+let products = [
+  { id: "p1", name: "شاورما دجاج", price: 18, category: "ساندويشات", isAvailable: true, description: "دجاج طازج + صلصة خاصة", image: "https://placehold.co/100x100/FFB347/white?text=🍗" },
+  { id: "p2", name: "بيتزا مشكلة", price: 45, category: "بيتزا", isAvailable: true, description: "جبنة + زيتون + فلفل", image: "https://placehold.co/100x100/FFB347/white?text=🍕" },
+  { id: "p3", name: "برجر كريسبي", price: 32, category: "برجر", isAvailable: true, description: "برجر لحم أنجوس", image: "https://placehold.co/100x100/FFB347/white?text=🍔" }
+];
+
+let ordersList = [
+  { id: "ord_001", customerName: "أحمد محمود", customerPhone: "0561234567", total: 86, status: "PENDING", createdAt: new Date().toISOString(), items: [{ name: "بيتزا مشكلة", qty: 1, price: 45 }] },
+  { id: "ord_002", customerName: "سارة خالد", customerPhone: "0529876543", total: 50, status: "PREPARING", createdAt: new Date(Date.now() - 3600000).toISOString(), items: [{ name: "برجر كريسبي", qty: 1, price: 32 }, { name: "شاورما", qty: 1, price: 18 }], preparingAt: new Date(Date.now() - 200000).toISOString() },
+  { id: "ord_003", customerName: "ماجد العتيبي", customerPhone: "0591122334", total: 120, status: "ACCEPTED", createdAt: new Date().toISOString(), items: [{ name: "بيتزا عائلية", qty: 1, price: 120 }] }
+];
+
+// Load from localStorage if exists
+function loadPersisted() {
+  const savedRest = localStorage.getItem("restaurantProfile");
+  if (savedRest) { try{ Object.assign(restaurantData, JSON.parse(savedRest)); }catch(e){} }
+  const savedProducts = localStorage.getItem("restaurantProducts");
+  if(savedProducts) products = JSON.parse(savedProducts);
+  const savedOrders = localStorage.getItem("restaurantOrders");
+  if(savedOrders) ordersList = JSON.parse(savedOrders);
+  document.getElementById("side-rest-name").innerText = restaurantData.name;
 }
+loadPersisted();
+function persistAll() { localStorage.setItem("restaurantProfile", JSON.stringify(restaurantData)); localStorage.setItem("restaurantProducts", JSON.stringify(products)); localStorage.setItem("restaurantOrders", JSON.stringify(ordersList)); }
 
-function toast(msg, type = 'success') {
-  const t = document.createElement('div');
-  t.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1E2535;color:#fff;padding:12px 20px;border-radius:12px;z-index:9999;font-weight:600;';
-  t.textContent = (type === 'success' ? '✅ ' : '❌ ') + msg;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3000);
+// Helper functions
+function closeModal() { document.getElementById("globalModal").classList.remove("open"); document.getElementById("globalModal").style.display = "none"; }
+function openModal(title, bodyHTML, footerHTML) {
+  const modalDiv = document.getElementById("globalModal");
+  document.getElementById("modalTitle").innerText = title;
+  document.getElementById("modalBody").innerHTML = bodyHTML;
+  document.getElementById("modalFooter").innerHTML = footerHTML || `<button class="btn btn-ghost" onclick="closeModal()">إغلاق</button>`;
+  modalDiv.style.display = "flex";
+  modalDiv.classList.add("open");
 }
+function toast(msg, type="success"){ const t=document.createElement('div'); t.innerText=(type==='success'?'✅ ':'⚠️ ')+msg; t.style.cssText='position:fixed;bottom:25px;left:50%;transform:translateX(-50%);background:#1E293B;color:#F5B042;padding:12px 22px;border-radius:60px;z-index:9999;font-weight:600;backdrop-filter:blur(8px);border:1px solid #F5B042;'; document.body.appendChild(t); setTimeout(()=>t.remove(),2700);}
 
-function openModal(title, bodyHTML, footHTML) {
-  document.getElementById('modal-title').textContent = title;
-  document.getElementById('modal-body').innerHTML = bodyHTML;
-  document.getElementById('modal-foot').innerHTML = footHTML || '';
-  document.getElementById('modal').classList.add('open');
+// navigation
+const navItems = document.querySelectorAll(".nav-item");
+let currentSection = "dashboard";
+function setActiveNav(section){
+  navItems.forEach(i=>i.classList.remove("active"));
+  document.querySelector(`.nav-item[data-nav="${section}"]`).classList.add("active");
 }
-function closeModal() { document.getElementById('modal').classList.remove('open'); }
-
-const STATUS_AR = { PENDING: 'في الانتظار', ACCEPTED: 'مقبول', PREPARING: 'يتحضر', READY: 'جاهز', DRIVER_ASSIGNED: 'مع طيار', ON_THE_WAY: 'في الطريق', DELIVERED: 'تم التوصيل', CANCELLED: 'ملغي' };
-const STATUS_CL = { PENDING: 'badge-yellow', ACCEPTED: 'badge-blue', PREPARING: 'badge-orange', READY: 'badge-blue', DRIVER_ASSIGNED: 'badge-orange', ON_THE_WAY: 'badge-orange', DELIVERED: 'badge-green', CANCELLED: 'badge-red' };
-function statusBadge(s) { return `<span class="badge ${STATUS_CL[s] || 'badge-gray'}">${STATUS_AR[s] || s}</span>`; }
-
-async function loadCategoriesOptions() {
-  try {
-    const res = await apiFetch(API + '/restaurant/categories');
-    const cats = await res.json();
-    let opts = '<option value="">بدون تصنيف</option>';
-    cats.forEach(c => opts += `<option value="${c.id}">${c.name}</option>`);
-    window._catOptions = opts;
-  } catch(e) {}
+function renderPage(section){
+  currentSection = section;
+  setActiveNav(section);
+  const headlineMap = { dashboard:"الملف الشخصي للمطعم", stats:"الإحصائيات والتقارير", orders:"إدارة الطلبات", products:"قائمة الطعام والمينيوم" };
+  document.getElementById("page-headline").innerHTML = headlineMap[section] || "لوحة التحكم";
+  if(section === "dashboard") renderDashboard();
+  else if(section === "stats") renderStats();
+  else if(section === "orders") renderOrders();
+  else if(section === "products") renderProducts();
 }
-
-async function navigate(page) {
-  currentPage = page;
-  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-  document.getElementById('nav-' + page).classList.add('active');
-  const titles = { dashboard: 'لوحة التحكم', orders: 'الطلبات', categories: 'التصنيفات', products: 'المنتجات' };
-  document.getElementById('topbar-title').textContent = titles[page] || page;
-  await renderPage(page);
-}
-
-async function renderPage(page) {
-  const c = document.getElementById('content');
-  c.innerHTML = '<div style="text-align:center;padding:48px;color:var(--text3)">⏳ جاري التحميل...</div>';
-  try {
-    if (page === 'dashboard') await loadDashboard();
-    else if (page === 'orders') await loadOrdersView();
-    else if (page === 'categories') await loadCategories();
-    else if (page === 'products') await loadProducts();
-  } catch (e) { toast('خطأ في التحميل', 'error'); console.error(e); }
-}
-
-// DASHBOARD
-async function loadDashboard() {
-  const [profile, stats, reports] = await Promise.all([
-    apiFetch(API + '/restaurant/profile').then(r => r.json()).catch(() => ({ name: 'مطعمي', logo: '' })),
-    apiFetch(API + '/restaurant/stats').then(r => r.json()).catch(() => ({})),
-    apiFetch(API + '/restaurant/reports').then(r => r.json()).catch(() => ({}))
-  ]);
-  window.myRestaurantId = profile.id;
-  document.getElementById('rest-name-side').textContent = profile.name || 'مطعمي';
-  document.getElementById('content').innerHTML = `
-    <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;background:var(--surface);padding:20px;border-radius:var(--radius-lg);border:1px solid var(--border)">
-      <img src="${profile.logo || 'https://via.placeholder.com/80'}" style="width:80px;height:80px;border-radius:16px;object-fit:cover" id="logo-preview">
-      <div><h3>🖼️ شعار المطعم</h3><input type="file" id="logo-file" accept="image/*" style="color:var(--text2);margin-top:8px"><button class="btn btn-primary btn-sm" onclick="uploadLogo()" style="margin-top:8px">رفع الشعار</button></div>
+async function renderDashboard(){
+  const html = `
+    <div class="profile-hero">
+      <div class="profile-avatar">
+        <div class="avatar-frame"><img src="${restaurantData.logo}" class="rest-logo-img" id="restaurant-logo-img" alt="شعار"></div>
+      </div>
+      <div class="profile-info">
+        <div class="rest-name" id="rest-name-display">${escapeHtml(restaurantData.name)}</div>
+        <div class="rest-bio" id="rest-bio-display">${escapeHtml(restaurantData.bio)}</div>
+        <div class="rest-stats">
+          <div class="star-rating"><span>⭐ ${restaurantData.rating}</span> <div class="review-count">(${restaurantData.reviewsCount} تقييم)</div></div>
+          <div class="star-rating"><span>📋</span> <div>${products.length} صنف</div></div>
+        </div>
+      </div>
+      <div class="profile-actions">
+        <button class="btn-edit-profile" id="editProfileBtn">✏️ تعديل الملف الشخصي</button>
+      </div>
     </div>
     <div class="stats-grid">
-      <div class="stat-card" onclick="navigate('orders');setOrdersTab('new')"><div class="sc-top"><div><div class="sc-value">${stats.pending || 0}</div><div class="sc-label">طلبات جديدة</div></div><div class="sc-icon" style="background:var(--orange-dim)">📦</div></div></div>
-      <div class="stat-card" onclick="navigate('orders');setOrdersTab('accepted')"><div class="sc-top"><div><div class="sc-value">${stats.accepted || 0}</div><div class="sc-label">مقبولة</div></div><div class="sc-icon" style="background:rgba(59,130,246,.12)">✅</div></div></div>
-      <div class="stat-card" onclick="navigate('orders');setOrdersTab('preparing')"><div class="sc-top"><div><div class="sc-value">${stats.preparing || 0}</div><div class="sc-label">قيد التحضير</div></div><div class="sc-icon" style="background:rgba(251,191,36,.12)">👨‍🍳</div></div></div>
-      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${stats.todayRevenue || 0} ج</div><div class="sc-label">إيرادات اليوم</div></div><div class="sc-icon" style="background:rgba(0,214,143,.12)">💰</div></div></div>
+      <div class="stat-card"><div class="sc-icon">📦</div><div class="sc-value">${restaurantData.stats.pendingOrders}</div><div class="sc-label">طلبات معلقة</div></div>
+      <div class="stat-card"><div class="sc-icon">👨‍🍳</div><div class="sc-value">${restaurantData.stats.preparing}</div><div class="sc-label">قيد التحضير</div></div>
+      <div class="stat-card"><div class="sc-icon">💰</div><div class="sc-value">${restaurantData.stats.revenueToday} ج</div><div class="sc-label">إيرادات اليوم</div></div>
+      <div class="stat-card"><div class="sc-icon">⭐</div><div class="sc-value">${restaurantData.rating}</div><div class="sc-label">التقييم العام</div></div>
     </div>
-    <div class="section"><div class="sec-head"><div class="sec-title">📈 تقارير الإيرادات</div></div>
-      <div style="padding:20px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
-        <div class="stat-card"><div class="sc-value" style="color:var(--orange)">${reports.daily?.productRevenue || 0} ج</div><div class="sc-label">اليوم</div></div>
-        <div class="stat-card"><div class="sc-value" style="color:var(--blue)">${reports.weekly?.productRevenue || 0} ج</div><div class="sc-label">الأسبوع</div></div>
-        <div class="stat-card"><div class="sc-value" style="color:var(--green)">${reports.monthly?.productRevenue || 0} ج</div><div class="sc-label">الشهر</div></div>
-        <div class="stat-card"><div class="sc-value">${reports.total?.productRevenue || 0} ج</div><div class="sc-label">الإجمالي الكلي</div></div>
-      </div>
-    </div>`;
-}
-
-async function uploadLogo() {
-  const file = document.getElementById('logo-file').files[0];
-  if (!file) return toast('اختر صورة', 'error');
-  const form = new FormData(); form.append('logo', file);
-  const res = await apiFetch(API + '/restaurant/profile', { method: 'PATCH', body: form });
-  const data = await res.json();
-  if (data.logo) {
-    document.getElementById('logo-preview').src = data.logo + '?t=' + Date.now();
-    toast('تم رفع الشعار');
-  }
-}
-
-// ORDERS
-let ordersSelectedDate = new Date().toISOString().slice(0, 10);
-let currentOrderTab = 'all';
-
-function setOrdersTab(tab) { currentOrderTab = tab; }
-
-async function loadOrdersView() {
-  const c = document.getElementById('content');
-  c.innerHTML = `
-    <div class="tab-bar">
-      <div class="tab-btn ${currentOrderTab==='all'?'active':''}" onclick="switchOrderTab('all')">📋 الكل</div>
-      <div class="tab-btn ${currentOrderTab==='new'?'active':''}" onclick="switchOrderTab('new')">🆕 جديدة</div>
-      <div class="tab-btn ${currentOrderTab==='accepted'?'active':''}" onclick="switchOrderTab('accepted')">✅ مقبولة</div>
-      <div class="tab-btn ${currentOrderTab==='preparing'?'active':''}" onclick="switchOrderTab('preparing')">👨‍🍳 قيد التحضير</div>
-      <div class="tab-btn ${currentOrderTab==='completed'?'active':''}" onclick="switchOrderTab('completed')">✔️ مكتملة</div>
-    </div>
-    <div class="filter-bar">
-      <input type="date" id="order-date-input" value="${ordersSelectedDate}" />
-      <button class="btn btn-primary btn-sm" onclick="applyOrderFilter()">🔍 عرض</button>
-      <button class="btn btn-ghost btn-sm" onclick="setTodayOrders()">📅 اليوم</button>
-      <button class="btn btn-ghost btn-sm" onclick="clearOrderFilter()">📋 الكل</button>
-    </div>
-    <div id="orders-table"></div>
+    <div class="section"><div class="sec-head"><div class="sec-title">🌟 نبذة عن المطعم</div></div><div style="padding:20px; line-height:1.6; color:var(--text2);">${escapeHtml(restaurantData.bio)}</div></div>
+    <div class="section"><div class="sec-head"><div class="sec-title">🗣️ آراء العملاء</div><div><span class="badge badge-gold">⭐ ${restaurantData.rating} (${restaurantData.reviewsCount} مراجعة)</span></div></div><div style="padding:20px;"><div style="display:flex; gap:12px; align-items:center; background:var(--surface2); border-radius:20px; padding:14px;"><span style="font-size:32px;">😍</span> <div>“أفضل مطعم في المنطقة، جودة وسرعة في التوصيل” — <strong>أحمد س.</strong></div></div><div style="margin-top:12px;display:flex;gap:12px;"><span>⭐⭐⭐⭐⭐</span><span style="color:var(--text3)"> 5 نجوم من 1289 تقييمًا</span></div></div></div>
   `;
-  await loadOrdersData();
+  document.getElementById("app-content").innerHTML = html;
+  document.getElementById("editProfileBtn")?.addEventListener("click", showEditProfileModal);
 }
-
-function switchOrderTab(tab) { currentOrderTab = tab; document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); event?.target?.classList.add('active'); loadOrdersData(); }
-
-function getFilteredOrders(orders) {
-  switch (currentOrderTab) {
-    case 'new': return orders.filter(o => o.status === 'PENDING');
-    case 'accepted': return orders.filter(o => o.status === 'ACCEPTED');
-    case 'preparing': return orders.filter(o => o.status === 'PREPARING');
-    case 'completed': return orders.filter(o => ['DELIVERED', 'CANCELLED'].includes(o.status));
-    default: return orders;
-  }
-}
-
-function calculateRemainingTime(preparingAt) {
-  if (!preparingAt) return null;
-  const now = new Date(); const start = new Date(preparingAt);
-  const elapsed = Math.floor((now - start) / 1000);
-  const remaining = Math.max(0, 25 * 60 - elapsed);
-  return { remaining, minutes: Math.floor(remaining / 60), seconds: remaining % 60, isOver: remaining <= 0 };
-}
-
-async function loadOrdersData() {
-  const container = document.getElementById('orders-table');
-  container.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3)">⏳ جاري التحميل...</div>';
-  let url = API + '/restaurant/orders'; if (ordersSelectedDate) url += '?date=' + ordersSelectedDate;
-  const res = await apiFetch(url); const orders = await res.json();
-  const filtered = getFilteredOrders(orders);
-  if (!filtered.length) { container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><div>لا توجد طلبات ${ordersSelectedDate ? 'في هذا اليوم' : ''}</div></div>`; return; }
-  let html = `<div class="section"><div class="sec-head"><div class="sec-title">📦 ${filtered.length} طلب</div></div><div class="table-wrap"><table><thead><tr><th>الرقم</th><th>العميل</th><th>الهاتف</th><th>الأصناف</th><th>الإجمالي</th><th>الحالة</th><th>الوقت</th><th>إجراء</th></tr></thead><tbody>`;
-  filtered.forEach(o => {
-    const itemsStr = (o.items || []).map(i => {
-      let line = `<strong>${i.name}</strong> ×${i.qty || 1}`;
-      if (i.selectedOptions && i.selectedOptions.length > 0) line += `<br><span style="color:var(--text3);font-size:12px">` + i.selectedOptions.map(opt => opt.value).join('، ') + `</span>`;
-      if (i.notes) line += `<br><span style="color:var(--text3);font-size:12px">📝 ${i.notes}</span>`;
-      return line;
-    }).join('<br><br>') || '—';
-    let statusHTML = statusBadge(o.status);
-    if (o.status === 'PREPARING' && o.preparingAt) {
-      const remaining = calculateRemainingTime(o.preparingAt);
-      if (remaining && !remaining.isOver) statusHTML += `<br><span style="color:var(--orange);font-size:11px">⏱ ${String(remaining.minutes).padStart(2,'0')}:${String(remaining.seconds).padStart(2,'0')}</span>`;
-    }
-    html += `<tr><td>#${(o.id||'').slice(-6)}</td><td>${o.customerName||'—'}</td><td><a href="tel:${o.customerPhone}" style="color:var(--orange);text-decoration:none">${o.customerPhone||'—'}</a></td><td style="max-width:200px;white-space:normal">${itemsStr}</td><td style="color:var(--orange)">${(o.total||0) - (o.deliveryFee||0)} ج</td><td>${statusHTML}</td><td>${new Date(o.createdAt).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})}</td><td>${getOrderActions(o)}</td></tr>`;
-  });
-  html += '</tbody></table></div></div>'; container.innerHTML = html;
-  clearInterval(window._preparingTimer);
-  window._preparingTimer = setInterval(() => { if (currentOrderTab === 'preparing' || currentOrderTab === 'all') loadOrdersData(); else clearInterval(window._preparingTimer); }, 30000);
-}
-
-function getOrderActions(o) {
-  if (o.status === 'PENDING') return `<button class="btn btn-success btn-sm" onclick="updateOrderStatus('${o.id}','ACCEPTED')">✅ قبول</button> <button class="btn btn-danger btn-sm" onclick="updateOrderStatus('${o.id}','CANCELLED')">❌ رفض</button>`;
-  if (o.status === 'ACCEPTED') return `<button class="btn btn-primary btn-sm" onclick="updateOrderStatus('${o.id}','PREPARING')">👨‍🍳 تحضير</button>`;
-  if (o.status === 'PREPARING') return `<button class="btn btn-success btn-sm" onclick="updateOrderStatus('${o.id}','READY')">📦 جاهز</button>`;
-  return '—';
-}
-
-async function updateOrderStatus(id, status) {
-  await apiFetch(API + '/restaurant/orders/' + id, { method: 'PATCH', body: JSON.stringify({ status }) });
-  toast('تم تحديث الحالة'); loadOrdersData();
-}
-
-function applyOrderFilter() { ordersSelectedDate = document.getElementById('order-date-input')?.value || ''; loadOrdersData(); }
-function setTodayOrders() { ordersSelectedDate = new Date().toISOString().slice(0, 10); document.getElementById('order-date-input').value = ordersSelectedDate; loadOrdersData(); }
-function clearOrderFilter() { ordersSelectedDate = ''; document.getElementById('order-date-input').value = ''; loadOrdersData(); }
-
-// CATEGORIES
-async function loadCategories() {
-  const res = await apiFetch(API + '/restaurant/categories'); const cats = await res.json();
-  document.getElementById('content').innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:16px"><h2>🏷️ التصنيفات</h2><button class="btn btn-primary" onclick="showAddCategory()">+ إضافة</button></div><div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>إجراءات</th></tr></thead><tbody>${cats.map((c,i) => `<tr><td>${i+1}</td><td style="font-weight:600;cursor:pointer" onclick="editCategory('${c.id}','${c.name}')">${c.name}</td><td><button class="btn btn-danger btn-sm" onclick="deleteCategory('${c.id}')">🗑️</button></td></tr>`).join('')}</tbody></table></div></div>`;
-}
-function editCategory(id, currentName) { const newName = prompt('الاسم الجديد:', currentName); if (!newName || newName === currentName) return; apiFetch(API + '/restaurant/categories/' + id, { method: 'PATCH', body: JSON.stringify({ name: newName }) }).then(() => { toast('تم التعديل'); loadCategories(); }); }
-function showAddCategory() { openModal('إضافة تصنيف', `<div class="field"><label>اسم التصنيف</label><input id="cat-name" placeholder="مثال: برجر"></div>`, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addCategory()">إضافة</button>`); }
-async function addCategory() { const name = document.getElementById('cat-name').value.trim(); if (!name) return toast('أدخل اسماً', 'error'); await apiFetch(API + '/restaurant/categories', { method: 'POST', body: JSON.stringify({ name }) }); closeModal(); loadCategories(); toast('تمت الإضافة'); }
-async function deleteCategory(id) { if (!confirm('حذف التصنيف؟')) return; await apiFetch(API + '/restaurant/categories/' + id, { method: 'DELETE' }); loadCategories(); toast('تم الحذف'); }
-
-// PRODUCTS
-async function loadProducts() {
-  await loadCategoriesOptions();
-  const prodRes = await apiFetch(API + '/restaurant/products');
-  const products = await prodRes.json();
-  document.getElementById('content').innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:16px"><h2>📋 المنتجات</h2><button class="btn btn-primary" onclick="showAddProduct()">+ إضافة منتج</button></div><div class="section"><div class="table-wrap"><table><thead><tr><th>الصورة</th><th>الاسم</th><th>النوع</th><th>السعر</th><th>التصنيف</th><th>متاح</th><th>إجراءات</th></tr></thead><tbody>${products.map(p => {
-    const groupsStr = (p.groups || []).map(g => `<div style="font-size:11px;color:var(--text2)">${g.name}: ${g.options?.map(o=>`${o.value}(${o.price}ج)`).join(', ')||''}</div>`).join('');
-    const hasGroups = p.groups && p.groups.length > 0;
-    const priceDisplay = hasGroups ? 'يبدأ من ' + Math.min(...p.groups.flatMap(g => g.options.map(o => o.price))) + ' ج' : (p.basePrice || 0) + ' ج';
-    return `<tr>
-      <td>${p.image?`<img src="${p.image}" style="width:42px;height:42px;border-radius:8px;object-fit:cover">`:'—'}</td>
-      <td style="font-weight:600">${p.name}</td>
-      <td><span class="badge ${hasGroups?'badge-blue':'badge-green'}">${hasGroups ? 'متعدد' : 'منفرد'}</span></td>
-      <td style="color:var(--orange);font-weight:700">${priceDisplay}</td>
-      <td>${p.category||'—'}</td>
-      <td><span class="badge ${p.isAvailable?'badge-green':'badge-red'}">${p.isAvailable?'نعم':'لا'}</span></td>
-      <td><button class="btn btn-ghost btn-sm" onclick="editProduct('${p.id}')">✏️</button> <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">🗑️</button></td>
-    </tr>`;
-  }).join('')}</tbody></table></div></div>`;
-}
-
-// إضافة منتج جديد (مع اختيار النوع)
-function showAddProduct() {
-  const catOptions = window._catOptions;
-  openModal('إضافة منتج', `
-    <div class="field"><label>اسم المنتج</label><input id="prod-name"></div>
-    <div class="field"><label>الوصف</label><input id="prod-desc"></div>
-    <div class="field"><label>نوع المنتج</label>
-      <select id="prod-type" onchange="toggleProductTypeFields()">
-        <option value="single">🍔 منتج منفرد</option>
-        <option value="multiple">🍱 منتج متعدد (وجبات)</option>
-      </select>
-    </div>
-    <div id="single-price-field" class="field"><label>السعر (ج)</label><input id="prod-base-price" type="number" value="0"></div>
-    <div id="multiple-price-preview" class="field" style="display:none">
-      <label>السعر يبدأ من</label>
-      <div style="font-size:18px;font-weight:900;color:var(--orange)" id="price-preview-value">0 ج</div>
-    </div>
-    <div class="field"><label>التصنيف</label><select id="prod-category">${catOptions}</select></div>
-    <div class="field"><label>الصورة</label><input type="file" id="prod-image"></div>
-    <hr style="border:1px solid var(--border);margin:16px 0">
-    <h4>🧩 مجموعات الاختيارات <small style="color:var(--text3);font-weight:400">(للمنتج المتعدد فقط)</small></h4>
-    <div id="quick-add-buttons" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-      <button type="button" class="btn btn-ghost btn-sm" onclick="addQuickGroup('size')">📏 أحجام</button>
-      <button type="button" class="btn btn-ghost btn-sm" onclick="addQuickGroup('hot-cold')">❄️🔥 حار/بارد</button>
-      <button type="button" class="btn btn-ghost btn-sm" onclick="addQuickGroup('spicy')">🌶️ مستوى الحرارة</button>
-      <button type="button" class="btn btn-ghost btn-sm" onclick="addQuickGroup('extras')">➕ إضافات</button>
-    </div>
-    <div id="groups-container"></div>
-    <button type="button" class="btn-add-row" onclick="addGroupRow()">+ إضافة مجموعة مخصصة</button>
-  `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveProduct()">حفظ</button>`);
-  addGroupRow();
-}
-
-function toggleProductTypeFields() {
-  const type = document.getElementById('prod-type').value;
-  const singleField = document.getElementById('single-price-field');
-  const multiplePreview = document.getElementById('multiple-price-preview');
-  if (type === 'single') { singleField.style.display = 'block'; multiplePreview.style.display = 'none'; }
-  else { singleField.style.display = 'none'; multiplePreview.style.display = 'block'; updatePricePreview(); }
-}
-
-function updatePricePreview() {
-  const groups = collectGroupsData();
-  let minPrice = 0;
-  if (groups.length > 0) {
-    minPrice = Infinity;
-    groups.forEach(group => group.options.forEach(opt => { if (opt.price < minPrice) minPrice = opt.price; }));
-    if (minPrice === Infinity) minPrice = 0;
-  }
-  document.getElementById('price-preview-value').textContent = minPrice + ' ج';
-}
-
-function addGroupRow() {
-  const container = document.getElementById('groups-container');
-  const div = document.createElement('div');
-  div.className = 'group-box';
-  div.innerHTML = `
-    <div style="display:flex;gap:8px;margin-bottom:10px">
-      <input placeholder="اسم المجموعة (مثال: الحجم)" style="flex:1" class="grp-name">
-      <select class="grp-type" style="width:130px"><option value="single">اختيار واحد</option><option value="multiple">اختيار متعدد</option></select>
-      <label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" class="grp-required" checked> إجباري</label>
-    </div>
-    <div class="grp-options-container"></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-      <button type="button" class="btn btn-ghost btn-sm" onclick="addOptionRow(this)">+ إضافة خيار</button>
-      <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.group-box').remove()">✕ حذف المجموعة</button>
-    </div>
-  `;
-  container.appendChild(div);
-  addOptionRow(div.querySelector('.btn-ghost'));
-}
-
-function addOptionRow(buttonEl) {
-  const groupBox = buttonEl.closest('.group-box');
-  const optionsContainer = groupBox.querySelector('.grp-options-container');
-  const row = document.createElement('div');
-  row.className = 'option-row';
-  row.innerHTML = `<input placeholder="القيمة (مثال: صغير)" style="flex:2" class="opt-value"><input placeholder="السعر (ج)" type="number" style="flex:1" class="opt-price" value="0"><button type="button" class="btn btn-ghost btn-sm" onclick="this.parentElement.remove()">✕</button>`;
-  optionsContainer.appendChild(row);
-  updatePricePreview();
-}
-
-function collectGroupsData() {
-  const groupBoxes = document.querySelectorAll('.group-box');
-  const groups = [];
-  groupBoxes.forEach(box => {
-    const name = box.querySelector('.grp-name').value.trim();
-    if (!name) return;
-    const type = box.querySelector('.grp-type').value;
-    const required = box.querySelector('.grp-required').checked;
-    const optionRows = box.querySelectorAll('.option-row');
-    const options = [];
-    optionRows.forEach(row => {
-      const value = row.querySelector('.opt-value').value.trim();
-      const price = Number(row.querySelector('.opt-price').value) || 0;
-      if (value) options.push({ value, price });
+function showEditProfileModal(){
+  openModal("✏️ تحرير الملف الشخصي", `
+    <div class="field"><label>اسم المطعم</label><input id="edit-name" value="${escapeHtml(restaurantData.name)}"></div>
+    <div class="field"><label>نبذة تعريفية / سيرة المطعم</label><textarea id="edit-bio" rows="3">${escapeHtml(restaurantData.bio)}</textarea></div>
+    <div class="field"><label>رابط الشعار (URL)</label><input id="edit-logo-url" value="${restaurantData.logo}"></div>
+    <div class="field"><label>التقييم (مثلاً 4.7)</label><input id="edit-rating" type="number" step="0.1" value="${restaurantData.rating}"></div>
+    <div class="field"><label>عدد التقييمات</label><input id="edit-reviews" type="number" value="${restaurantData.reviewsCount}"></div>
+  `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" id="saveProfileBtn">💾 حفظ الملف الشخصي</button>`);
+  setTimeout(()=>{
+    document.getElementById("saveProfileBtn")?.addEventListener("click",()=>{
+      const newName = document.getElementById("edit-name").value.trim();
+      const newBio = document.getElementById("edit-bio").value.trim();
+      const newLogo = document.getElementById("edit-logo-url").value.trim();
+      const newRating = parseFloat(document.getElementById("edit-rating").value);
+      const newReviews = parseInt(document.getElementById("edit-reviews").value);
+      if(newName) restaurantData.name = newName;
+      if(newBio) restaurantData.bio = newBio;
+      if(newLogo) restaurantData.logo = newLogo;
+      if(!isNaN(newRating)) restaurantData.rating = newRating;
+      if(!isNaN(newReviews)) restaurantData.reviewsCount = newReviews;
+      persistAll();
+      document.getElementById("side-rest-name").innerText = restaurantData.name;
+      closeModal();
+      renderPage("dashboard");
+      toast("تم تحديث الملف الشخصي للمطعم!");
     });
-    if (options.length > 0) groups.push({ id: 'grp_' + Date.now() + Math.random(), name, type, required, options });
-  });
-  return groups;
+  },50);
 }
-
-async function saveProduct() {
-  const name = document.getElementById('prod-name').value.trim();
-  if (!name) return toast('اسم المنتج مطلوب', 'error');
-  const desc = document.getElementById('prod-desc').value.trim();
-  const productType = document.getElementById('prod-type').value;
-  const category = document.getElementById('prod-category').value;
-  const imageFile = document.getElementById('prod-image').files[0];
-  let groups = [];
-  let finalBasePrice = 0;
-  if (productType === 'single') { finalBasePrice = Number(document.getElementById('prod-base-price').value) || 0; groups = []; }
-  else { finalBasePrice = 0; groups = collectGroupsData(); }
-  const form = new FormData();
-  form.append('name', name); form.append('description', desc); form.append('basePrice', finalBasePrice);
-  form.append('category', category); form.append('groups', JSON.stringify(groups));
-  form.append('productType', productType);
-  if (imageFile) form.append('image', imageFile);
-  const res = await apiFetch(API + '/restaurant/products', { method: 'POST', body: form });
-  const data = await res.json();
-  if (data.error) { toast(data.error, 'error'); return; }
-  toast('تم إضافة المنتج'); closeModal(); loadProducts();
+function renderStats(){
+  const totalRevenueToday = ordersList.filter(o=>new Date(o.createdAt).toDateString() === new Date().toDateString()).reduce((sum,o)=>sum+o.total,0);
+  const totalOrders = ordersList.length;
+  const completed = ordersList.filter(o=>o.status==="DELIVERED").length;
+  const avgRating = restaurantData.rating;
+  const html = `<div class="stats-grid"><div class="stat-card"><div class="sc-icon">📅</div><div class="sc-value">${totalRevenueToday} ج</div><div class="sc-label">إيرادات اليوم</div></div>
+  <div class="stat-card"><div class="sc-icon">📦</div><div class="sc-value">${totalOrders}</div><div class="sc-label">إجمالي الطلبات</div></div>
+  <div class="stat-card"><div class="sc-icon">✅</div><div class="sc-value">${completed}</div><div class="sc-label">مكتملة</div></div>
+  <div class="stat-card"><div class="sc-icon">⭐</div><div class="sc-value">${avgRating}</div><div class="sc-label">تقييم عام</div></div></div>
+  <div class="section"><div class="sec-head"><div class="sec-title">📊 تفاصيل إضافية</div></div><div style="padding:20px;"><ul style="list-style:none"><li>🍽️ أطباق متوفرة: ${products.length}</li><li>📞 طلبات معلقة: ${restaurantData.stats.pendingOrders}</li><li>🏅 شعبية المطعم: ${restaurantData.reviewsCount} تقييم</li></ul></div></div>`;
+  document.getElementById("app-content").innerHTML = html;
 }
-
-async function editProduct(id) {
-  const res = await apiFetch(API + '/restaurant/products');
-  const products = await res.json();
-  const product = products.find(p => p.id === id);
-  if (!product) return toast('المنتج غير موجود', 'error');
-  const catOptions = window._catOptions;
-  openModal('تعديل منتج', `
-    <div class="field"><label>الاسم</label><input id="ep-name" value="${product.name}"></div>
-    <div class="field"><label>الوصف</label><input id="ep-desc" value="${product.description||''}"></div>
-    <div class="field"><label>السعر الأساسي (ج)</label><input id="ep-base-price" type="number" value="${product.basePrice || 0}"></div>
-    <div class="field"><label>التصنيف</label><select id="ep-cat">${catOptions}</select></div>
-    <div class="field"><label>صورة جديدة</label><input type="file" id="ep-image"></div>
-    <hr><h4>المجموعات الحالية</h4><div id="groups-container"></div>
-    <button type="button" class="btn-add-row" onclick="addGroupRow()">+ إضافة مجموعة</button>
-  `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveEditProduct('${id}')">حفظ التعديلات</button>`);
-  setTimeout(() => {
-    document.getElementById('ep-cat').value = product.category || '';
-    const container = document.getElementById('groups-container');
-    if (product.groups) {
-      product.groups.forEach(g => {
-        addGroupRow(); const last = container.lastChild;
-        last.querySelector('.grp-name').value = g.name; last.querySelector('.grp-type').value = g.type;
-        last.querySelector('.grp-required').checked = g.required;
-        const opts = last.querySelector('.grp-options-container');
-        g.options.forEach(opt => {
-          const row = document.createElement('div'); row.className = 'option-row';
-          row.innerHTML = `<input value="${opt.value}" style="flex:2" class="opt-value"><input type="number" value="${opt.price}" style="flex:1" class="opt-price"><button type="button" class="btn btn-ghost btn-sm" onclick="this.parentElement.remove()">✕</button>`;
-          opts.appendChild(row);
-        });
-      });
-    } else { addGroupRow(); }
-  }, 100);
-}
-
-async function saveEditProduct(id) {
-  const name = document.getElementById('ep-name').value.trim();
-  const desc = document.getElementById('ep-desc').value.trim();
-  const category = document.getElementById('ep-cat').value;
-  const basePrice = Number(document.getElementById('ep-base-price').value) || 0;
-  const imageFile = document.getElementById('ep-image').files[0];
-  const groups = collectGroupsData();
-  const form = new FormData();
-  form.append('name', name); form.append('description', desc); form.append('category', category);
-  form.append('basePrice', basePrice); form.append('groups', JSON.stringify(groups));
-  if (imageFile) form.append('image', imageFile);
-  const res = await apiFetch(API + '/restaurant/products/' + id, { method: 'PATCH', body: form });
-  const data = await res.json();
-  if (data.error) { toast(data.error, 'error'); return; }
-  toast('تم التحديث'); closeModal(); loadProducts();
-}
-
-async function deleteProduct(id) {
-  if (!confirm('حذف المنتج؟')) return;
-  await apiFetch(API + '/restaurant/products/' + id, { method: 'DELETE' });
-  loadProducts(); toast('تم الحذف');
-}
-
-function addQuickGroup(type) {
-  const templates = {
-    'size': { name: 'الحجم', type: 'single', required: true, options: [{ value: 'صغير', price: 0 }, { value: 'وسط', price: 5 }, { value: 'كبير', price: 10 }] },
-    'hot-cold': { name: 'درجة الحرارة', type: 'single', required: true, options: [{ value: 'حار', price: 0 }, { value: 'بارد', price: 0 }] },
-    'spicy': { name: 'مستوى الحرارة', type: 'single', required: false, options: [{ value: 'عادي', price: 0 }, { value: 'وسط', price: 0 }, { value: 'حار', price: 2 }, { value: 'ناري', price: 4 }] },
-    'extras': { name: 'إضافات', type: 'multiple', required: false, options: [{ value: 'جبنة إضافية', price: 5 }, { value: 'بطاطس', price: 7 }, { value: 'بيبسي', price: 10 }] }
+function renderOrders(){
+  let filterStatus = "ALL";
+  const generateTable = () => {
+    let filtered = filterStatus === "ALL" ? ordersList : ordersList.filter(o=>o.status === filterStatus);
+    let rows = filtered.map(o => `<tr><td>${o.id.slice(-6)}</td><td>${o.customerName}</td><td>${o.customerPhone}</td><td>${o.items.map(i=>i.name).join(", ")}</td><td>${o.total} ج</td><td><span class="badge badge-gold">${statusText(o.status)}</span></td><td>${new Date(o.createdAt).toLocaleTimeString()}</td><td>${orderActions(o)}</td></tr>`).join("");
+    return `<div class="tab-bar"><div class="tab-btn ${filterStatus==='ALL'?'active':''}" data-filter="ALL">الكل</div><div class="tab-btn ${filterStatus==='PENDING'?'active':''}" data-filter="PENDING">جديدة</div><div class="tab-btn ${filterStatus==='PREPARING'?'active':''}" data-filter="PREPARING">تحضير</div><div class="tab-btn ${filterStatus==='ACCEPTED'?'active':''}" data-filter="ACCEPTED">مقبولة</div></div><div class="section"><div class="table-wrap"><table><thead><tr><th>رقم</th><th>العميل</th><th>هاتف</th><th>الأصناف</th><th>المجموع</th><th>الحالة</th><th>الوقت</th><th>إجراء</th></tr></thead><tbody>${rows||'<tr><td colspan="8" style="text-align:center">لا توجد طلبات</td></tr>'}</tbody></table></div></div>`;
   };
-  const tpl = templates[type]; if (!tpl) return;
-  addGroupRow();
-  const container = document.getElementById('groups-container');
-  const lastGroup = container.lastChild;
-  lastGroup.querySelector('.grp-name').value = tpl.name; lastGroup.querySelector('.grp-type').value = tpl.type;
-  lastGroup.querySelector('.grp-required').checked = tpl.required;
-  const optsContainer = lastGroup.querySelector('.grp-options-container');
-  optsContainer.innerHTML = '';
-  tpl.options.forEach(opt => {
-    const row = document.createElement('div'); row.className = 'option-row';
-    row.innerHTML = `<input value="${opt.value}" style="flex:2" class="opt-value"><input type="number" value="${opt.price}" style="flex:1" class="opt-price"><button type="button" class="btn btn-ghost btn-sm" onclick="this.parentElement.remove()">✕</button>`;
-    optsContainer.appendChild(row);
+  const html = generateTable();
+  document.getElementById("app-content").innerHTML = html;
+  document.querySelectorAll(".tab-btn").forEach(btn=>{
+    btn.addEventListener("click",(e)=>{
+      filterStatus = btn.getAttribute("data-filter");
+      renderOrders();
+    });
   });
 }
-
-loadCategoriesOptions();
-navigate('dashboard');
+function statusText(st){ const map={PENDING:"🕒 معلق", ACCEPTED:"✅ مقبول", PREPARING:"🔥 تحضير", DELIVERED:"🚚 مُسلّم"}; return map[st]||st; }
+function orderActions(o){
+  if(o.status==="PENDING") return `<button class="btn btn-primary btn-sm" onclick="updateOrderStatus('${o.id}','ACCEPTED')">قبول</button> <button class="btn btn-ghost btn-sm" onclick="updateOrderStatus('${o.id}','CANCELLED')">رفض</button>`;
+  if(o.status==="ACCEPTED") return `<button class="btn btn-primary btn-sm" onclick="updateOrderStatus('${o.id}','PREPARING')">بدء التحضير</button>`;
+  if(o.status==="PREPARING") return `<button class="btn btn-success btn-sm" onclick="updateOrderStatus('${o.id}','DELIVERED')">تسليم</button>`;
+  return "—";
+}
+window.updateOrderStatus = function(id,newStatus){
+  const order = ordersList.find(o=>o.id===id);
+  if(order){ order.status = newStatus; if(newStatus==="PREPARING") order.preparingAt = new Date().toISOString(); persistAll(); renderPage("orders"); toast(`تم تحديث الحالة إلى ${newStatus}`); }
+}
+function renderProducts(){
+  let html = `<div style="display:flex; justify-content:space-between; margin-bottom:18px;"><h2>🍽️ قائمة الطعام</h2><button class="btn btn-primary" id="addNewProductBtn">+ إضافة طبق جديد</button></div><div class="section"><div class="table-wrap"><table><thead><tr><th>الصورة</th><th>الاسم</th><th>السعر</th><th>التصنيف</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>`;
+  products.forEach(p=>{ html+=`<tr><td><img src="${p.image}" width="45" height="45" style="border-radius:12px;"></td><td><strong>${p.name}</strong><br><span style="font-size:11px;color:var(--text3)">${p.description||''}</span></td><td>${p.price} ج</td><td>${p.category}</td><td><span class="badge ${p.isAvailable ? 'badge-green' : 'badge-gold'}">${p.isAvailable ? "متاح" : "غير متاح"}</span></td><td><button class="btn btn-ghost btn-sm" onclick="editProductItem('${p.id}')">تعديل</button> <button class="btn btn-ghost btn-sm" onclick="deleteProductItem('${p.id}')">حذف</button></td></tr>`; });
+  html+=`</tbody></table></div></div>`;
+  document.getElementById("app-content").innerHTML = html;
+  document.getElementById("addNewProductBtn")?.addEventListener("click",showAddProductModal);
+}
+function showAddProductModal(){
+  openModal("➕ إضافة منتج جديد", `<div class="field"><label>اسم المنتج</label><input id="prodName"></div><div class="field"><label>السعر (ج)</label><input id="prodPrice" type="number" value="0"></div><div class="field"><label>التصنيف</label><input id="prodCat" placeholder="مثل: برجر، مشروبات"></div><div class="field"><label>وصف سريع</label><textarea id="prodDesc" rows="2"></textarea></div><div class="field"><label>رابط صورة</label><input id="prodImg" placeholder="https://..."></div>`, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" id="confirmAddProduct">إضافة المنتج</button>`);
+  setTimeout(()=>{ document.getElementById("confirmAddProduct")?.addEventListener("click",()=>{ const newP={ id:"p"+Date.now(), name:document.getElementById("prodName").value, price:parseFloat(document.getElementById("prodPrice").value)||0, category:document.getElementById("prodCat").value, description:document.getElementById("prodDesc").value, isAvailable:true, image:document.getElementById("prodImg").value||"https://placehold.co/100x100/FFB347/white?text=🍽️"}; if(newP.name){ products.push(newP); persistAll(); toast("تمت الإضافة"); closeModal(); renderProducts(); } else toast("أدخل اسم المنتج","error"); }); },50);
+}
+window.editProductItem=(id)=>{
+  const prod = products.find(p=>p.id===id);
+  if(!prod) return;
+  openModal("✏️ تعديل المنتج", `<div class="field"><label>الاسم</label><input id="epName" value="${prod.name}"></div><div class="field"><label>السعر</label><input id="epPrice" type="number" value="${prod.price}"></div><div class="field"><label>التصنيف</label><input id="epCat" value="${prod.category}"></div><div class="field"><label>الوصف</label><textarea id="epDesc">${prod.description||''}</textarea></div><div class="field"><label>الصورة URL</label><input id="epImg" value="${prod.image}"></div><div class="field"><label>متاح؟</label><select id="epAvail"><option ${prod.isAvailable?"selected":""} value="true">متاح</option><option ${!prod.isAvailable?"selected":""} value="false">غير متاح</option></select></div>`, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" id="saveProductEdit">حفظ التعديلات</button>`);
+  setTimeout(()=>{ document.getElementById("saveProductEdit")?.addEventListener("click",()=>{ prod.name=document.getElementById("epName").value; prod.price=parseFloat(document.getElementById("epPrice").value); prod.category=document.getElementById("epCat").value; prod.description=document.getElementById("epDesc").value; prod.image=document.getElementById("epImg").value; prod.isAvailable=document.getElementById("epAvail").value==="true"; persistAll(); closeModal(); renderProducts(); toast("تم التحديث"); }); },50);
+}
+window.deleteProductItem=(id)=>{ if(confirm("حذف هذا المنتج نهائياً؟")){ products=products.filter(p=>p.id!==id); persistAll(); renderProducts(); toast("تم الحذف"); } }
+function escapeHtml(str){ return String(str).replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+navItems.forEach(item=>{ item.addEventListener("click", ()=>renderPage(item.getAttribute("data-nav"))); });
+renderPage("dashboard");
 </script>
 </body>
 </html>
