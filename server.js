@@ -12,7 +12,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// إعداد multer لرفع الملفات (صور المنتجات، شعارات المطاعم، مرفقات الطلبات الخاصة)
+// إعداد multer لرفع الملفات
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     let dir = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
@@ -39,7 +39,6 @@ const DATA_DIR = process.env.DATA_DIR || __dirname;
 const DATA_FILE = path.join(DATA_DIR, 'data.json');
 const JWT_SECRET = process.env.JWT_SECRET || 'drako_secret_key_fallback';
 
-// قراءة البيانات مع تهيئة الجداول الجديدة
 function readData() {
   if (!fs.existsSync(DATA_FILE)) {
     const initial = {
@@ -792,15 +791,33 @@ app.get('/api/restaurants', (req, res) => {
   const list = data.restaurants.filter(r => r.isOpen).map(r => ({ id: r.id, name: r.name, logo: r.logo || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=150&h=150&fit=crop' }));
   res.json(list);
 });
+
+// ==================== التعديل المهم هنا ====================
 app.get('/api/restaurants/:id/menu', (req, res) => {
   const data = readData();
   const restaurant = data.restaurants.find(r => r.id === req.params.id);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-  const products = data.products.filter(p => p.restaurantId === restaurant.id && p.isAvailable).map(p => ({ ...p, category: p.category || 'عام' }));
+
+  // جلب تصنيفات هذا المطعم لتحويل المعرف إلى اسم
+  const restaurantCategories = data.categories.filter(c => c.restaurantId === restaurant.id);
+  const categoryMap = new Map();
+  restaurantCategories.forEach(cat => {
+    categoryMap.set(cat.id, cat.name);
+  });
+
+  let products = data.products.filter(p => p.restaurantId === restaurant.id && p.isAvailable);
+  products = products.map(p => {
+    let categoryName = p.category || 'عام';
+    // إذا كان المعرف موجوداً في الخريطة، استبدله بالاسم
+    if (categoryMap.has(categoryName)) {
+      categoryName = categoryMap.get(categoryName);
+    }
+    return { ...p, category: categoryName };
+  });
   res.json(products);
 });
+// ========================================================
 
-// الأسواق والصيدليات (جديد)
 app.get('/api/markets', (req, res) => {
   const data = readData();
   const openMarkets = data.markets.filter(m => m.isOpen !== false);
