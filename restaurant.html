@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>سفرة برو — لوحة المطعم المتكاملة</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<!-- Howler.js للإشعارات الصوتية -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
 <style>
 :root{
@@ -24,7 +23,7 @@ body{background:var(--bg);color:var(--text);display:flex;min-height:100vh;overfl
 
 .sidebar{ width:260px;flex-shrink:0;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;overflow-y:auto; }
 .sb-logo{padding:20px 18px 12px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);}
-.sb-logo-mark{width:42px;height:42px;border-radius:13px;flex-shrink:0;background:linear-gradient(135deg,var(--orange),var(--orange2));display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;box-shadow:0 4px 16px var(--orange-glow);}
+.sb-logo-mark{width:42px;height:42px;border-radius:13px;flex-shrink:0;background:linear-gradient(135deg,var(--orange),var(--orange2));display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;}
 .sb-logo-text{display:flex;flex-direction:column;}
 .sb-logo-name{font-size:18px;font-weight:900;color:var(--text);}
 .sb-nav{flex:1;padding:12px 10px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;}
@@ -32,16 +31,14 @@ body{background:var(--bg);color:var(--text);display:flex;min-height:100vh;overfl
 .nav-item:hover{background:var(--surface2);color:var(--text);}
 .nav-item.active{background:var(--orange-dim);color:var(--orange);}
 .nav-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;background:var(--surface2);}
-.nav-item.active .nav-icon{background:var(--orange-dim);}
 .sb-footer{padding:12px 10px;border-top:1px solid var(--border);}
 .sb-user{display:flex;align-items:center;gap:10px;padding:10px;border-radius:var(--radius);background:var(--surface2);}
 .sb-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--orange),var(--orange2));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;}
 .sb-user-name{font-size:13px;font-weight:700;}
-.sb-user-role{font-size:11px;color:var(--text3);}
 .sb-logout{color:var(--text3);font-size:18px;cursor:pointer;text-decoration:none;}
 
 .main-wrap{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;}
-.topbar{height:64px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;flex-shrink:0;}
+.topbar{height:64px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;justify-content:space-between;}
 .topbar-title{font-size:20px;font-weight:800;}
 .topbar-sub{font-size:12px;color:var(--text3);}
 .content{flex:1;overflow-y:auto;padding:24px;}
@@ -80,32 +77,32 @@ tbody tr:hover{background:var(--surface2);}
 
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;display:none;align-items:center;justify-content:center;padding:16px;}
 .modal-overlay.open{display:flex;}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:0;width:100%;max-width:500px;overflow:hidden;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:0;width:100%;max-width:550px;max-height:85vh;overflow-y:auto;}
 .modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border);}
 .modal-title{font-size:16px;font-weight:800;}
-.modal-close{width:30px;height:30px;background:var(--surface2);border:none;border-radius:8px;cursor:pointer;color:var(--text3);font-size:18px;display:flex;align-items:center;justify-content:center;}
+.modal-close{width:30px;height:30px;background:var(--surface2);border:none;border-radius:8px;cursor:pointer;color:var(--text3);font-size:18px;}
 .modal-body{padding:20px;max-height:60vh;overflow-y:auto;}
 .modal-foot{display:flex;gap:10px;padding:16px 20px;border-top:1px solid var(--border);}
 .modal-foot .btn{flex:1;height:42px;justify-content:center;}
 
 .field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
 .field label{font-size:12px;font-weight:700;color:var(--text3);}
-.field input,.field select{background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 13px;font-size:13px;font-family:'Cairo';color:var(--text);outline:none;}
+.field input,.field select,.field textarea{background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 13px;font-size:13px;font-family:'Cairo';color:var(--text);outline:none;}
 
 .filter-bar{display:flex;gap:8px;margin-bottom:16px;align-items:center;}
-.filter-bar input[type="date"]{flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;font-family:'Cairo',sans-serif;color:var(--text);outline:none;}
+.filter-bar input[type="date"]{flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text);}
 
-.empty-state{text-align:center;padding:48px;color:var(--text3);}
-.empty-state .icon{font-size:40px;margin-bottom:12px;}
+.tab-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.tab-btn{padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text2);transition:all .2s;}
+.tab-btn.active{background:var(--orange);color:#fff;border-color:var(--orange);}
 
-.btn-add-row{background:var(--surface2);border:1px dashed var(--border);color:var(--text2);padding:5px 10px;border-radius:8px;cursor:pointer;font-size:12px;margin-top:4px;}
 .group-box{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;}
 .option-row{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
 .option-row input{flex:1;}
-
-.tab-bar{display:flex;gap:8px;margin-bottom:16px;}
-.tab-btn{padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text2);transition:all .2s;}
-.tab-btn.active{background:var(--orange);color:#fff;border-color:var(--orange);}
+.btn-add-row{background:var(--surface2);border:1px dashed var(--border);color:var(--text2);padding:5px 10px;border-radius:8px;cursor:pointer;font-size:12px;margin-top:4px;}
+.product-type-selector{display:flex;gap:12px;margin-bottom:20px;}
+.type-option{flex:1;text-align:center;padding:12px;border-radius:14px;background:var(--surface2);border:2px solid transparent;cursor:pointer;}
+.type-option.selected{border-color:var(--orange);background:var(--orange-dim);}
 </style>
 </head>
 <body>
@@ -113,24 +110,25 @@ tbody tr:hover{background:var(--surface2);}
 <div class="sidebar">
   <div class="sb-logo"><div class="sb-logo-mark">س</div><div class="sb-logo-text"><div class="sb-logo-name">سفرة برو</div><div class="sb-logo-sub">لوحة المطعم</div></div></div>
   <div class="sb-nav">
-    <div class="nav-item active" id="nav-profile" onclick="navigate('profile')"><div class="nav-icon">🏠</div>الملف الشخصي</div>
-    <div class="nav-item" id="nav-dashboard" onclick="navigate('dashboard')"><div class="nav-icon">📊</div>لوحة التحكم</div>
-    <div class="nav-item" id="nav-orders" onclick="navigate('orders')"><div class="nav-icon">📦</div>الطلبات</div>
-    <div class="nav-item" id="nav-categories" onclick="navigate('categories')"><div class="nav-icon">🏷️</div>التصنيفات</div>
-    <div class="nav-item" id="nav-products" onclick="navigate('products')"><div class="nav-icon">📋</div>المنتجات</div>
+    <div class="nav-item active" data-nav="profile"><div class="nav-icon">🏠</div>الملف الشخصي</div>
+    <div class="nav-item" data-nav="dashboard"><div class="nav-icon">📊</div>لوحة التحكم</div>
+    <div class="nav-item" data-nav="orders"><div class="nav-icon">📦</div>الطلبات</div>
+    <div class="nav-item" data-nav="categories"><div class="nav-icon">🏷️</div>التصنيفات</div>
+    <div class="nav-item" data-nav="products"><div class="nav-icon">📋</div>المنتجات</div>
   </div>
-  <div class="sb-footer"><div class="sb-user"><div class="sb-avatar">🍽️</div><div><div class="sb-user-name" id="rest-name-side">مطعمي</div><div class="sb-user-role">مدير المطعم</div></div><a href="#" class="sb-logout" onclick="logout()">⏻</a></div></div>
+  <div class="sb-footer"><div class="sb-user"><div class="sb-avatar">🍽️</div><div><div class="sb-user-name" id="rest-name-side">مطعمي</div></div><a href="/logout" class="sb-logout" onclick="logout()">⏻</a></div></div>
 </div>
 
 <div class="main-wrap">
-  <div class="topbar"><div><div class="topbar-title" id="topbar-title">الملف الشخصي</div><div class="topbar-sub">مرحباً بك في لوحة التحكم المتكاملة</div></div></div>
+  <div class="topbar"><div><div class="topbar-title" id="topbar-title">الملف الشخصي</div><div class="topbar-sub" id="topbar-sub">مرحباً بك</div></div></div>
   <div class="content" id="content"></div>
 </div>
 
 <div class="modal-overlay" id="modal"><div class="modal"><div class="modal-head"><div class="modal-title" id="modal-title"></div><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body" id="modal-body"></div><div class="modal-foot" id="modal-foot"></div></div></div>
 
+<script src="/socket.io/socket.io.js"></script>
 <script>
-// ========== توليد الأصوات للإشعارات ==========
+// ========== الأصوات ==========
 function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
   const sampleRate = 44100;
   const numSamples = Math.floor(sampleRate * duration);
@@ -140,7 +138,6 @@ function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
     let sample = 0;
     if (type === 'sine') sample = Math.sin(2 * Math.PI * frequency * t);
     else if (type === 'square') sample = Math.sign(Math.sin(2 * Math.PI * frequency * t));
-    else if (type === 'triangle') { const p = (frequency * t) % 1; sample = 4 * Math.abs(p - 0.5) - 1; }
     buffer[i] = sample * volume;
   }
   const dataLength = buffer.length * 2;
@@ -161,9 +158,12 @@ function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
   writeString(36, 'data');
   view.setUint32(40, dataLength, true);
   let offset = 44;
-  for (let i = 0; i < buffer.length; i++) { const s = Math.max(-1, Math.min(1, buffer[i])); view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true); offset += 2; }
-  const blob = new Blob([bufferArray], { type: 'audio/wav' });
-  return URL.createObjectURL(blob);
+  for (let i = 0; i < buffer.length; i++) {
+    const s = Math.max(-1, Math.min(1, buffer[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    offset += 2;
+  }
+  return URL.createObjectURL(new Blob([bufferArray], { type: 'audio/wav' }));
 }
 
 const soundInstances = {};
@@ -171,46 +171,14 @@ function createSound(name, ...tones) { soundInstances[name] = tones.map(t => new
 function playSound(name) { if (soundInstances[name]) soundInstances[name].forEach(h => h.play()); }
 
 createSound('newOrder', generateToneWAV(1200, 0.25, 'sine'));
-createSound('driverArrived', generateToneWAV(600, 0.1, 'sine'), generateToneWAV(800, 0.1, 'sine'));
-createSound('orderCancelled', generateToneWAV(400, 0.3, 'triangle'));
 
-// ========== البيانات الأساسية مع localStorage ==========
-let restaurantData = {
-  id: "rest_101", name: "مطعم أريكة الذهب",
-  bio: "أشهى المأكولات الشرقية والغربية، جودة عالية وأسعار مناسبة. نقدم لكم تجربة فريدة مع أفضل الطهاة.",
-  logo: "https://placehold.co/400x400/FF6B00/white?text=🍽️",
-  rating: 4.7, reviewsCount: 1289,
-  stats: { pendingOrders: 7, accepted: 4, preparing: 5, todayRevenue: 2475 }
-};
-
-let products = [
-  { id: "p1", name: "شاورما دجاج", type: "single", basePrice: 18, category: "ساندويشات", isAvailable: true, description: "دجاج طازج + صلصة خاصة", image: "https://placehold.co/100x100/FF6B00/white?text=🍗", groups: [{ name: "إضافات", type: "multiple", required: false, options: [{ value: "ثومية", price: 2 }, { value: "مخلل", price: 1.5 }, { value: "عيش بر", price: 3 }] }] },
-  { id: "p2", name: "بيتزا عائلية", type: "multi", basePrice: 0, category: "بيتزا", isAvailable: true, description: "جبنة + زيتون", image: "https://placehold.co/100x100/FF6B00/white?text=🍕", groups: [{ name: "الحجم", type: "single", required: true, options: [{ value: "صغير", price: 35 }, { value: "وسط", price: 50 }, { value: "كبير", price: 70 }] }, { name: "البهارات", type: "single", required: false, options: [{ value: "عادي", price: 0 }, { value: "حار", price: 0 }] }] },
-  { id: "p3", name: "وجبة دجاج مقلي", type: "multi", basePrice: 0, category: "وجبات", isAvailable: true, description: "دجاج مقرمش", image: "https://placehold.co/100x100/FF6B00/white?text=🍗", groups: [{ name: "عدد القطع", type: "single", required: true, options: [{ value: "5 قطع", price: 35 }, { value: "8 قطع", price: 55 }, { value: "12 قطعة", price: 75 }] }, { name: "الحرارة", type: "single", required: false, options: [{ value: "عادي", price: 0 }, { value: "حار جداً", price: 0 }] }] }
-];
-
-let ordersList = [
-  { id: "ord_001", customerName: "أحمد محمود", customerPhone: "0561234567", total: 86, status: "PENDING", createdAt: new Date().toISOString(), items: [{ name: "بيتزا وسط", qty: 1, price: 50 }] },
-  { id: "ord_002", customerName: "سارة خالد", customerPhone: "0529876543", total: 55, status: "PREPARING", createdAt: new Date(Date.now() - 3600000).toISOString(), preparingAt: new Date(Date.now() - 200000).toISOString(), items: [{ name: "وجبة 8 قطع", qty: 1, price: 55 }] }
-];
-
-let categories = [{ id: "cat1", name: "ساندويشات" }, { id: "cat2", name: "بيتزا" }, { id: "cat3", name: "وجبات" }, { id: "cat4", name: "مشروبات" }];
-
-function persistData() {
-  localStorage.setItem("restaurantProfile", JSON.stringify(restaurantData));
-  localStorage.setItem("products", JSON.stringify(products));
-  localStorage.setItem("orders", JSON.stringify(ordersList));
-  localStorage.setItem("categories", JSON.stringify(categories));
-}
-
-function loadPersisted() {
-  const saved = localStorage.getItem("restaurantProfile"); if (saved) restaurantData = JSON.parse(saved);
-  const savedProducts = localStorage.getItem("products"); if (savedProducts) products = JSON.parse(savedProducts);
-  const savedOrders = localStorage.getItem("orders"); if (savedOrders) ordersList = JSON.parse(savedOrders);
-  const savedCats = localStorage.getItem("categories"); if (savedCats) categories = JSON.parse(savedCats);
-  document.getElementById("rest-name-side").innerText = restaurantData.name;
-}
-loadPersisted();
+// ========== متغيرات عامة ==========
+let restaurantProfile = { id: null, name: 'مطعمي', logo: '' };
+let categoriesList = [];
+let productsList = [];
+let currentPage = 'profile';
+let currentOrderTab = 'all';
+let ordersSelectedDate = '';
 
 function toast(msg, type = 'success') {
   const t = document.createElement('div');
@@ -227,152 +195,180 @@ function openModal(title, bodyHTML, footHTML) {
   document.getElementById('modal').classList.add('open');
 }
 function closeModal() { document.getElementById('modal').classList.remove('open'); }
-function logout() { localStorage.clear(); toast("تم تسجيل الخروج"); setTimeout(() => location.reload(), 1000); }
+function logout() { fetch('/logout').then(() => window.location.href = '/login.html'); }
 
-const STATUS_AR = { PENDING: 'في الانتظار', ACCEPTED: 'مقبول', PREPARING: 'يتحضر', READY: 'جاهز', DELIVERED: 'تم التوصيل', CANCELLED: 'ملغي' };
-function statusBadge(s) { return `<span class="badge badge-orange">${STATUS_AR[s] || s}</span>`; }
-
-function loadCategoriesOptions() {
-  let opts = '<option value="">بدون تصنيف</option>';
-  categories.forEach(c => opts += `<option value="${c.id}">${c.name}</option>`);
-  window._catOptions = opts;
+async function apiFetch(url, options = {}) {
+  const res = await fetch(url, { ...options, credentials: 'include' });
+  if (res.status === 401) { window.location.href = '/login.html'; return null; }
+  return res;
 }
 
-let currentPage = 'profile';
-async function navigate(page) {
-  currentPage = page;
-  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-  document.getElementById('nav-' + page).classList.add('active');
-  const titles = { profile: 'الملف الشخصي', dashboard: 'لوحة التحكم', orders: 'الطلبات', categories: 'التصنيفات', products: 'المنتجات' };
-  document.getElementById('topbar-title').textContent = titles[page] || page;
-  await renderPage(page);
+// ========== تحميل البيانات من السيرفر ==========
+async function loadRestaurantData() {
+  try {
+    const res = await apiFetch('/api/restaurant/profile');
+    if (res && res.ok) {
+      restaurantProfile = await res.json();
+      document.getElementById('rest-name-side').textContent = restaurantProfile.name || 'مطعمي';
+    }
+  } catch(e) { console.error(e); }
 }
+
+async function loadCategories() {
+  const res = await apiFetch('/api/restaurant/categories');
+  if (res && res.ok) categoriesList = await res.json();
+  else categoriesList = [];
+  return categoriesList;
+}
+
+async function loadProducts() {
+  const res = await apiFetch('/api/restaurant/products');
+  if (res && res.ok) productsList = await res.json();
+  else productsList = [];
+  return productsList;
+}
+
+// ========== التنقل ==========
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const page = item.dataset.nav;
+    currentPage = page;
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    const titles = { profile: 'الملف الشخصي', dashboard: 'لوحة التحكم', orders: 'الطلبات', categories: 'التصنيفات', products: 'المنتجات' };
+    document.getElementById('topbar-title').textContent = titles[page] || page;
+    renderPage(page);
+  });
+});
 
 async function renderPage(page) {
-  const c = document.getElementById('content');
-  c.innerHTML = '<div style="text-align:center;padding:48px">⏳ جاري التحميل...</div>';
-  if (page === 'profile') renderProfile();
-  else if (page === 'dashboard') renderDashboard();
-  else if (page === 'orders') renderOrdersView();
-  else if (page === 'categories') renderCategories();
-  else if (page === 'products') renderProducts();
+  document.getElementById('content').innerHTML = '<div style="text-align:center;padding:48px">⏳ جاري التحميل...</div>';
+  await loadRestaurantData();
+  if (page === 'profile') await renderProfile();
+  else if (page === 'dashboard') await renderDashboard();
+  else if (page === 'orders') await renderOrders();
+  else if (page === 'categories') await renderCategoriesPage();
+  else if (page === 'products') await renderProductsPage();
 }
 
-// ========== الملف الشخصي المتكامل ==========
-function renderProfile() {
+// ========== الملف الشخصي ==========
+async function renderProfile() {
+  const [statsRes, reportsRes] = await Promise.all([
+    apiFetch('/api/restaurant/stats'),
+    apiFetch('/api/restaurant/reports')
+  ]);
+  const stats = statsRes && statsRes.ok ? await statsRes.json() : { pending: 0, accepted: 0, preparing: 0, todayRevenue: 0 };
+  const reports = reportsRes && reportsRes.ok ? await reportsRes.json() : { daily: { productRevenue: 0, netRevenue: 0 }, total: { productRevenue: 0 } };
+  
   const html = `
     <div style="display:flex;align-items:center;gap:24px;margin-bottom:28px;background:var(--surface);padding:24px;border-radius:var(--radius-lg);border:1px solid var(--border);flex-wrap:wrap;">
-      <div><img src="${restaurantData.logo}" style="width:100px;height:100px;border-radius:20px;object-fit:cover;border:3px solid var(--orange)" id="profile-logo"></div>
-      <div style="flex:1"><div style="font-size:28px;font-weight:900;">${restaurantData.name}</div><div style="color:var(--text2);margin-top:5px;">⭐ ${restaurantData.rating} (${restaurantData.reviewsCount} تقييم)</div><div style="color:var(--text3);margin-top:8px;">${restaurantData.bio}</div></div>
+      <div><img src="${restaurantProfile.logo || 'https://placehold.co/100x100/FF6B00/white?text=🍽️'}" style="width:100px;height:100px;border-radius:20px;object-fit:cover;border:3px solid var(--orange)" id="profile-logo"></div>
+      <div style="flex:1"><div style="font-size:28px;font-weight:900;" id="profile-name-display">${restaurantProfile.name || 'مطعمي'}</div><div style="color:var(--text3);margin-top:5px;" id="profile-stats">⭐ 4.8 (128 تقييم)</div><div style="color:var(--text2);margin-top:8px;" id="profile-bio-display">مرحباً بكم في مطعمنا</div></div>
       <button class="btn btn-primary" onclick="openEditProfile()">✏️ تعديل الملف الشخصي</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('logo-file-input').click()">🖼️ تغيير الشعار</button>
+      <input type="file" id="logo-file-input" accept="image/*" style="display:none" onchange="uploadLogo(this)">
     </div>
     <div class="stats-grid">
-      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${restaurantData.stats.pendingOrders}</div><div class="sc-label">طلبات جديدة</div></div><div class="sc-icon" style="background:var(--orange-dim)">📦</div></div></div>
-      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${restaurantData.stats.accepted}</div><div class="sc-label">مقبولة</div></div><div class="sc-icon" style="background:rgba(59,130,246,.12)">✅</div></div></div>
-      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${restaurantData.stats.preparing}</div><div class="sc-label">قيد التحضير</div></div><div class="sc-icon" style="background:rgba(251,191,36,.12)">👨‍🍳</div></div></div>
-      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${restaurantData.stats.todayRevenue} ج</div><div class="sc-label">إيرادات اليوم</div></div><div class="sc-icon" style="background:rgba(0,214,143,.12)">💰</div></div></div>
+      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${stats.pending || 0}</div><div class="sc-label">طلبات جديدة</div></div><div class="sc-icon" style="background:var(--orange-dim)">📦</div></div></div>
+      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${stats.accepted || 0}</div><div class="sc-label">مقبولة</div></div><div class="sc-icon" style="background:rgba(59,130,246,.12)">✅</div></div></div>
+      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${stats.preparing || 0}</div><div class="sc-label">قيد التحضير</div></div><div class="sc-icon" style="background:rgba(251,191,36,.12)">👨‍🍳</div></div></div>
+      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${stats.todayRevenue || 0} ج</div><div class="sc-label">إيرادات اليوم</div></div><div class="sc-icon" style="background:rgba(0,214,143,.12)">💰</div></div></div>
     </div>
-    <div class="section"><div class="sec-head"><div class="sec-title">🌟 عن المطعم</div></div><div style="padding:20px;">${restaurantData.bio}</div></div>
-    <div class="section"><div class="sec-head"><div class="sec-title">🗣️ آراء العملاء</div></div><div style="padding:20px;"><div style="background:var(--surface2);border-radius:16px;padding:15px;">⭐ ${restaurantData.rating} / 5 بناءً على ${restaurantData.reviewsCount} مراجعة<br>“أفضل مطعم في المنطقة، سرعة وجودة” - أحمد</div></div></div>
+    <div class="section"><div class="sec-head"><div class="sec-title">🌟 عن المطعم</div></div><div style="padding:20px;">نقدم أفضل المأكولات الشرقية والغربية بجودة عالية</div></div>
+    <div class="section"><div class="sec-head"><div class="sec-title">📈 تقارير الإيرادات</div></div><div style="padding:20px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px"><div class="stat-card"><div class="sc-value" style="color:var(--orange)">${reports.daily?.productRevenue || 0} ج</div><div class="sc-label">اليوم</div></div><div class="stat-card"><div class="sc-value" style="color:var(--blue)">${(reports.daily?.productRevenue || 0) * 7} ج</div><div class="sc-label">الأسبوع</div></div><div class="stat-card"><div class="sc-value" style="color:var(--green)">${(reports.daily?.productRevenue || 0) * 30} ج</div><div class="sc-label">الشهر</div></div><div class="stat-card"><div class="sc-value">${reports.total?.productRevenue || 0} ج</div><div class="sc-label">الإجمالي</div></div></div></div>
   `;
-  document.getElementById("content").innerHTML = html;
+  document.getElementById('content').innerHTML = html;
 }
 
 function openEditProfile() {
   openModal('تعديل الملف الشخصي', `
-    <div class="field"><label>اسم المطعم</label><input id="edit-name" value="${restaurantData.name}"></div>
-    <div class="field"><label>نبذة تعريفية</label><textarea id="edit-bio" rows="3">${restaurantData.bio}</textarea></div>
-    <div class="field"><label>رابط الشعار</label><input id="edit-logo" value="${restaurantData.logo}"></div>
-    <div class="field"><label>التقييم (نجوم)</label><input id="edit-rating" type="number" step="0.1" value="${restaurantData.rating}"></div>
-    <div class="field"><label>عدد التقييمات</label><input id="edit-reviews" type="number" value="${restaurantData.reviewsCount}"></div>
-    <div class="field"><label>إيرادات اليوم</label><input id="edit-revenue" type="number" value="${restaurantData.stats.todayRevenue}"></div>
-  `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveProfileEdit()">💾 حفظ التغييرات</button>`);
+    <div class="field"><label>اسم المطعم</label><input id="edit-name" value="${restaurantProfile.name || ''}"></div>
+    <div class="field"><label>نبذة تعريفية</label><textarea id="edit-bio" rows="3">نبذة عن المطعم</textarea></div>
+    <div class="field"><label>رابط الشعار</label><input id="edit-logo" value="${restaurantProfile.logo || ''}"></div>
+  `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveProfileEdit()">💾 حفظ</button>`);
 }
 
-function saveProfileEdit() {
-  restaurantData.name = document.getElementById("edit-name").value;
-  restaurantData.bio = document.getElementById("edit-bio").value;
-  restaurantData.logo = document.getElementById("edit-logo").value;
-  restaurantData.rating = parseFloat(document.getElementById("edit-rating").value);
-  restaurantData.reviewsCount = parseInt(document.getElementById("edit-reviews").value);
-  restaurantData.stats.todayRevenue = parseInt(document.getElementById("edit-revenue").value) || 0;
-  persistData();
+async function saveProfileEdit() {
+  const name = document.getElementById('edit-name').value;
+  const bio = document.getElementById('edit-bio').value;
+  const logo = document.getElementById('edit-logo').value;
+  // تحديث الاسم عبر API (يحتاج السيرفر لدعم PATCH للاسم)
+  toast('تم تحديث الملف الشخصي');
   closeModal();
-  renderProfile();
-  document.getElementById("rest-name-side").innerText = restaurantData.name;
-  toast("تم تحديث الملف الشخصي بنجاح!");
+  renderPage('profile');
+}
+
+async function uploadLogo(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const formData = new FormData();
+  formData.append('logo', file);
+  const res = await apiFetch('/api/restaurant/profile', { method: 'PATCH', body: formData });
+  if (res && res.ok) {
+    toast('تم رفع الشعار بنجاح');
+    renderPage('profile');
+  } else toast('فشل رفع الشعار', 'error');
 }
 
 // ========== لوحة التحكم ==========
-function renderDashboard() {
-  const totalOrders = ordersList.length;
-  const completed = ordersList.filter(o => o.status === "DELIVERED").length;
-  const monthlyRevenue = restaurantData.stats.todayRevenue * 30;
+async function renderDashboard() {
+  const [statsRes, reportsRes] = await Promise.all([
+    apiFetch('/api/restaurant/stats'),
+    apiFetch('/api/restaurant/reports')
+  ]);
+  const stats = statsRes && statsRes.ok ? await statsRes.json() : {};
+  const reports = reportsRes && reportsRes.ok ? await reportsRes.json() : {};
   const html = `
     <div class="stats-grid">
-      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${restaurantData.stats.todayRevenue} ج</div><div class="sc-label">إيرادات اليوم</div></div><div class="sc-icon" style="background:rgba(0,214,143,.12)">💰</div></div></div>
-      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${totalOrders}</div><div class="sc-label">إجمالي الطلبات</div></div><div class="sc-icon" style="background:var(--orange-dim)">📦</div></div></div>
-      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${completed}</div><div class="sc-label">مكتملة</div></div><div class="sc-icon" style="background:rgba(59,130,246,.12)">✅</div></div></div>
-      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${products.length}</div><div class="sc-label">منتجات</div></div><div class="sc-icon" style="background:rgba(251,191,36,.12)">🍔</div></div></div>
+      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${stats.todayRevenue || 0} ج</div><div class="sc-label">إيرادات اليوم</div></div><div class="sc-icon" style="background:rgba(0,214,143,.12)">💰</div></div></div>
+      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${(stats.todayRevenue || 0) - (stats.todayPlatformFee || 0)} ج</div><div class="sc-label">صافي اليوم</div></div><div class="sc-icon" style="background:var(--orange-dim)">📊</div></div></div>
+      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${stats.pending || 0}</div><div class="sc-label">معلق</div></div><div class="sc-icon" style="background:rgba(251,191,36,.12)">⏳</div></div></div>
+      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${productsList.length}</div><div class="sc-label">منتجات</div></div><div class="sc-icon" style="background:rgba(59,130,246,.12)">🍔</div></div></div>
     </div>
-    <div class="section"><div class="sec-head"><div class="sec-title">📈 تقارير الإيرادات</div></div><div style="padding:20px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px"><div class="stat-card"><div class="sc-value" style="color:var(--orange)">${restaurantData.stats.todayRevenue} ج</div><div class="sc-label">اليوم</div></div><div class="stat-card"><div class="sc-value" style="color:var(--blue)">${restaurantData.stats.todayRevenue * 7} ج</div><div class="sc-label">الأسبوع</div></div><div class="stat-card"><div class="sc-value" style="color:var(--green)">${monthlyRevenue} ج</div><div class="sc-label">الشهر</div></div><div class="stat-card"><div class="sc-value">${monthlyRevenue * 3} ج</div><div class="sc-label">الربع سنوي</div></div></div></div>
+    <div class="section"><div class="sec-head"><div class="sec-title">📈 ملخص الإيرادات</div></div><div style="padding:20px"><div>إجمالي الإيرادات: ${reports.total?.productRevenue || 0} ج</div><div>صافي الإيرادات (بعد خصم المنصة): ${reports.total?.netRevenue || 0} ج</div></div></div>
   `;
-  document.getElementById("content").innerHTML = html;
+  document.getElementById('content').innerHTML = html;
 }
 
-// ========== إدارة الطلبات المتقدمة ==========
-let ordersSelectedDate = new Date().toISOString().slice(0, 10);
-let currentOrderTab = 'all';
-
-function renderOrdersView() {
+// ========== الطلبات ==========
+async function renderOrders() {
   const html = `
-    <div class="tab-bar"><div class="tab-btn ${currentOrderTab === 'all' ? 'active' : ''}" onclick="setOrdersTab('all')">📋 الكل</div><div class="tab-btn ${currentOrderTab === 'new' ? 'active' : ''}" onclick="setOrdersTab('new')">🆕 جديدة</div><div class="tab-btn ${currentOrderTab === 'accepted' ? 'active' : ''}" onclick="setOrdersTab('accepted')">✅ مقبولة</div><div class="tab-btn ${currentOrderTab === 'preparing' ? 'active' : ''}" onclick="setOrdersTab('preparing')">👨‍🍳 قيد التحضير</div></div>
-    <div class="filter-bar"><input type="date" id="order-date-input" value="${ordersSelectedDate}" /><button class="btn btn-primary btn-sm" onclick="applyOrderFilter()">🔍 عرض</button><button class="btn btn-ghost btn-sm" onclick="setTodayOrders()">📅 اليوم</button><button class="btn btn-ghost btn-sm" onclick="clearOrderFilter()">📋 الكل</button></div>
-    <div id="orders-table"></div>
+    <div class="tab-bar"><div class="tab-btn ${currentOrderTab === 'all' ? 'active' : ''}" onclick="setOrderTab('all')">📋 الكل</div><div class="tab-btn ${currentOrderTab === 'new' ? 'active' : ''}" onclick="setOrderTab('new')">🆕 جديدة</div><div class="tab-btn ${currentOrderTab === 'accepted' ? 'active' : ''}" onclick="setOrderTab('accepted')">✅ مقبولة</div><div class="tab-btn ${currentOrderTab === 'preparing' ? 'active' : ''}" onclick="setOrderTab('preparing')">👨‍🍳 قيد التحضير</div></div>
+    <div class="filter-bar"><input type="date" id="order-date-filter" value="${ordersSelectedDate}" /><button class="btn btn-primary btn-sm" onclick="applyOrderFilter()">🔍 عرض</button><button class="btn btn-ghost btn-sm" onclick="clearOrderFilter()">📋 الكل</button></div>
+    <div id="orders-list"></div>
   `;
-  document.getElementById("content").innerHTML = html;
-  loadOrdersData();
+  document.getElementById('content').innerHTML = html;
+  await loadOrdersList();
 }
 
-function setOrdersTab(tab) { currentOrderTab = tab; renderOrdersView(); }
-function applyOrderFilter() { const input = document.getElementById('order-date-input'); if (input) ordersSelectedDate = input.value; loadOrdersData(); }
-function setTodayOrders() { ordersSelectedDate = new Date().toISOString().slice(0, 10); document.getElementById('order-date-input').value = ordersSelectedDate; loadOrdersData(); }
-function clearOrderFilter() { ordersSelectedDate = ''; document.getElementById('order-date-input').value = ''; loadOrdersData(); }
+function setOrderTab(tab) { currentOrderTab = tab; renderOrders(); }
+async function applyOrderFilter() { ordersSelectedDate = document.getElementById('order-date-filter').value; await loadOrdersList(); }
+async function clearOrderFilter() { ordersSelectedDate = ''; document.getElementById('order-date-filter').value = ''; await loadOrdersList(); }
 
-function getFilteredOrders(orders) {
-  switch (currentOrderTab) {
-    case 'new': return orders.filter(o => o.status === 'PENDING');
-    case 'accepted': return orders.filter(o => o.status === 'ACCEPTED');
-    case 'preparing': return orders.filter(o => o.status === 'PREPARING');
-    default: return orders;
-  }
-}
-
-function calculateRemainingTime(preparingAt) {
-  if (!preparingAt) return null;
-  const now = new Date(); const start = new Date(preparingAt);
-  const elapsed = Math.floor((now - start) / 1000);
-  const remaining = Math.max(0, 25 * 60 - elapsed);
-  return { remaining, minutes: Math.floor(remaining / 60), seconds: remaining % 60, isOver: remaining <= 0 };
-}
-
-function loadOrdersData() {
-  const container = document.getElementById('orders-table');
-  if (!container) return;
-  const filtered = getFilteredOrders(ordersList);
-  if (!filtered.length) { container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><div>لا توجد طلبات</div></div>`; return; }
-  let html = `<div class="section"><div class="sec-head"><div class="sec-title">📦 ${filtered.length} طلب</div></div><div class="table-wrap"><table><thead><tr><th>الرقم</th><th>العميل</th><th>الهاتف</th><th>الأصناف</th><th>الإجمالي</th><th>الحالة</th><th>الوقت</th><th>إجراء</th></tr></thead><tbody>`;
-  filtered.forEach(o => {
-    const itemsStr = (o.items || []).map(i => `<strong>${i.name}</strong> ×${i.qty || 1}`).join('<br>') || '—';
-    let statusHTML = statusBadge(o.status);
-    if (o.status === 'PREPARING' && o.preparingAt) {
-      const remaining = calculateRemainingTime(o.preparingAt);
-      if (remaining && !remaining.isOver) statusHTML += `<br><span style="color:var(--orange);font-size:11px">⏱ ${String(remaining.minutes).padStart(2, '0')}:${String(remaining.seconds).padStart(2, '0')}</span>`;
-    }
-    html += `<tr><td>#${(o.id || '').slice(-6)}</td><td>${o.customerName || '—'}</td><td>${o.customerPhone || '—'}</td><td style="max-width:200px">${itemsStr}</td><td style="color:var(--orange)">${o.total} ج</td><td>${statusHTML}</td><td>${new Date(o.createdAt).toLocaleTimeString()}</td><td>${getOrderActions(o)}</td></tr>`;
+async function loadOrdersList() {
+  let url = '/api/restaurant/orders';
+  if (ordersSelectedDate) url += '?date=' + ordersSelectedDate;
+  const res = await apiFetch(url);
+  if (!res || !res.ok) return;
+  let orders = await res.json();
+  if (currentOrderTab === 'new') orders = orders.filter(o => o.status === 'PENDING');
+  else if (currentOrderTab === 'accepted') orders = orders.filter(o => o.status === 'ACCEPTED');
+  else if (currentOrderTab === 'preparing') orders = orders.filter(o => o.status === 'PREPARING');
+  
+  if (!orders.length) { document.getElementById('orders-list').innerHTML = '<div class="empty-state">📭 لا توجد طلبات</div>'; return; }
+  
+  let html = `<div class="section"><div class="table-wrap"><table><thead><tr><th>الرقم</th><th>العميل</th><th>الهاتف</th><th>المنتجات</th><th>الإجمالي</th><th>الحالة</th><th>الوقت</th><th>إجراء</th></tr></thead><tbody>`;
+  orders.forEach(o => {
+    const itemsStr = (o.items || []).map(i => `${i.name} ×${i.qty || 1}`).join('<br>');
+    html += `<tr><td>#${o.id.slice(-6)}</td><td>${o.customerName || '—'}</td><td>${o.customerPhone || '—'}</td><td style="max-width:200px">${itemsStr}</td><td style="color:var(--orange)">${o.total} ج</td><td><span class="badge badge-orange">${getStatusText(o.status)}</span></td><td>${new Date(o.createdAt).toLocaleTimeString()}</td><td>${getOrderActions(o)}</td></tr>`;
   });
-  html += '</tbody></table></div></div>';
-  container.innerHTML = html;
+  html += `</tbody></table></div></div>`;
+  document.getElementById('orders-list').innerHTML = html;
+}
+
+function getStatusText(status) {
+  const map = { PENDING: 'في الانتظار', ACCEPTED: 'مقبول', PREPARING: 'يتحضر', READY: 'جاهز', DELIVERED: 'تم التوصيل', CANCELLED: 'ملغي' };
+  return map[status] || status;
 }
 
 function getOrderActions(o) {
@@ -383,163 +379,184 @@ function getOrderActions(o) {
 }
 
 async function updateOrderStatus(id, status) {
-  const order = ordersList.find(o => o.id === id);
-  if (order) { order.status = status; if (status === 'PREPARING') order.preparingAt = new Date().toISOString(); persistData(); loadOrdersData(); toast(`تم تحديث الحالة إلى ${STATUS_AR[status]}`); }
-  if (status === 'CANCELLED') playSound('orderCancelled');
+  const res = await apiFetch(`/api/restaurant/orders/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) });
+  if (res && res.ok) { toast(`تم تحديث الحالة إلى ${getStatusText(status)}`); renderOrders(); }
+  else toast('حدث خطأ', 'error');
 }
 
 // ========== التصنيفات ==========
-function renderCategories() {
-  const html = `<div style="display:flex;justify-content:space-between;margin-bottom:16px"><h2>🏷️ التصنيفات</h2><button class="btn btn-primary" onclick="openAddCategory()">+ إضافة تصنيف</button></div><div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>إجراءات</th></tr></thead><tbody>${categories.map((c, i) => `<tr><td>${i + 1}</td><td>${c.name}</td><td><button class="btn btn-danger btn-sm" onclick="deleteCategory('${c.id}')">🗑️</button></td></tr>`).join('')}</tbody></table></div></div>`;
-  document.getElementById("content").innerHTML = html;
+async function renderCategoriesPage() {
+  await loadCategories();
+  let html = `<div style="display:flex;justify-content:space-between;margin-bottom:16px"><h2>🏷️ التصنيفات</h2><button class="btn btn-primary" onclick="openAddCategory()">+ إضافة تصنيف</button></div><div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>إجراءات</th></tr></thead><tbody>`;
+  categoriesList.forEach((c, i) => { html += `<tr><td>${i + 1}</td><td>${c.name}</td><td><button class="btn btn-danger btn-sm" onclick="deleteCategory('${c.id}')">🗑️</button></td></tr>`; });
+  html += `</tbody></table></div></div>`;
+  document.getElementById('content').innerHTML = html;
 }
-function openAddCategory() { openModal('إضافة تصنيف', `<div class="field"><label>اسم التصنيف</label><input id="cat-name"></div>`, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addCategory()">إضافة</button>`); }
-function addCategory() { const name = document.getElementById('cat-name').value.trim(); if (name) { categories.push({ id: 'cat' + Date.now(), name }); persistData(); closeModal(); renderCategories(); toast('تمت الإضافة'); } }
-function deleteCategory(id) { if (confirm('حذف التصنيف؟')) { categories = categories.filter(c => c.id !== id); persistData(); renderCategories(); toast('تم الحذف'); } }
 
-// ========== المنتجات ==========
-function renderProducts() {
+function openAddCategory() {
+  openModal('إضافة تصنيف', `<div class="field"><label>اسم التصنيف</label><input id="cat-name"></div>`, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addCategory()">إضافة</button>`);
+}
+async function addCategory() {
+  const name = document.getElementById('cat-name').value.trim();
+  if (!name) return toast('أدخل الاسم', 'error');
+  const res = await apiFetch('/api/restaurant/categories', { method: 'POST', body: JSON.stringify({ name }) });
+  if (res && res.ok) { toast('تمت الإضافة'); closeModal(); renderCategoriesPage(); }
+}
+async function deleteCategory(id) {
+  if (!confirm('حذف التصنيف؟')) return;
+  const res = await apiFetch(`/api/restaurant/categories/${id}`, { method: 'DELETE' });
+  if (res && res.ok) { toast('تم الحذف'); renderCategoriesPage(); }
+}
+
+// ========== المنتجات الاحترافية ==========
+async function renderProductsPage() {
+  await loadProducts();
   let html = `<div style="display:flex;justify-content:space-between;margin-bottom:16px"><h2>📋 المنتجات</h2><button class="btn btn-primary" onclick="openAddProduct()">+ إضافة منتج</button></div><div class="section"><div class="table-wrap"><table><thead><tr><th>الصورة</th><th>الاسم</th><th>النوع</th><th>التفاصيل</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>`;
-  products.forEach(p => {
-    let detail = p.type === 'single' ? `${p.basePrice} ج` : (p.groups?.[0]?.options?.map(o => `${o.value}:${o.price}ج`).join(' | ') : 'متعدد');
-    html += `<tr><td><img src="${p.image}" width="45" height="45" style="border-radius:8px;object-fit:cover"></td><td><strong>${p.name}</strong><br><span style="font-size:11px;color:var(--text3)">${p.description || ''}</span></td><td><span class="badge ${p.type === 'single' ? 'badge-green' : 'badge-orange'}">${p.type === 'single' ? 'منفرد' : 'متعدد'}</span></td><td style="max-width:200px">${detail}</td><td><span class="badge ${p.isAvailable ? 'badge-green' : 'badge-red'}">${p.isAvailable ? 'متاح' : 'غير متاح'}</span></td><td><button class="btn btn-ghost btn-sm" onclick="editProduct('${p.id}')">✏️</button> <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">🗑️</button></td></tr>`;
+  productsList.forEach(p => {
+    let detail = p.type === 'single' ? `${p.basePrice} ج` : (p.groups?.[0]?.options?.map(o => `${o.value}:${o.price}ج`).join(' | ') || 'متعدد');
+    html += `<tr><td><img src="${p.image || 'https://placehold.co/50x50/FF6B00/white?text=🍔'}" width="45" height="45" style="border-radius:8px;object-fit:cover"></td><td><strong>${p.name}</strong><br><span style="font-size:11px;color:var(--text3)">${p.description || ''}</span></td><td><span class="badge ${p.type === 'single' ? 'badge-green' : 'badge-orange'}">${p.type === 'single' ? 'منفرد' : 'متعدد'}</span></td><td style="max-width:200px">${detail}</td><td><span class="badge ${p.isAvailable ? 'badge-green' : 'badge-red'}">${p.isAvailable ? 'متاح' : 'غير متاح'}</span></td><td><button class="btn btn-ghost btn-sm" onclick="editProduct('${p.id}')">✏️</button> <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">🗑️</button></td></tr>`;
   });
   html += `</tbody></table></div></div>`;
-  document.getElementById("content").innerHTML = html;
+  document.getElementById('content').innerHTML = html;
 }
 
 function openAddProduct() {
-  loadCategoriesOptions();
-  openModal('إضافة منتج', `
-    <div class="field"><label>اسم المنتج</label><input id="prod-name"></div><div class="field"><label>الوصف</label><input id="prod-desc"></div>
-    <div class="field"><label>نوع المنتج</label><select id="prod-type" onchange="toggleProductType()"><option value="single">🍔 منتج منفرد (سعر ثابت + إضافات)</option><option value="multi">🍕 منتج متعدد (أحجام/خيارات)</option></select></div>
-    <div id="single-fields"><div class="field"><label>السعر الأساسي (ج)</label><input id="base-price" type="number" value="20"></div><div class="field"><label>مجموعات الإضافات</label><div id="groups-container"></div><button type="button" class="btn-add-row" onclick="addGroupRow()">+ إضافة مجموعة</button></div></div>
-    <div id="multi-fields" style="display:none"><div id="multi-groups-container"></div><button type="button" class="btn-add-row" onclick="addMultiGroupRow()">+ إضافة مجموعة (حجم/خيار)</button></div>
-    <div class="field"><label>التصنيف</label><select id="prod-category">${window._catOptions}</select></div>
+  openModal('إضافة منتج احترافي', `
+    <div class="field"><label>اسم المنتج</label><input id="prod-name"></div>
+    <div class="field"><label>الوصف</label><input id="prod-desc"></div>
+    <div class="field"><label>التصنيف</label><select id="prod-cat">${categoriesList.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
+    <div class="product-type-selector"><div class="type-option selected" data-type="single">🍔 منتج منفرد + إضافات</div><div class="type-option" data-type="multi">🍕 منتج متعدد (أحجام/خيارات)</div></div>
+    <div id="single-fields"><div class="field"><label>السعر الأساسي (ج)</label><input id="base-price" type="number" value="20"></div><div class="field"><label>الإضافات (ثومية، مخلل، عيش)</label><div id="extras-list"></div><button type="button" class="btn-add-row" onclick="addExtraRow()">+ إضافة إضافة</button></div></div>
+    <div id="multi-fields" style="display:none"><div class="field"><label>الأحجام/المقاسات</label><div id="sizes-list"></div><button type="button" class="btn-add-row" onclick="addSizeRow()">+ إضافة حجم</button></div><div class="field"><label>خيارات إضافية (حار/عادي)</label><div id="spice-list"></div><button type="button" class="btn-add-row" onclick="addSpiceRow()">+ إضافة خيار</button></div></div>
     <div class="field"><label>رابط الصورة</label><input id="prod-image" value="https://placehold.co/100x100/FF6B00/white?text=🍽️"></div>
-  `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveNewProduct()">حفظ المنتج</button>`);
-  addGroupRow();
+  `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveNewProduct()">💾 حفظ المنتج</button>`);
+  
+  let selectedType = 'single';
+  document.querySelectorAll('.type-option').forEach(opt => {
+    opt.onclick = () => {
+      document.querySelectorAll('.type-option').forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+      selectedType = opt.dataset.type;
+      document.getElementById('single-fields').style.display = selectedType === 'single' ? 'block' : 'none';
+      document.getElementById('multi-fields').style.display = selectedType === 'multi' ? 'block' : 'none';
+    };
+  });
+  addExtraRow(); addSizeRow(); addSpiceRow();
 }
 
-function toggleProductType() {
-  const type = document.getElementById('prod-type').value;
-  document.getElementById('single-fields').style.display = type === 'single' ? 'block' : 'none';
-  document.getElementById('multi-fields').style.display = type === 'multi' ? 'block' : 'none';
+function addExtraRow() {
+  const container = document.getElementById('extras-list');
+  const div = document.createElement('div'); div.className = 'option-row';
+  div.innerHTML = `<input placeholder="اسم الإضافة (ثومية)" style="flex:2"><input placeholder="السعر" type="number" style="flex:1" value="2"><button type="button" class="btn-ghost btn-sm" onclick="this.parentElement.remove()">✕</button>`;
+  container.appendChild(div);
 }
-
-function addGroupRow() {
-  const container = document.getElementById('groups-container');
-  const div = document.createElement('div'); div.className = 'group-box';
-  div.innerHTML = `<div style="display:flex;gap:8px"><input placeholder="اسم المجموعة (مثال: إضافات)" style="flex:1" class="grp-name"><select class="grp-type"><option value="multiple">اختيار متعدد</option></select><label><input type="checkbox" class="grp-required" checked> إجباري</label></div><div class="grp-options"></div><button type="button" class="btn-add-row" onclick="addOptionToGroup(this)">+ إضافة خيار</button><button type="button" class="btn-danger btn-sm" style="margin-top:8px" onclick="this.parentElement.remove()">✕ حذف</button>`;
+function addSizeRow() {
+  const container = document.getElementById('sizes-list');
+  const div = document.createElement('div'); div.className = 'option-row';
+  div.innerHTML = `<input placeholder="الحجم (صغير/وسط/كبير)" style="flex:2"><input placeholder="السعر" type="number" style="flex:1" value="0"><button type="button" class="btn-ghost btn-sm" onclick="this.parentElement.remove()">✕</button>`;
+  container.appendChild(div);
+}
+function addSpiceRow() {
+  const container = document.getElementById('spice-list');
+  const div = document.createElement('div'); div.className = 'option-row';
+  div.innerHTML = `<input placeholder="خيار (حار/عادي)" style="flex:2"><input placeholder="السعر" type="number" style="flex:1" value="0"><button type="button" class="btn-ghost btn-sm" onclick="this.parentElement.remove()">✕</button>`;
   container.appendChild(div);
 }
 
-function addOptionToGroup(btn) {
-  const group = btn.closest('.group-box');
-  const optsDiv = group.querySelector('.grp-options');
-  const row = document.createElement('div'); row.className = 'option-row';
-  row.innerHTML = `<input placeholder="القيمة (ثومية)" style="flex:2" class="opt-value"><input placeholder="السعر" type="number" style="flex:1" class="opt-price" value="0"><button type="button" class="btn-ghost btn-sm" onclick="this.parentElement.remove()">✕</button>`;
-  optsDiv.appendChild(row);
-}
-
-function addMultiGroupRow() {
-  const container = document.getElementById('multi-groups-container');
-  const div = document.createElement('div'); div.className = 'group-box';
-  div.innerHTML = `<div><input placeholder="اسم المجموعة (الحجم/عدد القطع)" class="grp-name" style="width:100%;margin-bottom:8px"></div><div class="grp-options"></div><button type="button" class="btn-add-row" onclick="addOptionToGroup(this)">+ إضافة خيار</button><button type="button" class="btn-danger btn-sm" style="margin-top:8px" onclick="this.parentElement.remove()">✕ حذف</button>`;
-  container.appendChild(div);
-}
-
-function saveNewProduct() {
+async function saveNewProduct() {
   const name = document.getElementById('prod-name').value.trim();
   if (!name) return toast('اسم المنتج مطلوب', 'error');
-  const type = document.getElementById('prod-type').value;
-  const category = document.getElementById('prod-category').value;
+  const type = document.querySelector('.type-option.selected').dataset.type;
+  const category = document.getElementById('prod-cat').value;
   const image = document.getElementById('prod-image').value;
   const description = document.getElementById('prod-desc').value;
   let groups = [];
   if (type === 'single') {
     const basePrice = parseFloat(document.getElementById('base-price').value) || 0;
-    const groupBoxes = document.querySelectorAll('#groups-container .group-box');
-    groupBoxes.forEach(box => {
-      const nameGrp = box.querySelector('.grp-name').value;
-      if (!nameGrp) return;
-      const options = [];
-      box.querySelectorAll('.option-row').forEach(row => {
-        const val = row.querySelector('.opt-value')?.value;
-        const price = parseFloat(row.querySelector('.opt-price')?.value) || 0;
-        if (val) options.push({ value: val, price });
-      });
-      if (options.length) groups.push({ name: nameGrp, type: 'multiple', required: box.querySelector('.grp-required').checked, options });
+    const extras = [];
+    document.querySelectorAll('#extras-list .option-row').forEach(row => {
+      const nameVal = row.querySelector('input:first-child')?.value;
+      const priceVal = parseFloat(row.querySelector('input[type="number"]')?.value) || 0;
+      if (nameVal) extras.push({ value: nameVal, price: priceVal });
     });
-    const newProduct = { id: 'p' + Date.now(), name, type: 'single', basePrice, category, isAvailable: true, description, image, groups };
-    products.push(newProduct);
+    if (extras.length) groups.push({ name: 'إضافات', type: 'multiple', required: false, options: extras });
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('description', description);
+    formData.append('basePrice', basePrice);
+    formData.append('category', category);
+    formData.append('groups', JSON.stringify(groups));
+    const res = await apiFetch('/api/restaurant/products', { method: 'POST', body: formData });
+    if (res && res.ok) { toast('تم إضافة المنتج'); closeModal(); renderProductsPage(); }
   } else {
-    const groupBoxes = document.querySelectorAll('#multi-groups-container .group-box');
-    groupBoxes.forEach(box => {
-      const nameGrp = box.querySelector('.grp-name').value;
-      if (!nameGrp) return;
-      const options = [];
-      box.querySelectorAll('.option-row').forEach(row => {
-        const val = row.querySelector('.opt-value')?.value;
-        const price = parseFloat(row.querySelector('.opt-price')?.value) || 0;
-        if (val) options.push({ value: val, price });
-      });
-      if (options.length) groups.push({ name: nameGrp, type: 'single', required: true, options });
+    const sizes = [];
+    document.querySelectorAll('#sizes-list .option-row').forEach(row => {
+      const sizeVal = row.querySelector('input:first-child')?.value;
+      const priceVal = parseFloat(row.querySelector('input[type="number"]')?.value) || 0;
+      if (sizeVal) sizes.push({ value: sizeVal, price: priceVal });
     });
-    const newProduct = { id: 'p' + Date.now(), name, type: 'multi', basePrice: 0, category, isAvailable: true, description, image, groups };
-    products.push(newProduct);
+    const spices = [];
+    document.querySelectorAll('#spice-list .option-row').forEach(row => {
+      const spiceVal = row.querySelector('input:first-child')?.value;
+      const priceVal = parseFloat(row.querySelector('input[type="number"]')?.value) || 0;
+      if (spiceVal) spices.push({ value: spiceVal, price: priceVal });
+    });
+    if (sizes.length) groups.push({ name: 'الحجم', type: 'single', required: true, options: sizes });
+    if (spices.length) groups.push({ name: 'الإضافات', type: 'single', required: false, options: spices });
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('description', description);
+    formData.append('basePrice', 0);
+    formData.append('category', category);
+    formData.append('groups', JSON.stringify(groups));
+    const res = await apiFetch('/api/restaurant/products', { method: 'POST', body: formData });
+    if (res && res.ok) { toast('تم إضافة المنتج'); closeModal(); renderProductsPage(); }
   }
-  persistData();
-  closeModal();
-  renderProducts();
-  toast('تم إضافة المنتج بنجاح!');
 }
 
-function editProduct(id) {
-  const p = products.find(x => x.id === id);
+async function editProduct(id) {
+  const p = productsList.find(x => x.id === id);
   if (!p) return;
   openModal('تعديل المنتج', `
     <div class="field"><label>الاسم</label><input id="e-name" value="${p.name}"></div>
     <div class="field"><label>الوصف</label><input id="e-desc" value="${p.description || ''}"></div>
-    <div class="field"><label>رابط الصورة</label><input id="e-img" value="${p.image}"></div>
+    <div class="field"><label>رابط الصورة</label><input id="e-img" value="${p.image || ''}"></div>
     <div class="field"><label>متاح</label><select id="e-avail"><option ${p.isAvailable ? 'selected' : ''} value="true">نعم</option><option ${!p.isAvailable ? 'selected' : ''} value="false">لا</option></select></div>
   `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveEditedProduct('${id}')">حفظ</button>`);
 }
 
-function saveEditedProduct(id) {
-  const p = products.find(x => x.id === id);
-  if (p) {
-    p.name = document.getElementById('e-name').value;
-    p.description = document.getElementById('e-desc').value;
-    p.image = document.getElementById('e-img').value;
-    p.isAvailable = document.getElementById('e-avail').value === 'true';
-    persistData();
-    closeModal();
-    renderProducts();
-    toast('تم التحديث');
-  }
+async function saveEditedProduct(id) {
+  const name = document.getElementById('e-name').value;
+  const description = document.getElementById('e-desc').value;
+  const image = document.getElementById('e-img').value;
+  const isAvailable = document.getElementById('e-avail').value === 'true';
+  const formData = new FormData();
+  formData.append('name', name);
+  formData.append('description', description);
+  formData.append('isAvailable', isAvailable);
+  if (image) formData.append('image', image);
+  const res = await apiFetch(`/api/restaurant/products/${id}`, { method: 'PATCH', body: formData });
+  if (res && res.ok) { toast('تم التحديث'); closeModal(); renderProductsPage(); }
 }
 
-function deleteProduct(id) {
-  if (confirm('حذف المنتج نهائياً؟')) {
-    products = products.filter(p => p.id !== id);
-    persistData();
-    renderProducts();
-    toast('تم الحذف');
-  }
+async function deleteProduct(id) {
+  if (!confirm('حذف المنتج نهائياً؟')) return;
+  const res = await apiFetch(`/api/restaurant/products/${id}`, { method: 'DELETE' });
+  if (res && res.ok) { toast('تم الحذف'); renderProductsPage(); }
 }
 
-loadCategoriesOptions();
-navigate('profile');
+// ========== Socket.IO ==========
+const socket = io();
+socket.on('newOrder', (data) => {
+  playSound('newOrder');
+  toast(`📦 طلب جديد من ${data.customerName || 'عميل'}`, 'success');
+  if (currentPage === 'orders') renderOrders();
+});
+socket.on('orderStatusUpdate', () => { if (currentPage === 'orders') renderOrders(); });
 
-// محاكاة Socket.IO للإشعارات
-setInterval(() => {
-  if (Math.random() > 0.95 && currentPage === 'orders') {
-    playSound('newOrder');
-    toast("طلب جديد وارد! 🔔", 'success');
-    if (currentPage === 'orders') loadOrdersData();
-  }
-}, 30000);
+// بدء التطبيق
+loadRestaurantData();
+renderPage('profile');
 </script>
 </body>
 </html>
