@@ -1,774 +1,1826 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Drako">
+  <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+  <link rel="manifest" href="/manifest.json">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>دراكو - العميل</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <title>Drako</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
+    html, body {
+      overflow: hidden;
+      height: 100%;
+      overscroll-behavior: none;
+      touch-action: pan-y;
+    }
     body {
       background: #F7F7F7; color: #1A1A1A; max-width: 430px; margin: auto;
-      height: 100vh; overflow: hidden;
+      height: 100%; position: relative; 
     }
-    /* all previous styles (same as original customer interface) */
-    .app-container { display: flex; flex-direction: column; height: 100%; }
+    
+    /* Brand Colors */
+    :root {
+      --brand: #E8180E;
+      --brand-dark: #B80F09;
+      --brand-light: #FF4B43;
+      --brand-glow: rgba(232,24,14,0.18);
+      --bg: #F7F7F7;
+      --card: #FFFFFF;
+      --text: #1A1A1A;
+      --text-muted: #7A7A7A;
+      --border: #EBEBEB;
+      --radius: 18px;
+      --radius-sm: 12px;
+    }
+
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      position: relative;
+    }
+    
+    /* Swipe Overlay */
+    .swipe-overlay {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 20px;
+      height: 100%;
+      z-index: 1000;
+      background: transparent;
+      touch-action: pan-y;
+    }
+    
+    /* Auth Wrapper */
+    .auth-wrapper {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+      background: var(--bg);
+      display: block;
+    }
+    .auth-wrapper.hide {
+      display: none;
+    }
+    .auth-screen {
+      position: absolute;
+      inset: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      transition: transform 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.4s ease;
+      will-change: transform, opacity;
+    }
+    .auth-screen.hidden-right { transform: translateX(-100%); opacity: 0; pointer-events: none; }
+    .auth-screen.hidden-left  { transform: translateX(100%);  opacity: 0; pointer-events: none; }
+    .auth-screen.visible      { transform: translateX(0);       opacity: 1; }
+
+    /* Login Hero */
+    .login-hero {
+      position: relative;
+      height: 310px;
+      background: var(--brand);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .hero-circles span {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.06);
+    }
+    .hero-circles span:nth-child(1) { width: 280px; height: 280px; top: -80px; right: -60px; }
+    .hero-circles span:nth-child(2) { width: 180px; height: 180px; bottom: -40px; left: -40px; background: rgba(0,0,0,0.08); }
+    .hero-circles span:nth-child(3) { width: 100px; height: 100px; top: 60px; left: 40px; background: rgba(255,255,255,0.04); }
+    .hero-logo-wrap {
+      position: relative; z-index: 2; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; height: 100%; gap: 0;
+    }
+    .logo-icon {
+      width: 80px; height: 80px; margin-bottom: 14px;
+      animation: logoPop 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards;
+    }
+    @keyframes logoPop {
+      from { transform: scale(0.5) rotate(-10deg); opacity: 0; }
+      to   { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+    .hero-logo-wrap h1 {
+      font-size: 42px; font-weight: 900; color: #fff; letter-spacing: -1px; line-height: 1;
+      animation: fadeUp 0.5s 0.2s ease both;
+    }
+    .hero-logo-wrap p {
+      font-size: 13px; font-weight: 400; color: rgba(255,255,255,0.75);
+      letter-spacing: 3px; text-transform: uppercase; margin-top: 6px;
+      animation: fadeUp 0.5s 0.35s ease both;
+    }
+    @keyframes fadeUp {
+      from { transform: translateY(14px); opacity: 0; }
+      to   { transform: translateY(0); opacity: 1; }
+    }
+    .login-wave {
+      position: absolute; bottom: -2px; left: 0; right: 0;
+    }
+    .login-body {
+      flex: 1; background: var(--bg); padding: 28px 24px 40px;
+      animation: fadeUp 0.5s 0.4s ease both;
+    }
+    .login-body h2 { font-size: 22px; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+    .login-body .subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 28px; }
+    
+    /* Form Elements */
+    .field-group { margin-bottom: 16px; }
+    .field-label { font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; display: block; }
+    .field-wrap { position: relative; }
+    .field-icon { position: absolute; top: 50%; right: 16px; transform: translateY(-50%); font-size: 20px; pointer-events: none; color: var(--text-muted); }
+    .field-wrap input, .field-wrap select, .field-wrap textarea {
+      width: 100%; background: var(--card); border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm); font-family: 'Cairo', sans-serif; font-size: 15px;
+      color: var(--text); padding: 0 48px 0 16px; outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .field-wrap input, .field-wrap select { height: 54px; }
+    .field-wrap textarea { padding-top: 12px; padding-bottom: 12px; resize: vertical; }
+    .field-wrap input:focus, .field-wrap select:focus, .field-wrap textarea:focus {
+      border-color: var(--brand); box-shadow: 0 0 0 4px var(--brand-glow);
+    }
+    .password-toggle {
+      position: absolute; top: 50%; left: 16px; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; font-size: 19px; color: var(--text-muted);
+    }
+    .btn-primary {
+      width: 100%; height: 56px; background: var(--brand); border: none;
+      border-radius: var(--radius-sm); color: #fff; font-size: 17px; font-weight: 700;
+      cursor: pointer; transition: all 0.2s; box-shadow: 0 8px 24px rgba(232,24,14,0.28);
+      margin-top: 8px;
+    }
+    .btn-primary:hover { background: var(--brand-dark); transform: translateY(-1px); }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-ghost {
+      width: 100%; height: 52px; background: transparent; border: 1.5px solid var(--brand);
+      border-radius: var(--radius-sm); color: var(--brand); font-size: 15px; font-weight: 700;
+      cursor: pointer; margin-top: 12px; transition: 0.2s;
+    }
+    .btn-ghost:hover { background: rgba(232,24,14,0.05); }
+    .btn-secondary {
+      background: #f5f5f5;
+      color: var(--brand);
+      border: 1px solid var(--border);
+    }
+    .divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; color: var(--border); }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .divider span { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+    
+    /* Register Screen */
+    .reg-header {
+      position: sticky; top: 0; z-index: 10; background: var(--card); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 14px; padding: 16px 20px;
+    }
+    .back-btn {
+      width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--border);
+      background: var(--bg); cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 20px; flex-shrink: 0;
+    }
+    .reg-header-info h2 { font-size: 18px; font-weight: 700; }
+    .reg-header-info p { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .progress-bar-wrap { height: 3px; background: var(--border); position: relative; }
+    .progress-bar-fill { height: 100%; background: var(--brand); width: 50%; transition: width 0.4s ease; }
+    .reg-body { flex: 1; padding: 24px 20px 40px; }
+    .reg-step { display: none; }
+    .reg-step.active { display: block; animation: fadeUp 0.3s ease both; }
+    .step-badge {
+      display: inline-flex; align-items: center; gap: 6px; background: rgba(232,24,14,0.08);
+      border: 1px solid rgba(232,24,14,0.2); border-radius: 20px; padding: 4px 12px;
+      font-size: 12px; font-weight: 600; color: var(--brand); margin-bottom: 16px;
+    }
+    .step-title { font-size: 22px; font-weight: 900; margin-bottom: 4px; }
+    .step-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.6; }
+    .terms-note { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 16px; }
+    .terms-note a { color: var(--brand); text-decoration: none; }
+    
+    /* Edit Modal */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1200;
+      display: none; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: white; border-radius: 24px; width: 90%; max-width: 380px;
+      padding: 24px; animation: modalFadeIn 0.3s ease;
+    }
+    @keyframes modalFadeIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .modal-box h3 { font-size: 20px; margin-bottom: 16px; text-align: center; }
+    .modal-close {
+      float: left; background: none; border: none; font-size: 24px; cursor: pointer;
+    }
+    
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: #1A1A1A; color: #fff; font-size: 14px; font-weight: 600; padding: 12px 24px;
+      border-radius: 100px; white-space: nowrap; z-index: 9999; transition: 0.35s; opacity: 0; pointer-events: none;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    /* Main App Styles - original design */
+    .main-app-wrapper { display: none; flex-direction: column; height: 100%; }
+    .main-app-wrapper.active { display: flex; }
     .header {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 16px; background: rgba(255,255,255,0.96); backdrop-filter: blur(10px);
-      position: fixed; top: 0; width: 100%; max-width: 430px; z-index: 100;
+      padding: 18px 16px 24px; 
+      background: rgba(255,255,255,0.92); backdrop-filter: blur(14px); 
+      position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 430px; z-index: 100;
+      height: 70px;
     }
-    .main-content { flex: 1; overflow-y: auto; padding: 16px; margin-top: 70px; margin-bottom: 70px; }
-    .screen { display: none; }
+    .main-content {
+      flex: 1; overflow-y: auto; padding: 16px;
+      margin-top: 70px;
+      margin-bottom: 70px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .screen { display: none; animation: fade .25s ease; }
     .screen.active { display: block; }
-    .bottom-nav {
-      position: fixed; bottom: 0; width: 100%; max-width: 430px;
-      background: white; display: flex; justify-content: space-around;
-      padding: 8px 0; border-top: 1px solid #eee; z-index: 100;
+    @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .logo { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+    .logo-main {
+      font-size: 26px; font-weight: 900;
+      background: linear-gradient(135deg,#FF6B00,#ff9f5a);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: .5px;
     }
-    .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 12px; color: #999; cursor: pointer; }
-    .nav-item.active { color: #E8180E; }
+    .logo-sub { color: #999; font-size: 11px; font-weight: 600; letter-spacing: 1px; }
+    .top-actions { display:flex; align-items:center; gap:10px; }
+    .icon-btn {
+      width: 40px; height: 40px; border-radius: 12px; border: none;
+      background: #F5F5F5; font-size: 20px; cursor: pointer; position: relative;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.07); transition:.25s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .icon-btn:hover { transform: translateY(-2px); }
     .badge {
-      background: #E8180E; color: white; border-radius: 50%;
-      padding: 2px 6px; font-size: 10px; position: absolute; top: -5px; right: -10px;
+      position: absolute; top: -4px; left: -4px; width: 18px; height: 18px;
+      border-radius: 50%; background: #FF6B00; color: #fff;
+      font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold;
     }
-    /* Restaurant menu - original design */
+    .slogan { color: #888; font-size: 13px; margin-bottom: 16px; }
+    .search-box {
+      height: 48px; background: #F5F5F5; border-radius: 14px;
+      display: flex; align-items: center; padding: 0 14px; gap: 10px; margin-bottom: 20px;
+    }
+    .search-box input { flex: 1; border: none; background: transparent; outline: none; font-size: 14px; }
+    .section-title { font-size: 17px; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    
+    /* Category Filter Buttons */
+    .category-filters {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }
+    .filter-btn {
+      background: #F5F5F5;
+      border: none;
+      padding: 8px 20px;
+      border-radius: 30px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #666;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .filter-btn.active {
+      background: #FF6B00;
+      color: white;
+      box-shadow: 0 4px 12px rgba(255,107,0,0.3);
+    }
+    
+    /* Restaurant Card (same as before) */
     .restaurant-card {
-      background: white; border-radius: 20px; margin-bottom: 16px; padding: 12px;
-      display: flex; gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      position: relative; background: linear-gradient(180deg, #ffffff 0%, #fffaf6 100%);
+      border: 1px solid #f0f0f0; border-radius: 22px; padding: 14px;
+      display: flex; gap: 14px; margin-bottom: 16px; align-items: center;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.06); overflow: hidden; cursor: pointer;
+    }
+    .restaurant-card::before {
+      content: ''; position: absolute; top: 0; right: 0;
+      width: 5px; height: 100%; background: linear-gradient(180deg,#FF6B00,#ff934d);
+    }
+    .restaurant-card img {
+      width: 110px; height: 110px; border-radius: 18px; object-fit: cover;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.12); border: 3px solid #fff;
+    }
+    .restaurant-content { flex: 1; display:flex; flex-direction:column; justify-content:center; }
+    .restaurant-content h3 { font-size: 18px; margin-bottom: 8px; font-weight: 800; color: #1A1A1A; }
+    .meta { display: flex; gap: 8px; color: #777; font-size: 12px; margin-bottom: 8px; flex-wrap: wrap; align-items:center; }
+    .meta span { background:#fff; border:1px solid #eee; padding:4px 8px; border-radius:10px; }
+    .minimum { color: #888; font-size: 12px; margin-bottom: 12px; font-weight:600; }
+    .btn {
+      border: none; background: linear-gradient(135deg,#FF6B00,#ff8a33);
+      color: white; border-radius: 14px; height: 52px; width: 100%;
+      font-size: 14px; font-weight: bold; cursor: pointer;
+      transition:.25s; box-shadow: 0 8px 18px rgba(255,107,0,.25);
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .menu-btn {
+      width: fit-content; padding: 10px 18px; height: auto;
+      border-radius: 12px; font-size:13px; display:flex; align-items:center; gap:8px;
+    }
+    .outline-btn { background: transparent; border: 1.5px solid #FF6B00; color: #FF6B00; }
+    
+    /* Special Order Screen (markets, pharmacies, custom) */
+    .special-order-card {
+      background: white;
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .file-attachment {
+      margin: 16px 0;
+      padding: 12px;
+      background: #f9f9f9;
+      border-radius: 12px;
+      border: 1px dashed var(--border);
+      text-align: center;
+    }
+    .file-attachment input {
+      display: none;
+    }
+    .file-attachment label {
+      display: inline-block;
+      padding: 8px 16px;
+      background: var(--brand);
+      color: white;
+      border-radius: 30px;
+      font-size: 13px;
       cursor: pointer;
     }
-    .restaurant-card img { width: 90px; height: 90px; border-radius: 16px; object-fit: cover; }
-    .restaurant-info h3 { font-size: 18px; font-weight: 700; }
-    .meta { display: flex; gap: 8px; font-size: 12px; color: #777; margin: 6px 0; }
-    .btn { background: #E8180E; color: white; border: none; border-radius: 30px; padding: 8px 16px; font-weight: bold; cursor: pointer; }
-    .btn-outline { background: transparent; border: 1px solid #E8180E; color: #E8180E; }
-    .tabs { display: flex; gap: 8px; overflow-x: auto; margin: 16px 0; }
-    .tab { padding: 6px 16px; background: #f0f0f0; border-radius: 30px; font-size: 14px; cursor: pointer; white-space: nowrap; }
-    .tab.active { background: #E8180E; color: white; }
-    .product-card { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid #eee; align-items: center; }
-    .product-card img { width: 70px; height: 70px; border-radius: 12px; object-fit: cover; }
-    .product-details { flex: 1; }
-    .product-title { font-weight: 700; }
-    .product-price { color: #E8180E; font-weight: bold; }
-    .plus-btn { width: 36px; height: 36px; border-radius: 50%; background: #E8180E; color: white; border: none; font-size: 22px; cursor: pointer; }
-    .cart-item { display: flex; gap: 12px; background: white; border-radius: 16px; padding: 12px; margin-bottom: 12px; align-items: center; }
-    .qty-btn { width: 28px; height: 28px; border-radius: 50%; border: none; background: #f0f0f0; font-weight: bold; cursor: pointer; }
-    .summary { background: white; border-radius: 16px; padding: 16px; margin-top: 16px; }
-    .summary-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
-    .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 8px 20px; border-radius: 40px; z-index: 1000; opacity: 0; transition: 0.3s; }
-    .toast.show { opacity: 1; }
-    .category-filters { display: flex; gap: 12px; margin-bottom: 20px; overflow-x: auto; }
-    .filter-btn { background: #f0f0f0; border: none; padding: 8px 20px; border-radius: 30px; font-weight: bold; color: #555; cursor: pointer; white-space: nowrap; }
-    .filter-btn.active { background: #E8180E; color: white; }
-    .special-order-card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; }
-    .file-attachment { text-align: center; padding: 12px; border: 1px dashed #ddd; border-radius: 12px; margin: 16px 0; }
-    .file-attachment label { background: #E8180E; color: white; padding: 6px 16px; border-radius: 30px; cursor: pointer; display: inline-block; }
-    .preview-images { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-    .preview-images img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; }
+    .preview-images {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .preview-images img {
+      width: 70px;
+      height: 70px;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+    }
+    
+    /* Restaurant menu */
+    .hero-image { width: 100%; height: 240px; object-fit: cover; border-radius: 18px; }
+    .restaurant-info { background: white; border-radius: 20px 20px 0 0; margin-top: -18px; position: relative; padding: 18px 0 10px; }
+    .tabs { display: flex; overflow-x: auto; gap: 10px; margin: 14px 0; padding-bottom: 8px; }
+    .tab { padding: 10px 16px; background: #F5F5F5; border-radius: 12px; white-space: nowrap; font-size: 13px; color: #888; cursor: pointer; }
+    .tab.active { background: #FFF3EB; color: #FF6B00; border: 1px solid #FF6B00; }
+    .product-card { display: flex; gap: 12px; padding: 14px 0; border-bottom: 1px solid #eee; align-items: center; }
+    .product-card img { width: 82px; height: 82px; border-radius: 12px; object-fit: cover; }
+    .product-content { flex: 1; }
+    .product-content h4 { font-size: 15px; margin-bottom: 4px; }
+    .product-content p { font-size: 12px; color: #888; margin-bottom: 6px; line-height: 1.6; }
+    .price { font-weight: bold; }
+    .plus-btn { width: 36px; height: 36px; border-radius: 50%; border: none; background: #FF6B00; color: white; font-size: 22px; cursor: pointer; }
+    
+    /* Cart */
+    .cart-item { background: white; border-radius: 14px; padding: 12px; display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+    .cart-item img { width: 70px; height: 70px; border-radius: 12px; object-fit: cover; }
+    .cart-content { flex: 1; }
+    .cart-content h4 { font-size: 14px; margin-bottom: 4px; }
+    .qty-box { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+    .qty-btn { width: 28px; height: 28px; border-radius: 50%; border: none; cursor: pointer; font-weight: bold; }
+    .qty-plus { background: #FF6B00; color: white; }
+    .qty-minus { background: #eee; }
+    .summary { background: white; border-radius: 16px; padding: 16px; margin-top: 18px; }
+    .summary-row { display: flex; justify-content: space-between; margin-bottom: 12px; color: #666; font-size: 14px; }
+    .summary-total { color: #FF6B00; font-size: 20px; font-weight: bold; }
+    
+    /* Bottom Nav */
+    .bottom-nav {
+      position: fixed; bottom: 0; right: 50%; transform: translateX(50%);
+      width: 100%; max-width: 430px;
+      background: rgba(255,255,255,0.94); backdrop-filter: blur(16px);
+      border-top: 1px solid rgba(0,0,0,0.05); box-shadow: 0 -4px 10px rgba(0,0,0,.05);
+      display: flex; justify-content: space-around; padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px));
+      z-index: 999; height: 65px;
+    }
+    .nav-item { display: flex; flex-direction: column; align-items: center; justify-content:center; gap: 2px; font-size: 10px; color: #999; cursor: pointer; position: relative; transition:.25s; min-width:60px; }
+    .nav-item:hover { transform: translateY(-2px); }
+    .nav-item.active { color: #FF6B00; font-weight: bold; }
+    .nav-item.active::before { content:''; position:absolute; top:-4px; width:30px; height:3px; border-radius:20px; background:#FF6B00; }
+    .nav-item span:last-child { font-size:10px; font-weight:700; }
+    .empty { text-align: center; color: #888; margin-top: 60px; }
+
+    /* Sheet Overlay for product options */
+    .sheet-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1100;
+      display: none; align-items: flex-end; justify-content: center;
+    }
+    .sheet-overlay.open { display: flex; }
+    .sheet-box {
+      background: white; border-radius: 20px 20px 0 0; width: 100%; max-width: 430px;
+      max-height: 80vh; overflow-y: auto; padding: 20px; animation: slideUp 0.3s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .sheet-close {
+      width: 30px; height: 30px; background: #f5f5f5; border: none; border-radius: 50%;
+      font-size: 16px; cursor: pointer; float: left;
+    }
+    .option-label {
+      display: flex; align-items: center; gap: 10px; padding: 12px;
+      background: #f9f9f9; border-radius: 10px; margin-bottom: 6px; cursor: pointer;
+    }
+    .option-label input { accent-color: #FF6B00; }
+    
+    /* Track Order */
+    .status-track { background: #fff; border-radius: 16px; padding: 20px; margin: 16px 0; box-shadow: 0 4px 12px rgba(0,0,0,.05); }
+    .status-step { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .status-dot { width: 12px; height: 12px; border-radius: 50%; background: #ddd; }
+    .status-dot.done { background: #2ECC71; }
+    .status-text.active { font-weight: bold; color: #FF6B00; }
+    .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #E0E0E0; font-size: 14px; }
+    
+    /* Orders */
+    .order-item {
+      background: white; border-radius: 14px; padding: 14px; margin-bottom: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.05); display: flex; gap: 12px; align-items: center;
+    }
+    .order-item img {
+      width: 60px; height: 60px; border-radius: 12px; object-fit: cover; background: #f5f5f5;
+    }
+    .order-info { flex: 1; }
+    .order-info h4 { font-size: 14px; margin-bottom: 4px; }
+    .order-info .restaurant { font-size: 12px; color: #888; }
+    .order-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 12px; color: #888; }
+    .order-footer .total { font-weight: bold; color: #FF6B00; font-size: 14px; }
+    .track-btn {
+      background: none; border: 1px solid #FF6B00; color: #FF6B00;
+      padding: 6px 12px; border-radius: 10px; font-size: 12px; cursor: pointer; font-weight: 600;
+    }
+    
+    /* Account */
+    .profile-card {
+      background: white;
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 20px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .profile-avatar {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg,#FF6B00,#ff9a4d);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 12px;
+      font-size: 40px;
+      color: white;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .info-label { color: #888; font-size: 14px; }
+    .info-value { font-weight: 600; font-size: 14px; }
+    
+    /* Area & Payment */
+    .area-item, .payment-item {
+      background: white; border-radius: 14px; padding: 16px;
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 12px; border: 1px solid #E0E0E0; cursor: pointer;
+    }
+    .area-item.active, .payment-item.active { border-color: #FF6B00; background: #FFF3EB; }
+    .radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; }
+    .active .radio { border-color: #FF6B00; }
+    .active .radio::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #FF6B00; }
   </style>
 </head>
 <body>
-<div class="app-container" id="app">
-  <!-- Header -->
-  <div class="header">
-    <div class="logo"><span style="font-weight:900; font-size:22px;">دراكو</span></div>
-    <div><i class="fas fa-shopping-cart" onclick="showScreen('cartScreen')" style="font-size:22px; cursor:pointer;"></i><span id="cartBadge" class="badge">0</span></div>
+<div class="app-container">
+  <!-- Swipe Detection Overlay -->
+  <div class="swipe-overlay" id="swipeOverlay"></div>
+  
+  <!-- Edit Profile Modal -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeEditModal()">✕</button>
+      <h3>تعديل الحساب</h3>
+      <div class="field-group"><label class="field-label">الاسم</label><input type="text" id="editName" placeholder="اسمك" /></div>
+      <div class="field-group"><label class="field-label">رقم الهاتف</label><input type="tel" id="editPhone" placeholder="01xxxxxxxxx" /></div>
+      <div class="field-group"><label class="field-label">العنوان</label><input type="text" id="editAddress" placeholder="عنوانك" /></div>
+      <div class="field-group"><label class="field-label">المنطقة</label><select id="editRegion"></select></div>
+      <button class="btn-primary" onclick="updateProfile()">حفظ التغييرات</button>
+    </div>
   </div>
 
-  <div class="main-content" id="mainContent">
-    <!-- HOME SCREEN -->
-    <div class="screen active" id="homeScreen">
-      <div class="hero" style="background:#E8180E; border-radius:20px; padding:20px; color:white; margin-bottom:20px;">
-        <h2>اطلب أكل المفضل</h2>
-        <p>توصيل سريع لأقرب منطقة</p>
+  <!-- AUTH WRAPPER -->
+  <div class="auth-wrapper" id="authWrapper">
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" class="auth-screen visible">
+      <div class="login-hero">
+        <div class="hero-circles"><span></span><span></span><span></span></div>
+        <div class="hero-logo-wrap">
+          <svg class="logo-icon" viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="22" fill="rgba(255,255,255,0.15)"/><path d="M22 35 L52 20 Q82 20 82 38 Q82 55 60 55 L45 55 L45 58 L62 80 L38 80 L22 58 Z" fill="white"/><path d="M38 42 L58 42 Q66 42 66 50 Q66 58 58 58 L38 58 Z" fill="#E8180E"/></svg>
+          <h1>Drako</h1>
+          <p>Food Delivery</p>
+        </div>
+        <svg class="login-wave" viewBox="0 0 430 38" preserveAspectRatio="none" height="38"><path d="M0 38 C80 0 180 20 260 10 C330 2 390 28 430 18 L430 38 Z" fill="#F7F7F7"/></svg>
       </div>
-      <div class="search-box"><input type="text" id="searchHome" placeholder="ابحث عن مطعم أو منتج..." oninput="filterHome()"></div>
-      <div class="category-filters" id="categoryFilters">
-        <button class="filter-btn active" data-cat="restaurants">🍔 مطاعم</button>
-        <button class="filter-btn" data-cat="markets">🛒 ماركت</button>
-        <button class="filter-btn" data-cat="pharmacies">💊 صيدليات</button>
-        <button class="filter-btn" data-cat="special">✨ طلب خاص</button>
+      <div class="login-body">
+        <h2>أهلاً بك! 👋</h2>
+        <p class="subtitle">سجّل دخولك لتبدأ طلباتك اللذيذة</p>
+        <div class="field-group"><label class="field-label">رقم الهاتف</label><div class="field-wrap"><span class="field-icon">📱</span><input type="tel" id="loginPhone" placeholder="01xxxxxxxxx" /></div></div>
+        <div class="field-group"><label class="field-label">كلمة المرور</label><div class="field-wrap"><span class="field-icon">🔒</span><input type="password" id="loginPass" placeholder="••••••••" /><button class="password-toggle" onclick="togglePass('loginPass', this)" type="button">👁️</button></div></div>
+        <button class="btn-primary" onclick="customerLogin()">دخول</button>
+        <div class="divider"><span>أو</span></div>
+        <button class="btn-ghost" onclick="goToRegister()">إنشاء حساب جديد</button>
       </div>
-      <div id="homeItemsContainer"></div>
     </div>
 
-    <!-- RESTAURANT MENU (original design) -->
-    <div class="screen" id="restaurantMenuScreen">
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
-        <i class="fas fa-arrow-right" style="font-size:24px; cursor:pointer;" onclick="showScreen('homeScreen')"></i>
-        <h2 id="restaurantNameHeader"></h2>
+    <!-- REGISTER SCREEN -->
+    <div id="registerScreen" class="auth-screen hidden-left">
+      <div class="reg-header"><button class="back-btn" onclick="goToLogin()">←</button><div class="reg-header-info"><h2>إنشاء حساب جديد</h2><p id="step-subtitle">الخطوة 1 من 2 – بياناتك الشخصية</p></div></div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressBar"></div></div>
+      <div class="reg-body">
+        <div class="reg-step active" id="step1">
+          <div class="step-badge">✨ الخطوة الأولى</div><h2 class="step-title">من أنت؟</h2><p class="step-desc">نحتاج بياناتك الأساسية لإنشاء حسابك</p>
+          <div class="field-group"><label class="field-label">الاسم بالكامل</label><div class="field-wrap"><span class="field-icon">👤</span><input type="text" id="regName" placeholder="اكتب اسمك هنا" /></div></div>
+          <div class="field-group"><label class="field-label">رقم الهاتف</label><div class="field-wrap"><span class="field-icon">📱</span><input type="tel" id="regPhone" placeholder="01xxxxxxxxx" /></div></div>
+          <div class="field-group"><label class="field-label">كلمة المرور</label><div class="field-wrap"><span class="field-icon">🔒</span><input type="password" id="regPass" placeholder="6 أحرف على الأقل" /><button class="password-toggle" onclick="togglePass('regPass', this)" type="button">👁️</button></div></div>
+          <div class="field-group"><label class="field-label">تأكيد كلمة المرور</label><div class="field-wrap"><span class="field-icon">🔐</span><input type="password" id="regPassConfirm" placeholder="أعد كتابة كلمة المرور" /><button class="password-toggle" onclick="togglePass('regPassConfirm', this)" type="button">👁️</button></div></div>
+          <button class="btn-primary" onclick="goStep2()">التالي ←</button>
+        </div>
+        <div class="reg-step" id="step2">
+          <div class="step-badge">📍 الخطوة الثانية</div><h2 class="step-title">عنوانك التوصيل</h2><p class="step-desc">اختر منطقتك وعنوانك عشان نوصّل لحد بابك 🚀</p>
+          <div class="field-group"><label class="field-label">المنطقة</label><div class="field-wrap select-wrap"><span class="field-icon">🗺️</span><select id="regRegion"><option value="">اختر منطقتك</option></select></div></div>
+          <div class="field-group"><label class="field-label">العنوان التفصيلي</label><div class="field-wrap"><span class="field-icon">🏠</span><input type="text" id="regAddress" placeholder="مثال: شارع النيل، عمارة 5، شقة 2" /></div></div>
+          <button class="btn-primary" onclick="customerRegister()">إنشاء الحساب 🎉</button>
+          <p class="terms-note">بإنشاء حساب أنت توافق على <a href="#">شروط الاستخدام</a> و<a href="#">سياسة الخصوصية</a></p>
+        </div>
       </div>
-      <img id="restaurantCover" style="width:100%; height:180px; object-fit:cover; border-radius:20px;">
-      <div class="tabs" id="menuTabs"></div>
-      <div id="productsList"></div>
+    </div>
+  </div>
+
+  <!-- MAIN APP WRAPPER -->
+  <div class="main-app-wrapper" id="mainAppWrapper">
+    <div class="header" id="mainHeader">
+      <div class="top-actions"><button class="icon-btn">☰</button></div>
+      <div class="logo"><div class="logo-main">Drako</div><div class="logo-sub">FOOD DELIVERY</div></div>
+      <div class="top-actions">
+        <button class="icon-btn" onclick="showScreen('cartScreen')">🛒<span class="badge" id="headerBadge">0</span></button>
+      </div>
     </div>
 
-    <!-- SPECIAL ORDER (markets, pharmacies, custom) -->
-    <div class="screen" id="specialOrderScreen">
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
-        <i class="fas fa-arrow-right" style="font-size:24px; cursor:pointer;" onclick="showScreen('homeScreen')"></i>
-        <h2 id="specialOrderTitle"></h2>
-      </div>
-      <div class="special-order-card">
-        <div class="field-group">
-          <label>تفاصيل الطلب (المنتجات والكميات)</label>
-          <textarea id="specialOrderDetails" rows="5" style="width:100%; border-radius:12px; border:1px solid #ddd; padding:12px;"></textarea>
+    <div class="main-content" id="mainContent">
+      <!-- HOME SCREEN -->
+      <section class="screen" id="homeScreen">
+        <div style="background:linear-gradient(135deg,#FF6B00,#ff9a4d);padding:20px;border-radius:24px;color:white;position:relative;overflow:hidden;margin-bottom:20px;box-shadow:0 12px 30px rgba(255,107,0,.28);">
+          <div style="position:relative;z-index:2;">
+            <div style="font-size:24px;font-weight:900;line-height:1.6;">اطلب أكلك المفضل<br>في أسرع وقت 🚀</div>
+            <div class="slogan" style="color:#fff;margin-top:8px;font-size:13px;">أفضل المطاعم والعروض اليومية والتوصيل السريع لحد باب البيت.</div>
+          </div>
         </div>
-        <div class="file-attachment">
-          <label for="attachFiles">📎 إرفاق صور (إيصال أو مرجع)</label>
-          <input type="file" id="attachFiles" multiple accept="image/*" onchange="previewFiles(this)">
-          <div class="preview-images" id="filePreview"></div>
+        <div class="slogan">أكل تحبه... يوصل لحد عندك</div>
+        <div class="search-box">🔍<input type="text" placeholder="ابحث عن مطعم أو منتج" id="searchInput" oninput="filterHomeItems()" /></div>
+        
+        <!-- Category Filters -->
+        <div class="category-filters" id="categoryFilters">
+          <button class="filter-btn active" data-cat="restaurants">🍔 مطاعم</button>
+          <button class="filter-btn" data-cat="markets">🛒 ماركت</button>
+          <button class="filter-btn" data-cat="pharmacies">💊 صيدليات</button>
+          <button class="filter-btn" data-cat="special">✨ طلب خاص</button>
         </div>
+        
+        <div class="section-title" id="homeSectionTitle">🍔 المطاعم</div>
+        <div id="restaurantsContainer"></div>
+      </section>
+
+      <!-- RESTAURANT MENU SCREEN -->
+      <section class="screen" id="restaurantScreen">
+        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;">
+          <button class="icon-btn" onclick="showScreen('homeScreen')">←</button>
+          <div class="logo"><span id="restaurantTitleHeader">المطعم</span></div>
+          <button class="icon-btn">♡</button>
+        </div>
+        <img id="restaurantHero" class="hero-image" src="" />
+        <div class="restaurant-info">
+          <h2 id="restaurantName"></h2>
+          <div class="meta" style="margin-top: 10px;"><span>⭐ 4.8</span><span>⏱ 30 دقيقة</span><span>+120 تقييم</span></div>
+          <div class="tabs" id="tabsContainer"></div>
+          <div id="productsContainer"></div>
+        </div>
+      </section>
+
+      <!-- SPECIAL ORDER SCREEN (for markets, pharmacies, custom) -->
+      <section class="screen" id="specialOrderScreen">
+        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;">
+          <button class="icon-btn" onclick="showScreen('homeScreen')">←</button>
+          <div class="logo"><span id="specialOrderTitle">طلب ماركت</span></div>
+          <div></div>
+        </div>
+        <div class="special-order-card">
+          <div class="field-group">
+            <label class="field-label">📝 تفاصيل الطلب</label>
+            <div class="field-wrap">
+              <textarea id="specialOrderDetails" rows="5" placeholder="اكتب طلبك بالتفصيل (أسماء المنتجات، الكميات، ملاحظات...)"></textarea>
+            </div>
+          </div>
+          <div class="file-attachment">
+            <label for="attachFiles">📎 إرفاق ملفات (صور)</label>
+            <input type="file" id="attachFiles" multiple accept="image/*" onchange="previewFiles(this)">
+            <div class="preview-images" id="filePreview"></div>
+          </div>
+          <div class="summary">
+            <div class="summary-row"><span>🚚 رسوم التوصيل</span><span id="specialDeliveryFee">0 ج</span></div>
+            <div class="summary-row"><strong>الإجمالي</strong><strong class="summary-total" id="specialTotal">0 ج</strong></div>
+          </div>
+          <button class="btn" onclick="submitSpecialOrder()">📦 إرسال الطلب</button>
+        </div>
+      </section>
+
+      <!-- CART SCREEN -->
+      <section class="screen" id="cartScreen">
+        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;">
+          <button class="icon-btn" onclick="showScreen('homeScreen')">←</button>
+          <div class="logo">السلة</div>
+          <div></div>
+        </div>
+        <div id="cartItems"></div>
+        <div class="summary" id="cartSummary">
+          <div class="summary-row"><span>إجمالي المنتجات</span><span id="itemsTotal">0 ج</span></div>
+          <div class="summary-row"><span>رسوم التوصيل</span><span id="deliveryFee">0 ج</span></div>
+          <div class="summary-row"><strong>الإجمالي النهائي</strong><strong class="summary-total" id="finalTotal">0 ج</strong></div>
+        </div>
+        <button class="btn" id="checkoutBtn" onclick="proceedToCheckout()">إتمام الطلب</button>
+      </section>
+
+      <!-- AREA SCREEN -->
+      <section class="screen" id="areaScreen">
+        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;">
+          <button class="icon-btn" onclick="showScreen('cartScreen')">←</button>
+          <div class="logo">اختر منطقتك</div>
+          <div></div>
+        </div>
+        <div class="slogan">اختر المنطقة لعرض رسوم التوصيل</div>
+        <div id="areasContainer"></div>
+        <button class="btn" onclick="confirmArea()">تأكيد المنطقة</button>
+      </section>
+
+      <!-- CHECKOUT SCREEN -->
+      <section class="screen" id="checkoutScreen">
+        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;">
+          <button class="icon-btn" onclick="showScreen('areaScreen')">←</button>
+          <div class="logo">إتمام الطلب</div>
+          <div></div>
+        </div>
+        <div id="checkoutUserInfo"></div>
+        <div class="summary" style="margin-bottom:18px;"><div class="summary-row"><span>📍 المنطقة</span><span id="selectedAreaName"></span></div></div>
+        <div class="payment-item active" data-method="CASH" onclick="selectPayment(this, 'CASH')"><div>💵 كاش عند الاستلام</div><div class="radio"></div></div>
+        <div class="payment-item" data-method="VODAFONE" onclick="selectPayment(this, 'VODAFONE')"><div>📱 فودافون كاش</div><div class="radio"></div></div>
         <div class="summary">
-          <div class="summary-row"><span>🚚 رسوم التوصيل</span><span id="specialDeliveryFee">0 ج.م</span></div>
-          <div class="summary-row"><strong>الإجمالي</strong><strong id="specialTotal">0 ج.م</strong></div>
+          <div class="summary-row"><span>الإجمالي</span><span id="checkoutItemsTotal"></span></div>
+          <div class="summary-row"><span>التوصيل</span><span id="checkoutDelivery"></span></div>
+          <div class="summary-row"><strong>الإجمالي النهائي</strong><strong class="summary-total" id="checkoutFinal"></strong></div>
         </div>
-        <button class="btn" onclick="submitSpecialOrder()">إرسال الطلب</button>
-      </div>
+        <button class="btn" onclick="submitOrder()">تأكيد الطلب</button>
+      </section>
+
+      <!-- TRACK SCREEN -->
+      <section class="screen" id="trackScreen">
+        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;">
+          <button class="icon-btn" onclick="showScreen('homeScreen')">←</button>
+          <div class="logo">تتبع الطلب</div>
+          <div></div>
+        </div>
+        <div style="text-align:center; margin: 20px 0;">
+          <h2>حالة الطلب</h2>
+          <div style="color: #FF6B00; font-weight: bold; font-size: 18px;" id="trackOrderId"></div>
+        </div>
+        <div class="status-track" id="trackStatusContainer"></div>
+        <div class="details" id="trackDetails"></div>
+        <button class="btn" onclick="showScreen('homeScreen')">العودة للرئيسية</button>
+      </section>
+
+      <!-- ORDERS SCREEN -->
+      <section class="screen" id="ordersScreen">
+        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;">
+          <button class="icon-btn" onclick="showScreen('homeScreen')">←</button>
+          <div class="logo">طلباتي</div>
+          <div></div>
+        </div>
+        <div class="tab-bar" id="orders-tab-bar" style="display:flex; gap: 10px; margin-bottom: 16px;">
+          <div class="tab active" onclick="switchOrdersTab('active')">🔄 النشطة</div>
+          <div class="tab" onclick="switchOrdersTab('archive')">📦 الأرشيف</div>
+        </div>
+        <div id="myOrdersList"></div>
+      </section>
+
+      <!-- ACCOUNT SCREEN -->
+      <section class="screen" id="accountScreen">
+        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;">
+          <button class="icon-btn" onclick="showScreen('homeScreen')">←</button>
+          <div class="logo">حسابي</div>
+          <div></div>
+        </div>
+        <div style="padding: 16px;" id="accountInfo">
+          <button class="btn outline-btn" onclick="showScreen('loginScreen')">تسجيل الدخول</button>
+        </div>
+      </section>
     </div>
 
-    <!-- CART SCREEN -->
-    <div class="screen" id="cartScreen">
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
-        <i class="fas fa-arrow-right" style="font-size:24px; cursor:pointer;" onclick="showScreen('homeScreen')"></i>
-        <h2>سلة الطلبات</h2>
-      </div>
-      <div id="cartItemsContainer"></div>
-      <div class="summary" id="cartSummary">
-        <div class="summary-row"><span>إجمالي المنتجات</span><span id="cartSubtotal">0 ج.م</span></div>
-        <div class="summary-row"><span>رسوم التوصيل</span><span id="cartDeliveryFee">0 ج.م</span></div>
-        <div class="summary-row"><strong>الإجمالي النهائي</strong><strong id="cartTotal">0 ج.م</strong></div>
-      </div>
-      <button class="btn" onclick="proceedToCheckout()">إتمام الطلب</button>
+    <!-- BOTTOM NAV -->
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="navigateTo('homeScreen')">🏠<span>الرئيسية</span></div>
+      <div class="nav-item" onclick="navigateTo('cartScreen')">🛒<span>السلة</span><span class="badge" id="cartBadge">0</span></div>
+      <div class="nav-item" onclick="navigateTo('ordersScreen')">📦<span>طلباتي</span></div>
+      <div class="nav-item" onclick="navigateTo('accountScreen')">👤<span>حساب</span></div>
     </div>
-
-    <!-- AREA SCREEN -->
-    <div class="screen" id="areaScreen">
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
-        <i class="fas fa-arrow-right" style="font-size:24px; cursor:pointer;" onclick="showScreen('cartScreen')"></i>
-        <h2>اختر منطقتك</h2>
-      </div>
-      <div id="areasList"></div>
-      <button class="btn" onclick="confirmArea()">تأكيد</button>
-    </div>
-
-    <!-- CHECKOUT SCREEN -->
-    <div class="screen" id="checkoutScreen">
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
-        <i class="fas fa-arrow-right" style="font-size:24px; cursor:pointer;" onclick="showScreen('areaScreen')"></i>
-        <h2>تأكيد الطلب</h2>
-      </div>
-      <div id="checkoutUserInfo"></div>
-      <div class="summary"><div class="summary-row"><span>المنطقة</span><span id="checkoutAreaName"></span></div></div>
-      <div class="payment-options">
-        <div class="payment-item" data-method="CASH" onclick="selectPayment(this,'CASH')">💵 كاش عند الاستلام</div>
-        <div class="payment-item" data-method="VODAFONE" onclick="selectPayment(this,'VODAFONE')">📱 فودافون كاش</div>
-      </div>
-      <div class="summary">
-        <div class="summary-row"><span>إجمالي المنتجات</span><span id="checkoutSubtotal"></span></div>
-        <div class="summary-row"><span>التوصيل</span><span id="checkoutDelivery"></span></div>
-        <div class="summary-row"><strong>الإجمالي</strong><strong id="checkoutTotal"></strong></div>
-      </div>
-      <button class="btn" onclick="submitOrder()">تأكيد الطلب</button>
-    </div>
-
-    <!-- TRACK SCREEN -->
-    <div class="screen" id="trackScreen">
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
-        <i class="fas fa-arrow-right" style="font-size:24px; cursor:pointer;" onclick="showScreen('homeScreen')"></i>
-        <h2>تتبع الطلب</h2>
-      </div>
-      <div id="trackStatus"></div>
-      <div class="summary" id="trackDetails"></div>
-      <button class="btn" onclick="showScreen('homeScreen')">العودة</button>
-    </div>
-
-    <!-- ORDERS SCREEN -->
-    <div class="screen" id="ordersScreen">
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
-        <i class="fas fa-arrow-right" style="font-size:24px; cursor:pointer;" onclick="showScreen('homeScreen')"></i>
-        <h2>طلباتي</h2>
-      </div>
-      <div class="tabs" style="margin-bottom:12px;">
-        <div class="tab active" onclick="switchOrdersTab('active')">الحالية</div>
-        <div class="tab" onclick="switchOrdersTab('archive')">السابقة</div>
-      </div>
-      <div id="ordersList"></div>
-    </div>
-
-    <!-- ACCOUNT SCREEN -->
-    <div class="screen" id="accountScreen">
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
-        <i class="fas fa-arrow-right" style="font-size:24px; cursor:pointer;" onclick="showScreen('homeScreen')"></i>
-        <h2>حسابي</h2>
-      </div>
-      <div id="accountInfo"></div>
-    </div>
-  </div>
-
-  <div class="bottom-nav">
-    <div class="nav-item" onclick="navigateTo('homeScreen')"><i class="fas fa-home"></i><span>الرئيسية</span></div>
-    <div class="nav-item" onclick="navigateTo('cartScreen')"><i class="fas fa-shopping-cart"></i><span>السلة</span></div>
-    <div class="nav-item" onclick="navigateTo('ordersScreen')"><i class="fas fa-truck"></i><span>طلباتي</span></div>
-    <div class="nav-item" onclick="navigateTo('accountScreen')"><i class="fas fa-user"></i><span>حساب</span></div>
   </div>
 </div>
 
-<div class="toast" id="toastMsg"></div>
+<!-- PRODUCT SHEET -->
+<div class="sheet-overlay" id="productSheet">
+  <div class="sheet-box">
+    <button class="sheet-close" onclick="closeProductSheet()">✕</button>
+    <div id="sheetContent"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-  // ---------- Global variables ----------
-  let restaurants = [];
-  let markets = [
-    { id: 'market1', name: 'كارفور ماركت', logo: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200', type: 'market' },
-    { id: 'market2', name: 'المانيا سوبر ماركت', logo: 'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=200', type: 'market' }
-  ];
-  let pharmacies = [
-    { id: 'pharm1', name: 'صيدليات العزبي', logo: 'https://images.unsplash.com/photo-1584308666744-24d5c6dee668?w=200', type: 'pharmacy' },
-    { id: 'pharm2', name: 'صيدليات دواء', logo: 'https://images.unsplash.com/photo-1631549916768-4119b2e5f926?w=200', type: 'pharmacy' }
-  ];
-  let products = [];
-  let cart = JSON.parse(localStorage.getItem('drako_cart')) || [];
-  let selectedRestaurant = null;
-  let selectedArea = null;
-  let paymentMethod = 'CASH';
-  let currentUser = JSON.parse(localStorage.getItem('drako_user')) || null;
-  let allRegions = [];
-  let socket = null;
-  let currentCategory = 'restaurants';
-  let selectedFiles = [];
-  let specialOrderType = null;
-  let specialOrderStoreId = null;
+// ========== Helper Functions ==========
+function showToast(msg) { let t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2800); }
+function togglePass(id, btn) { let inp = document.getElementById(id); if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; } else { inp.type = 'password'; btn.textContent = '👁️'; } }
 
-  // ---------- UI helpers ----------
-  function showToast(msg) {
-    let toast = document.getElementById('toastMsg');
-    toast.innerText = msg;
-    toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 2500);
-  }
+// ========== Global Variables ==========
+const API = '/api';
+let restaurants = [];
+let markets = [];
+let pharmacies = [];
+let products = [];
+let cart = JSON.parse(localStorage.getItem('drako_cart')) || [];
+let selectedRestaurant = null;
+let selectedArea = null;
+let paymentMethod = 'CASH';
+let currentProduct = null;
+let currentUser = JSON.parse(localStorage.getItem('drako_user')) || null;
+let allRegions = [];
+let socket = null;
+let currentScreen = 'homeScreen';
+let touchStartX = 0, touchEndX = 0;
+let currentCategory = 'restaurants';
+let selectedFiles = [];
+let specialOrderType = null;
+let specialOrderStoreId = null;
 
-  function showScreen(id) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-    if (id === 'accountScreen') renderAccount();
-    if (id === 'ordersScreen') loadOrders();
-    if (id === 'areaScreen') loadAreas();
-    if (id === 'checkoutScreen') renderCheckoutUser();
-  }
+window._ordersTab = 'active';
+window._trackingOrderId = null;
+window._currentQty = 1;
+window._currentUnitPrice = 0;
 
-  function navigateTo(screenId) {
-    if ((screenId === 'ordersScreen' || screenId === 'accountScreen') && !currentUser) {
-      showScreen('loginScreen');
-      return;
+// Mock data for markets and pharmacies
+markets = [
+  { id: 'market1', name: 'كارفور ماركت', logo: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200', type: 'market' },
+  { id: 'market2', name: 'المانيا سوبر ماركت', logo: 'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=200', type: 'market' },
+  { id: 'market3', name: 'هايبر وان', logo: 'https://images.unsplash.com/photo-1534452203293-494d7ddbf7e0?w=200', type: 'market' }
+];
+pharmacies = [
+  { id: 'pharm1', name: 'صيدليات العزبي', logo: 'https://images.unsplash.com/photo-1584308666744-24d5c6dee668?w=200', type: 'pharmacy' },
+  { id: 'pharm2', name: 'صيدليات دواء', logo: 'https://images.unsplash.com/photo-1631549916768-4119b2e5f926?w=200', type: 'pharmacy' },
+  { id: 'pharm3', name: 'صيدليات نوبل', logo: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e0dd?w=200', type: 'pharmacy' }
+];
+
+// ========== Swipe to Go Back ==========
+document.getElementById('swipeOverlay').addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; });
+document.getElementById('swipeOverlay').addEventListener('touchend', (e) => { touchEndX = e.changedTouches[0].screenX; handleSwipe(); });
+function handleSwipe() { if (touchEndX - touchStartX > 50) goBack(); }
+function goBack() {
+  let history = getScreenHistory();
+  if (history.length > 1) { showScreen(history[history.length-2]); history.pop(); localStorage.setItem('drako_screen_history', JSON.stringify(history)); }
+  else showScreen('homeScreen');
+}
+function getScreenHistory() {
+  try { return JSON.parse(localStorage.getItem('drako_screen_history')) || ['homeScreen']; } catch(e) { return ['homeScreen']; }
+}
+function pushToHistory(screen) {
+  let history = getScreenHistory();
+  if (history[history.length-1] !== screen) { history.push(screen); localStorage.setItem('drako_screen_history', JSON.stringify(history)); }
+}
+function saveCurrentScreen(screen) { localStorage.setItem('drako_current_screen', screen); currentScreen = screen; }
+function restoreCurrentScreen() {
+  let saved = localStorage.getItem('drako_current_screen');
+  if (saved && !['loginScreen','registerScreen'].includes(saved)) { showScreen(saved); return true; }
+  return false;
+}
+
+// ========== Sound Functions ==========
+function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
+  const sampleRate = 44100;
+  const numSamples = Math.floor(sampleRate * duration);
+  const buffer = new Float32Array(numSamples);
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / sampleRate;
+    let sample = 0;
+    if (type === 'sine') sample = Math.sin(2 * Math.PI * frequency * t);
+    else if (type === 'square') sample = Math.sign(Math.sin(2 * Math.PI * frequency * t));
+    else if (type === 'triangle') {
+      const p = (frequency * t) % 1;
+      sample = 4 * Math.abs(p - 0.5) - 1;
     }
-    showScreen(screenId);
+    buffer[i] = sample * volume;
   }
-
-  // ---------- Auth & Regions ----------
-  async function loadRegions() {
-    try {
-      const res = await fetch('/api/regions');
-      allRegions = await res.json();
-    } catch(e) { allRegions = [
-      {id:'r1', name:'مساكن جمصة', fee:10},
-      {id:'r2', name:'15 مايو', fee:15},
-      {id:'r3', name:'المنصورة الجديدة', fee:20}
-    ]; }
+  const dataLength = buffer.length * 2;
+  const bufferArray = new ArrayBuffer(44 + dataLength);
+  const view = new DataView(bufferArray);
+  function writeString(offset, string) { for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i)); }
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + dataLength, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, dataLength, true);
+  let offset = 44;
+  for (let i = 0; i < buffer.length; i++) {
+    const s = Math.max(-1, Math.min(1, buffer[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    offset += 2;
   }
+  const blob = new Blob([bufferArray], { type: 'audio/wav' });
+  return URL.createObjectURL(blob);
+}
 
-  async function customerLogin() {
-    const phone = document.getElementById('loginPhone').value.trim();
-    const password = document.getElementById('loginPass').value;
-    if (!phone || !password) return showToast('أدخل البيانات');
-    try {
-      const res = await fetch('/api/customer/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, password })
-      });
-      const data = await res.json();
-      if (data.error) return showToast(data.error);
-      currentUser = data;
-      localStorage.setItem('drako_user', JSON.stringify(currentUser));
-      document.getElementById('authWrapper').style.display = 'none';
-      document.getElementById('mainAppWrapper').classList.add('active');
-      initSocket();
-      loadRestaurants();
-      renderCart();
-      showScreen('homeScreen');
-      showToast(`مرحباً ${data.name}`);
-    } catch(e) { showToast('فشل الاتصال'); }
+const soundInstances = {};
+function createSound(name, ...tones) {
+  soundInstances[name] = tones.map(t => new Howl({ src: [t], format: ['wav'], volume: 0.5 }));
+}
+function playSound(name) {
+  if (soundInstances[name]) {
+    soundInstances[name].forEach(h => h.play());
   }
+}
 
-  async function customerRegister() {
-    const name = document.getElementById('regName').value.trim();
-    const phone = document.getElementById('regPhone').value.trim();
-    const password = document.getElementById('regPass').value;
-    const regionId = document.getElementById('regRegion').value;
-    const address = document.getElementById('regAddress').value.trim();
-    if (!name || !phone || !password || !regionId || !address) return showToast('أكمل جميع الحقول');
-    try {
-      const res = await fetch('/api/customer/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone, password, regionId, address })
-      });
-      const data = await res.json();
-      if (data.error) return showToast(data.error);
-      currentUser = data;
-      localStorage.setItem('drako_user', JSON.stringify(currentUser));
-      document.getElementById('authWrapper').style.display = 'none';
-      document.getElementById('mainAppWrapper').classList.add('active');
-      initSocket();
-      loadRestaurants();
-      renderCart();
-      showScreen('homeScreen');
-      showToast('تم إنشاء الحساب');
-    } catch(e) { showToast('فشل'); }
+createSound('orderAccepted', generateToneWAV(600, 0.2, 'sine'));
+createSound('orderOnTheWay', generateToneWAV(800, 0.15, 'sine'), generateToneWAV(500, 0.15, 'sine'));
+createSound('orderDelivered', generateToneWAV(1000, 0.2, 'sine'));
+createSound('orderCancelled', generateToneWAV(400, 0.3, 'triangle'));
+
+// ========== API Helper ==========
+async function apiFetch(url, options = {}) {
+  const res = await fetch(url, {
+    ...options,
+    credentials: 'include',
+    headers: {
+      ...(options.headers || {}),
+      'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
+    }
+  });
+  return res;
+}
+
+// ========== Auth Navigation ==========
+function goToRegister() { 
+  document.getElementById('loginScreen').classList.replace('visible', 'hidden-right'); 
+  document.getElementById('registerScreen').classList.replace('hidden-left', 'visible'); 
+  loadRegionsForSelect(); 
+}
+function goToLogin() { 
+  document.getElementById('registerScreen').classList.replace('visible', 'hidden-left'); 
+  document.getElementById('loginScreen').classList.replace('hidden-right', 'visible'); 
+  resetRegisterSteps(); 
+}
+function resetRegisterSteps() { 
+  document.getElementById('step1').classList.add('active'); 
+  document.getElementById('step2').classList.remove('active'); 
+  document.getElementById('progressBar').style.width = '50%'; 
+  document.getElementById('step-subtitle').textContent = 'الخطوة 1 من 2 – بياناتك الشخصية'; 
+}
+function goStep2() { 
+  let name = document.getElementById('regName').value.trim(), 
+      phone = document.getElementById('regPhone').value.trim(), 
+      pass = document.getElementById('regPass').value, 
+      passConfirm = document.getElementById('regPassConfirm').value; 
+  if (!name) return showToast('⚠️ اكتب اسمك'); 
+  if (!phone || phone.length < 11) return showToast('⚠️ رقم هاتف غير صحيح'); 
+  if (pass.length < 6) return showToast('⚠️ كلمة المرور قصيرة'); 
+  if (pass !== passConfirm) return showToast('❌ كلمتا المرور غير متطابقتين'); 
+  document.getElementById('step1').classList.remove('active'); 
+  document.getElementById('step2').classList.add('active'); 
+  document.getElementById('progressBar').style.width = '100%'; 
+  document.getElementById('step-subtitle').textContent = 'الخطوة 2 من 2 – عنوان التوصيل'; 
+}
+
+async function loadRegionsForSelect() { 
+  try { 
+    const res = await apiFetch(API + '/regions'); 
+    allRegions = await res.json(); 
+  } catch (e) { 
+    allRegions = [
+      { id: 'reg_1', name: 'مساكن جمصة', fee: 10 },
+      { id: 'reg_2', name: '15 مايو', fee: 15 },
+      { id: 'reg_3', name: 'المنصورة الجديدة', fee: 20 },
+      { id: 'reg_4', name: 'الدلتا', fee: 25 },
+      { id: 'reg_5', name: 'الشيخ زايد', fee: 30 }
+    ]; 
+  } 
+  let sel = document.getElementById('regRegion'); 
+  if (sel) sel.innerHTML = '<option value="">اختر منطقتك</option>' + allRegions.map(r => `<option value="${r.id}">${r.name} — ${r.fee} ج توصيل</option>`).join(''); 
+  let editSel = document.getElementById('editRegion');
+  if (editSel) editSel.innerHTML = allRegions.map(r => `<option value="${r.id}">${r.name} — ${r.fee} ج</option>`).join('');
+}
+
+// ========== Auth Functions ==========
+async function customerLogin() { 
+  let phone = document.getElementById('loginPhone').value.trim(), 
+      password = document.getElementById('loginPass').value; 
+  if (!phone || !password) return showToast('⚠️ أكمل الحقول'); 
+  try { 
+    const res = await apiFetch(API + '/customer/login', { 
+      method: 'POST', 
+      body: JSON.stringify({ phone, password }) 
+    }); 
+    const data = await res.json(); 
+    if (data.error) return showToast('❌ ' + data.error); 
+    currentUser = { id: data.id, name: data.name, phone: data.phone, regionId: data.regionId, address: data.address, token: data.token }; 
+    localStorage.setItem('drako_user', JSON.stringify(currentUser)); 
+    document.getElementById('authWrapper').classList.add('hide'); 
+    document.getElementById('mainAppWrapper').classList.add('active'); 
+    initSocket();
+    loadRestaurants(); 
+    renderCart(); 
+    if (!restoreCurrentScreen()) showScreen('homeScreen'); 
+    showToast('✅ مرحباً ' + data.name); 
+  } catch (e) { showToast('❌ فشل الاتصال'); } 
+}
+
+async function customerRegister() { 
+  let name = document.getElementById('regName').value.trim(), 
+      phone = document.getElementById('regPhone').value.trim(), 
+      password = document.getElementById('regPass').value, 
+      regionId = document.getElementById('regRegion').value, 
+      address = document.getElementById('regAddress').value.trim(); 
+  if (!name || !phone || !password) return showToast('⚠️ أكمل الحقول'); 
+  if (!regionId) return showToast('⚠️ اختر المنطقة'); 
+  if (!address) return showToast('⚠️ أدخل العنوان التفصيلي'); 
+  try { 
+    const res = await apiFetch(API + '/customer/register', { 
+      method: 'POST', 
+      body: JSON.stringify({ name, phone, password, regionId, address }) 
+    }); 
+    const data = await res.json(); 
+    if (data.error) return showToast('❌ ' + data.error); 
+    currentUser = { id: data.id, name: data.name, phone: data.phone, regionId: data.regionId, address: data.address, token: data.token }; 
+    localStorage.setItem('drako_user', JSON.stringify(currentUser)); 
+    document.getElementById('authWrapper').classList.add('hide'); 
+    document.getElementById('mainAppWrapper').classList.add('active'); 
+    initSocket();
+    loadRestaurants(); 
+    renderCart(); 
+    showScreen('homeScreen'); 
+    showToast('🎉 تم إنشاء حسابك بنجاح'); 
+  } catch (e) { showToast('❌ فشل الاتصال'); } 
+}
+
+// ========== Edit Profile ==========
+function openEditModal() {
+  document.getElementById('editName').value = currentUser?.name || '';
+  document.getElementById('editPhone').value = currentUser?.phone || '';
+  document.getElementById('editAddress').value = currentUser?.address || '';
+  let editRegion = document.getElementById('editRegion');
+  if (editRegion && currentUser?.regionId) {
+    editRegion.value = currentUser.regionId;
   }
-
-  function logout() {
-    currentUser = null;
-    localStorage.removeItem('drako_user');
-    localStorage.removeItem('drako_cart');
-    cart = [];
-    renderCart();
-    location.reload();
+  document.getElementById('editModal').classList.add('open');
+}
+function closeEditModal() {
+  document.getElementById('editModal').classList.remove('open');
+}
+async function updateProfile() {
+  let name = document.getElementById('editName').value.trim();
+  let phone = document.getElementById('editPhone').value.trim();
+  let address = document.getElementById('editAddress').value.trim();
+  let regionId = document.getElementById('editRegion').value;
+  
+  if (!name) return showToast('⚠️ الاسم مطلوب');
+  if (!phone || phone.length < 11) return showToast('⚠️ رقم هاتف غير صحيح');
+  if (!address) return showToast('⚠️ العنوان مطلوب');
+  if (!regionId) return showToast('⚠️ اختر المنطقة');
+  
+  try {
+    currentUser.name = name;
+    currentUser.phone = phone;
+    currentUser.address = address;
+    currentUser.regionId = regionId;
+    localStorage.setItem('drako_user', JSON.stringify(currentUser));
+    renderAccountScreen();
+    closeEditModal();
+    showToast('✅ تم تحديث البيانات بنجاح');
+  } catch(e) {
+    showToast('❌ فشل التحديث');
   }
+}
 
-  function initSocket() {
-    if (socket) return;
-    socket = io();
-    socket.on('orderStatusUpdate', (data) => {
-      if (window._trackingOrderId === data.orderId) {
-        trackOrder(data.orderId);
-      }
-      loadOrders();
+function initSocket() {
+  if (socket) return;
+  socket = io();
+  socket.on('orderStatusUpdate', (data) => {
+    if (window._trackingOrderId === data.orderId) {
+      trackOrder(data.orderId);
+      if (data.status === 'ACCEPTED') playSound('orderAccepted');
+      else if (data.status === 'ON_THE_WAY') playSound('orderOnTheWay');
+      else if (data.status === 'DELIVERED') playSound('orderDelivered');
+      else if (data.status === 'CANCELLED') playSound('orderCancelled');
+    }
+    if (currentUser) loadMyOrders();
+  });
+}
+
+// ========== Main App Functions ==========
+function navigateTo(screenId) {
+  if ((screenId === 'ordersScreen' || screenId === 'accountScreen') && !currentUser) {
+    showScreen('loginScreen');
+    return;
+  }
+  showScreen(screenId);
+}
+
+function showScreen(id) { 
+  document.querySelectorAll('#mainAppWrapper .screen').forEach(s => s.classList.remove('active')); 
+  const target = document.getElementById(id); 
+  if (target) target.classList.add('active'); 
+  
+  document.querySelectorAll('.nav-item').forEach((n, i) => {
+    const navIds = ['homeScreen', 'cartScreen', 'ordersScreen', 'accountScreen'];
+    if (navIds[i] === id) n.classList.add('active');
+    else n.classList.remove('active');
+  });
+  
+  if (id === 'accountScreen') renderAccountScreen(); 
+  if (id === 'areaScreen') { loadRegions(); preselectArea(); } 
+  if (id === 'checkoutScreen') renderCheckoutUserInfo(); 
+  if (id === 'ordersScreen') loadMyOrders(); 
+  
+  pushToHistory(id);
+  saveCurrentScreen(id);
+}
+
+function renderCheckoutUserInfo() { 
+  const div = document.getElementById('checkoutUserInfo'); 
+  if (currentUser) { 
+    div.innerHTML = `<p style="color:#888">مرحباً، ${currentUser.name}</p>`; 
+  } else { 
+    div.innerHTML = `<div class="input-group"><label>الاسم</label><input id="customerName" placeholder="اكتب اسمك" /></div><div class="input-group"><label>رقم الهاتف</label><input id="customerPhone" placeholder="01xxxxxxxxx" /></div>`; 
+  } 
+}
+
+function renderAccountScreen() { 
+  const container = document.getElementById('accountInfo'); 
+  if (currentUser) { 
+    const regionName = allRegions.find(r => r.id === currentUser.regionId)?.name || 'غير محدد'; 
+    container.innerHTML = `
+      <div class="profile-card">
+        <div class="profile-avatar">👤</div>
+        <div class="info-row"><span class="info-label">الاسم</span><span class="info-value">${currentUser.name}</span></div>
+        <div class="info-row"><span class="info-label">رقم الهاتف</span><span class="info-value">${currentUser.phone}</span></div>
+        <div class="info-row"><span class="info-label">المنطقة</span><span class="info-value">${regionName}</span></div>
+        <div class="info-row"><span class="info-label">العنوان</span><span class="info-value">${currentUser.address || '—'}</span></div>
+        <button class="btn-primary" style="margin-top:16px;" onclick="openEditModal()">✏️ تعديل البيانات</button>
+        <button class="btn-ghost" style="margin-top:12px;" onclick="logout()">🚪 تسجيل الخروج</button>
+      </div>
+    `; 
+  } else { 
+    container.innerHTML = `<div class="profile-card"><button class="btn" onclick="location.reload()">تسجيل الدخول</button><button class="btn-ghost" style="margin-top:10px;" onclick="location.reload()">إنشاء حساب</button></div>`; 
+  } 
+}
+
+function logout() { 
+  currentUser = null; 
+  localStorage.removeItem('drako_user'); 
+  localStorage.removeItem('drako_current_screen');
+  localStorage.removeItem('drako_screen_history');
+  if (socket) socket.disconnect();
+  socket = null;
+  document.getElementById('mainAppWrapper').classList.remove('active'); 
+  document.getElementById('authWrapper').classList.remove('hide'); 
+  cart = []; 
+  saveCart(); 
+  goToLogin(); 
+}
+
+// ========== Regions ==========
+async function loadRegions() { 
+  try { 
+    const res = await apiFetch(API + '/regions'); 
+    allRegions = await res.json(); 
+  } catch (e) {} 
+  renderAreas(); 
+}
+
+function renderAreas() { 
+  const container = document.getElementById('areasContainer'); 
+  if (!allRegions.length) return; 
+  container.innerHTML = allRegions.map(a => `
+    <div class="area-item ${selectedArea?.id === a.id ? 'active' : ''}" onclick="selectArea('${a.id}')">
+      <div><strong>${a.name}</strong></div>
+      <div style="display:flex;align-items:center;gap:12px;"><strong>${a.fee} ج</strong><div class="radio"></div></div>
+    </div>
+  `).join(''); 
+}
+
+function preselectArea() { 
+  if (currentUser && currentUser.regionId && !selectedArea) { 
+    selectedArea = allRegions.find(r => r.id === currentUser.regionId) || null; 
+    renderAreas(); 
+  } 
+}
+
+function selectArea(id) { selectedArea = allRegions.find(a => a.id === id); renderAreas(); }
+
+function confirmArea() { 
+  if (!selectedArea) { showToast('⚠️ اختر منطقة'); return; } 
+  document.getElementById('selectedAreaName').innerText = selectedArea.name + ' - ' + selectedArea.fee + ' ج'; 
+  updateTotals(); 
+  showScreen('checkoutScreen'); 
+}
+
+function selectPayment(el, method) { 
+  document.querySelectorAll('.payment-item').forEach(i => i.classList.remove('active')); 
+  el.classList.add('active'); 
+  paymentMethod = method; 
+}
+
+// ========== Home Screen Category Logic ==========
+function initCategoryFilters() {
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      currentCategory = btn.dataset.cat;
+      let title = '';
+      if(currentCategory === 'restaurants') title = '🍔 المطاعم';
+      else if(currentCategory === 'markets') title = '🛒 الماركت';
+      else if(currentCategory === 'pharmacies') title = '💊 الصيدليات';
+      else if(currentCategory === 'special') title = '✨ طلب خاص';
+      document.getElementById('homeSectionTitle').innerHTML = title;
+      renderHomeItems();
     });
-  }
+  });
+}
 
-  // ---------- Home & Categories ----------
-  function initCategoryFilters() {
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-        btn.classList.add('active');
-        currentCategory = btn.dataset.cat;
-        renderHomeItems();
-      });
-    });
-  }
-
-  function renderHomeItems() {
-    const container = document.getElementById('homeItemsContainer');
-    let items = [];
-    if (currentCategory === 'restaurants') items = restaurants;
-    else if (currentCategory === 'markets') items = markets;
-    else if (currentCategory === 'pharmacies') items = pharmacies;
-    else if (currentCategory === 'special') {
-      container.innerHTML = `
-        <div class="restaurant-card" onclick="openSpecialOrder('custom', null)">
-          <img src="https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=200">
-          <div><h3>طلب خاص</h3><p>أي منتج غير موجود - اكتب طلبك وارفع الصور</p><button class="btn-outline" style="margin-top:8px;">اطلب الآن</button></div>
+function renderHomeItems() {
+  const container = document.getElementById('restaurantsContainer');
+  let items = [];
+  if(currentCategory === 'restaurants') items = restaurants;
+  else if(currentCategory === 'markets') items = markets;
+  else if(currentCategory === 'pharmacies') items = pharmacies;
+  else if(currentCategory === 'special') {
+    container.innerHTML = `
+      <div class="restaurant-card" onclick="openSpecialOrder('custom', null)">
+        <img src="https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=200">
+        <div class="restaurant-content">
+          <h3>طلب خاص</h3>
+          <div class="meta"><span>✨ مخصص</span><span>📝 اكتب طلبك</span></div>
+          <div class="minimum">أي طلب غير موجود في القوائم - أرفق الصور والتفاصيل</div>
+          <button class="btn menu-btn" onclick="event.stopPropagation(); openSpecialOrder('custom', null)">📝 تقديم طلب</button>
         </div>
-      `;
-      return;
-    }
-    if (!items.length) { container.innerHTML = '<div class="empty">لا توجد عناصر</div>'; return; }
-    container.innerHTML = items.map(item => `
-      <div class="restaurant-card" onclick="openSpecialOrder('${item.type}', '${item.id}')">
-        <img src="${item.logo}">
-        <div><h3>${item.name}</h3><div class="meta">⭐ 4.7 • توصيل سريع</div><button class="btn-outline" style="margin-top:8px;">اطلب الآن</button></div>
+      </div>
+    `;
+    return;
+  }
+  if(!items.length) { container.innerHTML='<div class="empty">لا توجد عناصر</div>'; return; }
+  container.innerHTML = items.map(item => `
+    <div class="restaurant-card" onclick="openSpecialOrder('${item.type}', '${item.id}')">
+      <img src="${item.logo || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'}">
+      <div class="restaurant-content">
+        <h3>${item.name}</h3>
+        <div class="meta"><span>⭐ 4.7</span><span>⏱ توصيل سريع</span></div>
+        <div class="minimum">🚚 أضف طلبك بالتفاصيل</div>
+        <button class="btn menu-btn" onclick="event.stopPropagation(); openSpecialOrder('${item.type}', '${item.id}')">📝 طلب الآن</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterHomeItems() {
+  let query = document.getElementById('searchInput').value.trim().toLowerCase();
+  if(currentCategory === 'restaurants') {
+    let filtered = restaurants.filter(r => r.name.toLowerCase().includes(query));
+    document.getElementById('restaurantsContainer').innerHTML = filtered.map(r => `
+      <div class="restaurant-card" onclick="openRestaurant('${r.id}')">
+        <img src="${r.logo || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'}">
+        <div class="restaurant-content">
+          <h3>${r.name}</h3>
+          <div class="meta"><span>⭐ 4.8</span><span>⏱ 30-45 دقيقة</span></div>
+          <div class="minimum">🚚 توصيل سريع • حد أدنى 50 ج</div>
+          <button class="btn menu-btn" onclick="event.stopPropagation(); openRestaurant('${r.id}')">🍽 عرض المنيو</button>
+        </div>
       </div>
     `).join('');
+  } else {
+    renderHomeItems();
   }
+}
 
-  function filterHome() {
-    const q = document.getElementById('searchHome').value.trim().toLowerCase();
-    if (currentCategory === 'restaurants') {
-      let filtered = restaurants.filter(r => r.name.toLowerCase().includes(q));
-      document.getElementById('homeItemsContainer').innerHTML = filtered.map(r => `
-        <div class="restaurant-card" onclick="openRestaurant('${r.id}')">
-          <img src="${r.logo}"><div><h3>${r.name}</h3><div class="meta">⭐ 4.8 • 30-45 دقيقة</div><button class="btn-outline">عرض المنيو</button></div>
-        </div>
-      `).join('');
-    } else {
-      renderHomeItems();
-    }
-  }
+// ========== Special Order ==========
+function openSpecialOrder(type, id) {
+  specialOrderType = type;
+  specialOrderStoreId = id;
+  let title = '';
+  if(type === 'market') title = 'طلب ماركت';
+  else if(type === 'pharmacy') title = 'طلب صيدلية';
+  else title = 'طلب خاص';
+  document.getElementById('specialOrderTitle').innerText = title;
+  document.getElementById('specialOrderDetails').value = '';
+  document.getElementById('filePreview').innerHTML = '';
+  selectedFiles = [];
+  document.getElementById('attachFiles').value = '';
+  updateSpecialDeliveryFee();
+  showScreen('specialOrderScreen');
+}
 
-  // ---------- Restaurant Menu (original) ----------
-  async function loadRestaurants() {
-    try {
-      const res = await fetch('/api/restaurants');
-      restaurants = await res.json();
-      renderHomeItems();
-    } catch(e) {}
-  }
+function updateSpecialDeliveryFee() {
+  let fee = selectedArea ? selectedArea.fee : 10;
+  document.getElementById('specialDeliveryFee').innerText = fee + ' ج';
+  document.getElementById('specialTotal').innerText = fee + ' ج';
+}
 
-  async function openRestaurant(restId) {
-    selectedRestaurant = restaurants.find(r => r.id === restId);
-    document.getElementById('restaurantNameHeader').innerText = selectedRestaurant.name;
-    document.getElementById('restaurantCover').src = selectedRestaurant.logo || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600';
-    try {
-      const res = await fetch(`/api/restaurants/${restId}/menu`);
-      products = await res.json();
-      renderMenuTabs();
-      showScreen('restaurantMenuScreen');
-    } catch(e) { showToast('خطأ في تحميل المنيو'); }
-  }
+function previewFiles(input) {
+  let preview = document.getElementById('filePreview');
+  preview.innerHTML = '';
+  selectedFiles = Array.from(input.files);
+  selectedFiles.forEach(file => {
+    let reader = new FileReader();
+    reader.onload = e => {
+      let img = document.createElement('img');
+      img.src = e.target.result;
+      preview.appendChild(img);
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
-  function renderMenuTabs() {
-    const categories = [...new Set(products.map(p => p.category || 'عام'))];
-    const tabsDiv = document.getElementById('menuTabs');
-    tabsDiv.innerHTML = categories.map((c, i) => `<div class="tab ${i===0?'active':''}" onclick="filterProductsByCat('${c}', this)">${c}</div>`).join('');
-    filterProductsByCat(categories[0], tabsDiv.firstChild);
-  }
+async function submitSpecialOrder() {
+  if(!currentUser) { showToast('⚠️ يرجى تسجيل الدخول أولاً'); return; }
+  let details = document.getElementById('specialOrderDetails').value.trim();
+  if(!details && specialOrderType !== 'custom') { showToast('⚠️ اكتب تفاصيل طلبك'); return; }
+  let fee = selectedArea ? selectedArea.fee : 10;
+  let total = fee;
+  let orderData = {
+    restaurantId: null,
+    items: [],
+    total: total,
+    customerName: currentUser.name,
+    customerPhone: currentUser.phone,
+    address: currentUser.address || (selectedArea ? selectedArea.name : ''),
+    regionName: selectedArea ? selectedArea.name : '',
+    paymentMethod: paymentMethod,
+    deliveryFee: fee,
+    specialOrder: true,
+    orderType: specialOrderType,
+    storeId: specialOrderStoreId,
+    orderDetails: details
+  };
+  try {
+    let formData = new FormData();
+    formData.append('orderData', JSON.stringify(orderData));
+    for(let file of selectedFiles) formData.append('files', file);
+    const res = await fetch(API + '/orders/special', { method: 'POST', body: formData, credentials: 'include' });
+    const data = await res.json();
+    if(data.error) return showToast('❌ '+data.error);
+    cart = []; saveCart(); renderCart();
+    trackOrder(data.orderId);
+    showToast('✅ تم إرسال الطلب بنجاح');
+  } catch(e) { console.error(e); showToast('❌ فشل الاتصال'); }
+}
 
-  function filterProductsByCat(category, el) {
-    document.querySelectorAll('#menuTabs .tab').forEach(t => t.classList.remove('active'));
-    if (el) el.classList.add('active');
-    const filtered = category ? products.filter(p => (p.category||'عام') === category) : products;
-    renderProducts(filtered);
-  }
+// ========== Restaurants (original menu) ==========
+async function loadRestaurants() { 
+  try { 
+    const res = await apiFetch(API + '/restaurants'); 
+    restaurants = await res.json(); 
+    renderHomeItems(); 
+  } catch (e) { console.log(e); } 
+}
 
-  function renderProducts(list) {
-    const container = document.getElementById('productsList');
-    if (!list.length) { container.innerHTML = '<div class="empty">لا توجد منتجات</div>'; return; }
-    container.innerHTML = list.map(p => `
+async function openRestaurant(id) { 
+  selectedRestaurant = restaurants.find(r => r.id === id); 
+  document.getElementById('restaurantName').innerText = selectedRestaurant.name; 
+  document.getElementById('restaurantTitleHeader').innerText = selectedRestaurant.name; 
+  document.getElementById('restaurantHero').src = (selectedRestaurant.logo && selectedRestaurant.logo.startsWith('/uploads')) ? selectedRestaurant.logo : (selectedRestaurant.logo || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600'); 
+  try { 
+    const res = await apiFetch(API + '/restaurants/' + id + '/menu'); 
+    products = await res.json(); 
+    renderTabs(); 
+    showScreen('restaurantScreen'); 
+  } catch (e) { console.log(e); } 
+}
+
+function renderTabs() { 
+  const categories = [...new Set(products.map(p => p.category || 'عام'))]; 
+  const tabs = document.getElementById('tabsContainer'); 
+  tabs.innerHTML = categories.map((c, i) => `<div class="tab ${i===0?'active':''}" onclick="filterProducts('${c}', this)">${c}</div>`).join(''); 
+  filterProducts(categories[0], document.querySelector('.tab')); 
+}
+
+function filterProducts(category, el) { 
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); 
+  if (el) el.classList.add('active'); 
+  const filtered = category ? products.filter(p => (p.category||'عام') === category) : products; 
+  renderProducts(filtered); 
+}
+
+function renderProducts(list = products) { 
+  const container = document.getElementById('productsContainer'); 
+  if (!list.length) { container.innerHTML = '<div class="empty">لا توجد منتجات</div>'; return; } 
+  container.innerHTML = list.map(p => { 
+    const hasGroups = p.groups && p.groups.length > 0; 
+    const minPrice = hasGroups ? Math.min(...p.groups.flatMap(g => g.options.map(o => o.price))) : (p.price || p.basePrice || 0); 
+    const displayPrice = (p.basePrice || 0) + minPrice; 
+    const priceDisplay = hasGroups ? 'يبدأ من ' + displayPrice + ' ج' : displayPrice + ' ج'; 
+    const escapedProduct = JSON.stringify(p).replace(/'/g, "\\'").replace(/"/g, '&quot;'); 
+    return `
       <div class="product-card">
-        <img src="${p.image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'}">
-        <div class="product-details">
-          <div class="product-title">${p.name}</div>
-          <div class="product-price">${p.basePrice || p.price || 0} ج.م</div>
-          <div style="font-size:12px; color:#888;">${p.description || ''}</div>
+        <img src="${(p.image && p.image.startsWith('/uploads')) ? p.image : (p.image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500')}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'">
+        <div class="product-content">
+          <h4>${p.name}</h4>
+          <p>${p.description || 'وجبة لذيذة من دراكو'}</p>
+          <div class="price">${priceDisplay}</div>
         </div>
-        <button class="plus-btn" onclick="addToCartSimple(${JSON.stringify(p).replace(/'/g,"\\'")})">+</button>
+        <button class="plus-btn" onclick='openProductSheet(${escapedProduct})'>+</button>
       </div>
-    `).join('');
-  }
+    `; 
+  }).join(''); 
+}
 
-  function addToCartSimple(product) {
-    let existing = cart.find(i => i.productId === product.id);
-    if (existing) existing.quantity++;
-    else cart.push({
+// ========== Product Sheet (with groups) ==========
+function openProductSheet(product) { 
+  currentProduct = product; 
+  const hasGroups = product.groups && product.groups.length > 0; 
+  if (!hasGroups) { addToCartSimple(product); return; } 
+
+  const basePrice = product.basePrice || 0; 
+  let html = `
+    <div style="display:flex;gap:16px;margin-bottom:20px">
+      <img src="${product.image || 'placeholder.jpg'}" style="width:100px;height:100px;border-radius:16px;object-fit:cover">
+      <div>
+        <h3>${product.name}</h3>
+        <p style="color:#666">${product.description || ''}</p>
+      </div>
+    </div>
+  `; 
+
+  product.groups.forEach(group => { 
+    html += `<div style="margin-top:16px"><strong>${group.name} ${group.required ? '*' : ''}</strong>`; 
+    if (group.type === 'single') { 
+      group.options.forEach(opt => { 
+        html += `<label class="option-label">
+          <input type="radio" name="${group.id}" value="${opt.price}" data-extra="${opt.price}" ${opt.price === 0 && group.required ? 'checked' : ''}>
+          <span style="flex:1">${opt.value}</span>
+          <span style="color:#FF6B00;font-weight:bold">${opt.price > 0 ? '+' + opt.price + ' ج' : 'مجاني'}</span>
+        </label>`; 
+      }); 
+    } else { 
+      group.options.forEach(opt => { 
+        html += `<label class="option-label">
+          <input type="checkbox" name="${group.id}" value="${opt.price}" data-extra="${opt.price}">
+          <span style="flex:1">${opt.value}</span>
+          <span style="color:#FF6B00;font-weight:bold">+${opt.price} ج</span>
+        </label>`; 
+      }); 
+    } 
+    if (group.maxSelection) html += `<small style="color:#888">الحد الأقصى ${group.maxSelection} اختيارات</small>`; 
+    html += `</div>`; 
+  }); 
+
+  html += `
+    <div style="margin-top:20px;display:flex;gap:12px;align-items:center">
+      <span>الكمية:</span>
+      <button class="qty-btn qty-minus" onclick="changeQty(-1)">-</button>
+      <strong id="item-qty">1</strong>
+      <button class="qty-btn qty-plus" onclick="changeQty(1)">+</button>
+    </div>
+    <div style="margin-top:16px">
+      <label style="font-size:13px;color:#666">ملاحظات للطلب</label>
+      <textarea id="item-notes" style="width:100%;height:60px;border:1px solid #ddd;border-radius:10px;padding:8px;margin-top:4px" placeholder="مثلاً: بدون بصل، زيادة صوص..."></textarea>
+    </div>
+    <div style="font-size:20px;font-weight:900;margin-top:16px;color:#FF6B00">
+      الإجمالي: <span id="sheet-total">${basePrice}</span> ج
+    </div>
+    <button class="btn" style="margin-top:16px" onclick="confirmAddToCart()">🛒 أضف للطلب</button>
+  `; 
+
+  document.getElementById('sheetContent').innerHTML = html; 
+  document.getElementById('productSheet').classList.add('open'); 
+
+  const updateTotal = () => { 
+    let total = basePrice; 
+    document.querySelectorAll('#sheetContent input:checked').forEach(inp => total += Number(inp.value) || 0); 
+    window._currentUnitPrice = total; 
+    document.getElementById('sheet-total').textContent = total * (window._currentQty || 1); 
+  }; 
+  document.querySelectorAll('#sheetContent input').forEach(inp => inp.addEventListener('change', updateTotal)); 
+  window._currentQty = 1; 
+  updateTotal(); 
+}
+
+function changeQty(delta) { 
+  window._currentQty = Math.max(1, (window._currentQty || 1) + delta); 
+  document.getElementById('item-qty').textContent = window._currentQty; 
+  const unitPrice = window._currentUnitPrice || 0; 
+  document.getElementById('sheet-total').textContent = unitPrice * window._currentQty; 
+}
+
+function closeProductSheet() { 
+  document.getElementById('productSheet').classList.remove('open'); 
+  currentProduct = null; 
+}
+
+function confirmAddToCart() { 
+  if (!currentProduct) return; 
+  const product = currentProduct; 
+  const qty = window._currentQty || 1; 
+  const notes = document.getElementById('item-notes')?.value || ''; 
+  const basePrice = product.basePrice || 0; 
+  const groups = product.groups || []; 
+  const selectedOptions = []; 
+  let finalPrice = basePrice; 
+
+  groups.forEach(group => { 
+    if (group.type === 'single') { 
+      const radio = document.querySelector(`#sheetContent input[name="${group.id}"]:checked`); 
+      if (radio) { 
+        const price = Number(radio.value) || 0; 
+        finalPrice += price; 
+        selectedOptions.push({
+          groupId: group.id,
+          groupName: group.name,
+          value: radio.parentElement.textContent.trim().split('(')[0].trim(),
+          price
+        }); 
+      } 
+    } else { 
+      const checkboxes = document.querySelectorAll(`#sheetContent input[name="${group.id}"]:checked`); 
+      checkboxes.forEach(cb => { 
+        const price = Number(cb.value) || 0; 
+        finalPrice += price; 
+        selectedOptions.push({
+          groupId: group.id,
+          groupName: group.name,
+          value: cb.parentElement.textContent.trim().split('(')[0].trim(),
+          price
+        }); 
+      }); 
+    } 
+  }); 
+
+  const uniqueId = product.id + '_' + JSON.stringify(selectedOptions); 
+  const existing = cart.find(i => i.id === uniqueId); 
+  if (existing) { 
+    existing.quantity = (existing.quantity || 1) + qty; 
+  } else { 
+    cart.push({
+      id: uniqueId,
+      productId: product.id,
+      name: product.name,
+      price: finalPrice,
+      image: product.image,
+      selectedOptions,
+      quantity: qty,
+      notes
+    }); 
+  } 
+  saveCart(); 
+  renderCart(); 
+  closeProductSheet(); 
+  showToast('✅ تمت إضافة المنتج'); 
+}
+
+function addToCartSimple(product) { 
+  const existing = cart.find(i => i.id === product.id); 
+  if (existing) { 
+    existing.quantity = (existing.quantity || 1) + 1; 
+  } else { 
+    cart.push({
       id: product.id,
       productId: product.id,
       name: product.name,
-      price: product.basePrice || product.price || 0,
+      price: product.price || product.basePrice || 0,
       image: product.image,
+      selectedOptions: [],
       quantity: 1,
-      selectedOptions: []
-    });
-    saveCart();
-    renderCart();
-    showToast('تمت الإضافة');
-  }
+      notes: ''
+    }); 
+  } 
+  saveCart(); 
+  renderCart(); 
+  showToast('✅ تمت إضافة المنتج'); 
+}
 
-  // ---------- Special Order (Market/Pharmacy/Custom) ----------
-  function openSpecialOrder(type, storeId) {
-    specialOrderType = type;
-    specialOrderStoreId = storeId;
-    let title = type === 'market' ? 'طلب ماركت' : (type === 'pharmacy' ? 'طلب صيدلية' : 'طلب خاص');
-    document.getElementById('specialOrderTitle').innerHTML = title;
-    document.getElementById('specialOrderDetails').value = '';
-    document.getElementById('filePreview').innerHTML = '';
-    selectedFiles = [];
-    document.getElementById('attachFiles').value = '';
-    updateSpecialDeliveryFee();
-    showScreen('specialOrderScreen');
-  }
+// ========== Cart Functions ==========
+function saveCart() { 
+  localStorage.setItem('drako_cart', JSON.stringify(cart)); 
+  const count = cart.reduce((a,b) => a + (b.quantity || 1), 0); 
+  document.getElementById('cartBadge').innerText = count; 
+  document.getElementById('headerBadge').innerText = count; 
+}
 
-  function updateSpecialDeliveryFee() {
-    let fee = selectedArea ? selectedArea.fee : 10;
-    document.getElementById('specialDeliveryFee').innerText = fee + ' ج.م';
-    document.getElementById('specialTotal').innerText = fee + ' ج.م';
-  }
-
-  function previewFiles(input) {
-    let preview = document.getElementById('filePreview');
-    preview.innerHTML = '';
-    selectedFiles = Array.from(input.files);
-    selectedFiles.forEach(file => {
-      let reader = new FileReader();
-      reader.onload = e => {
-        let img = document.createElement('img');
-        img.src = e.target.result;
-        preview.appendChild(img);
-      };
-      reader.readAsDataURL(file);
-    });
-  }
-
-  async function submitSpecialOrder() {
-    if (!currentUser) { showToast('يجب تسجيل الدخول'); return; }
-    let details = document.getElementById('specialOrderDetails').value.trim();
-    if (!details && specialOrderType !== 'custom') { showToast('اكتب تفاصيل الطلب'); return; }
-    let fee = selectedArea ? selectedArea.fee : 10;
-    let total = fee;
-    let orderData = {
-      restaurantId: null,
-      items: [],
-      total: total,
-      customerName: currentUser.name,
-      customerPhone: currentUser.phone,
-      address: currentUser.address || (selectedArea ? selectedArea.name : ''),
-      regionName: selectedArea ? selectedArea.name : '',
-      paymentMethod: paymentMethod,
-      deliveryFee: fee,
-      specialOrder: true,
-      orderType: specialOrderType,
-      storeId: specialOrderStoreId,
-      orderDetails: details
-    };
-    try {
-      let formData = new FormData();
-      formData.append('orderData', JSON.stringify(orderData));
-      for (let file of selectedFiles) formData.append('files', file);
-      const res = await fetch('/api/orders/special', { method: 'POST', body: formData, credentials: 'include' });
-      const data = await res.json();
-      if (data.error) return showToast(data.error);
-      showToast('تم إرسال الطلب');
-      showScreen('homeScreen');
-      loadOrders();
-    } catch(e) { showToast('فشل الإرسال'); }
-  }
-
-  // ---------- Cart ----------
-  function saveCart() {
-    localStorage.setItem('drako_cart', JSON.stringify(cart));
-    let count = cart.reduce((a,b) => a + b.quantity, 0);
-    document.getElementById('cartBadge').innerText = count;
-  }
-
-  function renderCart() {
-    const container = document.getElementById('cartItemsContainer');
-    if (!cart.length) {
-      container.innerHTML = '<div class="empty">السلة فارغة</div>';
-      document.getElementById('cartSummary').style.display = 'block';
-      updateTotals();
-      return;
-    }
-    container.innerHTML = cart.map((item, idx) => `
+function renderCart() { 
+  const container = document.getElementById('cartItems'); 
+  if (!cart.length) { 
+    container.innerHTML = '<div class="empty">🛒 السلة فارغة<br><span style="font-size:12px;">أضف بعض المنتجات من المطاعم</span></div>'; 
+    updateTotals(); 
+    return; 
+  } 
+  container.innerHTML = cart.map((item, index) => { 
+    const optionsText = (item.selectedOptions || []).map(o => o.value).join(', '); 
+    const notesText = item.notes ? `<div style="font-size:11px;color:#888">📝 ${item.notes}</div>` : ''; 
+    return `
       <div class="cart-item">
-        <img src="${item.image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'}" width="60">
-        <div style="flex:1">
-          <div><strong>${item.name}</strong></div>
-          <div>${item.price} ج.م</div>
-          <div><button class="qty-btn" onclick="updateQty(${idx}, -1)">-</button> ${item.quantity} <button class="qty-btn" onclick="updateQty(${idx}, 1)">+</button></div>
+        <img src="${(item.image && item.image.startsWith('/uploads')) ? item.image : (item.image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500')}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'">
+        <div class="cart-content">
+          <h4>${item.name}</h4>
+          ${optionsText ? `<div style="font-size:11px;color:#888">${optionsText}</div>` : ''}
+          ${notesText}
+          <div>${item.price} ج</div>
+          <div class="qty-box">
+            <button class="qty-btn qty-minus" onclick="updateCartItem(${index}, -1)">-</button>
+            <strong>${item.quantity || 1}</strong>
+            <button class="qty-btn qty-plus" onclick="updateCartItem(${index}, 1)">+</button>
+          </div>
         </div>
-        <i class="fas fa-trash-alt" style="color:red; cursor:pointer;" onclick="removeCartItem(${idx})"></i>
+        <button class="icon-btn" onclick="removeCartItem(${index})">🗑</button>
       </div>
-    `).join('');
-    updateTotals();
-  }
+    `; 
+  }).join(''); 
+  updateTotals(); 
+}
 
-  function updateQty(idx, delta) {
-    let newQty = cart[idx].quantity + delta;
-    if (newQty <= 0) cart.splice(idx, 1);
-    else cart[idx].quantity = newQty;
-    saveCart();
-    renderCart();
-  }
-  function removeCartItem(idx) { cart.splice(idx,1); saveCart(); renderCart(); }
+function updateCartItem(index, delta) { 
+  let newQty = cart[index].quantity + delta; 
+  if (newQty <= 0) cart.splice(index, 1); 
+  else cart[index].quantity = newQty; 
+  saveCart(); 
+  renderCart(); 
+}
 
-  function updateTotals() {
-    let subtotal = cart.reduce((s,i) => s + (i.price * i.quantity), 0);
-    let fee = selectedArea ? selectedArea.fee : 0;
-    let total = subtotal + fee;
-    document.getElementById('cartSubtotal').innerText = subtotal + ' ج.م';
-    document.getElementById('cartDeliveryFee').innerText = fee + ' ج.م';
-    document.getElementById('cartTotal').innerText = total + ' ج.م';
-    document.getElementById('checkoutSubtotal').innerText = subtotal + ' ج.م';
-    document.getElementById('checkoutDelivery').innerText = fee + ' ج.م';
-    document.getElementById('checkoutTotal').innerText = total + ' ج.م';
-  }
+function removeCartItem(index) { 
+  cart.splice(index, 1); 
+  saveCart(); 
+  renderCart(); 
+}
 
-  function proceedToCheckout() {
-    if (!cart.length) return showToast('السلة فارغة');
-    if (currentUser && currentUser.regionId) {
-      let region = allRegions.find(r => r.id === currentUser.regionId);
-      if (region) {
-        selectedArea = region;
-        updateTotals();
-        document.getElementById('checkoutAreaName').innerText = region.name + ' - ' + region.fee + ' ج.م';
-        renderCheckoutUser();
-        showScreen('checkoutScreen');
-        return;
+function updateTotals() { 
+  const itemsTotal = cart.reduce((a,b) => a + (b.price * (b.quantity || 1)), 0); 
+  const fee = selectedArea ? selectedArea.fee : 0; 
+  const final = itemsTotal + fee; 
+  document.getElementById('itemsTotal').innerText = itemsTotal + ' ج'; 
+  document.getElementById('deliveryFee').innerText = fee + ' ج'; 
+  document.getElementById('finalTotal').innerText = final + ' ج'; 
+  document.getElementById('checkoutItemsTotal').innerText = itemsTotal + ' ج'; 
+  document.getElementById('checkoutDelivery').innerText = fee + ' ج'; 
+  document.getElementById('checkoutFinal').innerText = final + ' ج'; 
+}
+
+function proceedToCheckout() { 
+  if (!cart.length) return showToast('⚠️ السلة فارغة'); 
+
+  if (currentUser && currentUser.regionId && allRegions.length) { 
+    const region = allRegions.find(r => r.id === currentUser.regionId); 
+    if (region) { 
+      selectedArea = region; 
+      updateTotals(); 
+      document.getElementById('selectedAreaName').innerText = region.name + ' - ' + region.fee + ' ج'; 
+      renderCheckoutUserInfo(); 
+      showScreen('checkoutScreen'); 
+      return; 
+    } 
+  } 
+  showScreen('areaScreen'); 
+}
+
+// ========== Order Functions ==========
+async function submitOrder() { 
+  if (!selectedArea) { 
+    showToast('⚠️ يرجى اختيار المنطقة أولاً'); 
+    showScreen('areaScreen'); 
+    return; 
+  } 
+
+  let name, phone, address; 
+  if (currentUser) { 
+    name = currentUser.name; 
+    phone = currentUser.phone; 
+    address = currentUser.address; 
+  } else { 
+    name = document.getElementById('customerName')?.value.trim(); 
+    phone = document.getElementById('customerPhone')?.value.trim(); 
+    if (!name || !phone) { showToast('⚠️ اكمل البيانات'); return; } 
+  } 
+
+  const itemsTotal = cart.reduce((a,b) => a + (b.price * (b.quantity || 1)), 0); 
+  const total = itemsTotal + (selectedArea.fee || 0); 
+
+  const orderData = { 
+    restaurantId: selectedRestaurant?.id, 
+    items: cart.map(i => ({ productId: i.productId, name: i.name, price: i.price, quantity: i.quantity || 1, selectedOptions: i.selectedOptions || [], notes: i.notes || '' })), 
+    total, 
+    customerName: name, 
+    customerPhone: phone, 
+    address: address || selectedArea.name, 
+    regionName: selectedArea.name, 
+    paymentMethod, 
+    deliveryFee: selectedArea.fee || 0 
+  }; 
+
+  try { 
+    const res = await apiFetch(API + '/orders', { method: 'POST', body: JSON.stringify(orderData) }); 
+    const data = await res.json(); 
+    if (data.error) { showToast('❌ ' + data.error); return; } 
+    cart = []; 
+    saveCart(); 
+    renderCart(); 
+    trackOrder(data.orderId); 
+    showToast('✅ تم إرسال الطلب بنجاح'); 
+  } catch (e) { 
+    console.error(e); 
+    showToast('❌ فشل في الاتصال بالسيرفر'); 
+  } 
+}
+
+async function trackOrder(orderId) { 
+  window._trackingOrderId = orderId; 
+  document.getElementById('trackOrderId').innerText = '#' + orderId.slice(-6).toUpperCase(); 
+  showScreen('trackScreen'); 
+  
+  const updateTrack = async () => { 
+    try { 
+      const res = await apiFetch(API + '/orders/' + orderId + '/track'); 
+      const order = await res.json(); 
+      const steps = ['PENDING','ACCEPTED','PREPARING','INVOICE_ADDED','READY','DRIVER_ASSIGNED','ON_THE_WAY','DELIVERED']; 
+      const currentIdx = steps.indexOf(order.status); 
+      let html = ''; 
+      steps.forEach((s, i) => { 
+        if (i <= currentIdx) { 
+          html += `<div class="status-step"><div class="status-dot done"></div><div class="status-text">${i===currentIdx?'<span class="active">'+getStatusText(s)+'</span>':getStatusText(s)}</div></div>`; 
+        } else { 
+          html += `<div class="status-step"><div class="status-dot"></div><div class="status-text">${getStatusText(s)}</div></div>`; 
+        } 
+      }); 
+      document.getElementById('trackStatusContainer').innerHTML = html; 
+      let invoiceHtml = '';
+      if (order.invoiceAmount) {
+        invoiceHtml = `<div class="detail-row"><span>💰 قيمة الفاتورة</span><strong>${order.invoiceAmount} ج</strong></div>`;
       }
-    }
-    showScreen('areaScreen');
-  }
+      document.getElementById('trackDetails').innerHTML = `
+        <div class="detail-row"><span>المطعم/المتجر</span><strong>${order.restaurantName || order.storeName || 'طلب خاص'}</strong></div>
+        <div class="detail-row"><span>العميل</span><strong>${order.customerName}</strong></div>
+        <div class="detail-row"><span>المنطقة</span><strong>${order.regionName||'—'}</strong></div>
+        <div class="detail-row"><span>العنوان</span><strong>${order.address||'—'}</strong></div>
+        ${invoiceHtml}
+        <div class="detail-row"><span>الإجمالي النهائي</span><strong>${order.total} ج</strong></div>
+        <div class="detail-row"><span>رسوم التوصيل</span><strong>${order.deliveryFee} ج</strong></div>
+        <div class="detail-row"><span>وقت الطلب</span><strong>${new Date(order.createdAt).toLocaleString('ar-EG')}</strong></div>
+      `; 
+      if (order.status !== 'DELIVERED' && order.status !== 'CANCELLED') { 
+        setTimeout(updateTrack, 10000); 
+      } 
+    } catch (e) { console.log(e); } 
+  }; 
+  updateTrack(); 
+}
 
-  async function loadAreas() {
-    await loadRegions();
-    let container = document.getElementById('areasList');
-    container.innerHTML = allRegions.map(a => `
-      <div class="area-item" onclick="selectArea('${a.id}')">
-        <span>${a.name}</span><span>${a.fee} ج.م</span>
-      </div>
-    `).join('');
-  }
+function getStatusText(s) { 
+  const map = {
+    PENDING: 'في الانتظار',
+    ACCEPTED: 'مقبول',
+    PREPARING: 'قيد التحضير',
+    INVOICE_ADDED: 'تم إضافة الفاتورة',
+    READY: 'جاهز للتوصيل',
+    DRIVER_ASSIGNED: 'مع طيار',
+    ON_THE_WAY: 'في الطريق',
+    DELIVERED: 'تم التوصيل',
+    CANCELLED: 'ملغي'
+  }; 
+  return map[s] || s; 
+}
 
-  function selectArea(id) {
-    selectedArea = allRegions.find(a => a.id === id);
-    document.querySelectorAll('.area-item').forEach(el => el.classList.remove('active'));
-    event.currentTarget.classList.add('active');
-  }
+// ========== My Orders ==========
+function switchOrdersTab(tab) { 
+  window._ordersTab = tab; 
+  document.querySelectorAll('#orders-tab-bar .tab').forEach(t => t.classList.remove('active')); 
+  if (event && event.target) event.target.classList.add('active'); 
+  loadMyOrders(); 
+}
 
-  function confirmArea() {
-    if (!selectedArea) return showToast('اختر منطقة');
-    document.getElementById('checkoutAreaName').innerText = selectedArea.name + ' - ' + selectedArea.fee + ' ج.م';
-    updateTotals();
-    showScreen('checkoutScreen');
-  }
+async function loadMyOrders() { 
+  const container = document.getElementById('myOrdersList'); 
+  if (!currentUser) { 
+    container.innerHTML = '<div class="empty">🔐 سجل دخولك أولاً لمشاهدة طلباتك</div>'; 
+    return; 
+  } 
+  try { 
+    const res = await apiFetch(API + '/orders?customerPhone=' + encodeURIComponent(currentUser.phone)); 
+    let orders = await res.json(); 
+    orders = orders.filter(o => o.customerPhone === currentUser.phone); 
+    
+    if (!orders.length) { 
+      container.innerHTML = '<div class="empty">📋 لا توجد طلبات سابقة</div>'; 
+      return; 
+    } 
 
-  function selectPayment(el, method) {
-    document.querySelectorAll('.payment-item').forEach(i => i.classList.remove('active'));
-    el.classList.add('active');
-    paymentMethod = method;
-  }
+    const tab = window._ordersTab || 'active'; 
+    let filtered = []; 
+    if (tab === 'active') { 
+      filtered = orders.filter(o => !['DELIVERED', 'CANCELLED'].includes(o.status)); 
+    } else { 
+      filtered = orders.filter(o => ['DELIVERED', 'CANCELLED'].includes(o.status)); 
+    } 
 
-  function renderCheckoutUser() {
-    let div = document.getElementById('checkoutUserInfo');
-    if (currentUser) div.innerHTML = `<p>العميل: ${currentUser.name} - ${currentUser.phone}</p><p>العنوان: ${currentUser.address || ''}</p>`;
-    else div.innerHTML = `<input id="guestName" placeholder="الاسم"><input id="guestPhone" placeholder="الهاتف">`;
-  }
+    if (!filtered.length) { 
+      container.innerHTML = '<div class="empty">📋 لا توجد طلبات في هذا القسم</div>'; 
+      return; 
+    } 
 
-  // ---------- Submit normal order (restaurant) ----------
-  async function submitOrder() {
-    if (!selectedArea) { showToast('اختر المنطقة'); showScreen('areaScreen'); return; }
-    let name, phone, address;
-    if (currentUser) { name = currentUser.name; phone = currentUser.phone; address = currentUser.address; }
-    else { name = document.getElementById('guestName')?.value; phone = document.getElementById('guestPhone')?.value; if (!name || !phone) return showToast('أدخل بياناتك'); }
-    let subtotal = cart.reduce((s,i) => s + (i.price * i.quantity), 0);
-    let total = subtotal + (selectedArea.fee || 0);
-    let orderData = {
-      restaurantId: selectedRestaurant?.id,
-      items: cart.map(i => ({ productId: i.productId, name: i.name, price: i.price, quantity: i.quantity })),
-      total,
-      customerName: name,
-      customerPhone: phone,
-      address: address || selectedArea.name,
-      regionName: selectedArea.name,
-      paymentMethod,
-      deliveryFee: selectedArea.fee
-    };
-    try {
-      const res = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(orderData) });
-      const data = await res.json();
-      if (data.error) return showToast(data.error);
-      cart = [];
-      saveCart();
-      renderCart();
-      trackOrder(data.orderId);
-      showToast('تم إرسال الطلب');
-    } catch(e) { showToast('فشل'); }
-  }
+    container.innerHTML = filtered.reverse().map(order => { 
+      const firstItem = order.items?.[0]; 
+      const imgSrc = (firstItem && firstItem.image && firstItem.image.startsWith('/uploads')) ? firstItem.image : 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'; 
+      const itemCount = (order.items || []).length;
+      const statusColor = order.status === 'DELIVERED' ? '#2ECC71' : (order.status === 'CANCELLED' ? '#F05252' : '#FF6B00'); 
+      const statusLabel = getStatusText(order.status); 
+      const total = order.total || 0; 
+      const date = new Date(order.createdAt).toLocaleDateString('ar-EG'); 
+      const time = new Date(order.createdAt).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'}); 
 
-  // ---------- Track & Orders ----------
-  async function trackOrder(orderId) {
-    window._trackingOrderId = orderId;
-    showScreen('trackScreen');
-    const update = async () => {
-      try {
-        const res = await fetch(`/api/orders/${orderId}/track`);
-        const order = await res.json();
-        let steps = ['PENDING','ACCEPTED','PREPARING','INVOICE_ADDED','READY','DRIVER_ASSIGNED','ON_THE_WAY','DELIVERED'];
-        let idx = steps.indexOf(order.status);
-        let html = steps.map((s,i) => `<div><div class="dot ${i<=idx ? 'done' : ''}"></div><span>${getStatusText(s)}</span></div>`).join('');
-        document.getElementById('trackStatus').innerHTML = html;
-        let invoiceHtml = '';
-        if (order.invoiceAmount) {
-          invoiceHtml = `<div class="summary-row"><span>💵 قيمة الفاتورة</span><span>${order.invoiceAmount} ج.م</span></div>`;
-        }
-        document.getElementById('trackDetails').innerHTML = `
-          <div class="summary-row"><span>المطعم/المتجر</span><span>${order.restaurantName || order.storeName || 'طلب خاص'}</span></div>
-          <div class="summary-row"><span>الإجمالي النهائي</span><span>${order.total} ج.م</span></div>
-          ${invoiceHtml}
-          <div class="summary-row"><span>رسوم التوصيل</span><span>${order.deliveryFee} ج.م</span></div>
-          <div class="summary-row"><span>الحالة</span><span>${getStatusText(order.status)}</span></div>
-        `;
-        if (!['DELIVERED','CANCELLED'].includes(order.status)) setTimeout(update, 5000);
-      } catch(e) {}
-    };
-    update();
-  }
-
-  function getStatusText(s) {
-    const map = {
-      PENDING: 'قيد الانتظار', ACCEPTED: 'تم القبول', PREPARING: 'تحضير',
-      INVOICE_ADDED: 'تم إضافة الفاتورة', READY: 'جاهز للتوصيل',
-      DRIVER_ASSIGNED: 'تم تعيين طيار', ON_THE_WAY: 'في الطريق',
-      DELIVERED: 'تم التوصيل', CANCELLED: 'ملغي'
-    };
-    return map[s] || s;
-  }
-
-  async function loadOrders() {
-    if (!currentUser) return;
-    try {
-      const res = await fetch(`/api/orders?customerPhone=${currentUser.phone}`);
-      let orders = await res.json();
-      orders = orders.filter(o => o.customerPhone === currentUser.phone);
-      let active = orders.filter(o => !['DELIVERED','CANCELLED'].includes(o.status));
-      let archive = orders.filter(o => ['DELIVERED','CANCELLED'].includes(o.status));
-      let list = window._ordersTab === 'active' ? active : archive;
-      let container = document.getElementById('ordersList');
-      if (!list.length) { container.innerHTML = '<div class="empty">لا توجد طلبات</div>'; return; }
-      container.innerHTML = list.map(o => `
-        <div class="cart-item" style="justify-content:space-between;">
-          <div><strong>طلب #${o.id.slice(-6)}</strong><div>${o.restaurantName || 'طلب خاص'}</div><div>${o.total} ج.م</div><div>${getStatusText(o.status)}</div></div>
-          <button class="btn-outline" onclick="trackOrder('${o.id}')">تتبع</button>
+      return `
+        <div class="order-item">
+          <img src="${imgSrc}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'">
+          <div class="order-info">
+            <h4>طلب #${order.id.slice(-6)}</h4>
+            <div class="restaurant">🍽️ ${order.restaurantName || (order.specialOrder ? 'طلب خاص' : 'مطعم')}</div>
+            <div class="items-summary">📦 ${itemCount} منتج</div>
+            <span class="status-badge" style="background:${statusColor}20; color:${statusColor}; padding:2px 8px; border-radius:20px; font-size:11px;">${statusLabel}</span>
+            <div class="order-footer">
+              <span>📅 ${date} - ${time}</span>
+              <span class="total">💰 ${total} ج</span>
+            </div>
+          </div>
+          <button class="track-btn" onclick="trackOrder('${order.id}')">📋 تتبع</button>
         </div>
-      `).join('');
-    } catch(e) {}
-  }
+      `; 
+    }).join(''); 
+  } catch (e) { 
+    console.error(e);
+    container.innerHTML = '<div class="empty">⚠️ تعذر تحميل الطلبات</div>'; 
+  } 
+}
 
-  function switchOrdersTab(tab) {
-    window._ordersTab = tab;
-    loadOrders();
-  }
+// ========== Initialization ==========
+if (currentUser) { 
+  document.getElementById('authWrapper').classList.add('hide'); 
+  document.getElementById('mainAppWrapper').classList.add('active'); 
+  initSocket();
+  loadRestaurants(); 
+  renderCart(); 
+  loadRegionsForSelect();
+  if (!restoreCurrentScreen()) showScreen('homeScreen'); 
+  initCategoryFilters();
+} else { 
+  document.getElementById('authWrapper').classList.remove('hide'); 
+  document.getElementById('mainAppWrapper').classList.remove('active'); 
+  loadRegionsForSelect(); 
+}
+saveCart();
 
-  function renderAccount() {
-    let container = document.getElementById('accountInfo');
-    if (currentUser) {
-      let region = allRegions.find(r => r.id === currentUser.regionId);
-      container.innerHTML = `
-        <div class="profile-card">
-          <div class="avatar">👤</div>
-          <div><strong>${currentUser.name}</strong></div>
-          <div>${currentUser.phone}</div>
-          <div>${region ? region.name : ''}</div>
-          <div>${currentUser.address || ''}</div>
-          <button class="btn" onclick="logout()">تسجيل الخروج</button>
-        </div>
-      `;
-    } else {
-      container.innerHTML = `<button class="btn" onclick="location.reload()">تسجيل الدخول</button>`;
-    }
+window.addEventListener('beforeunload', () => {
+  if (currentUser) {
+    localStorage.setItem('drako_current_screen', currentScreen);
   }
-
-  // ---------- Init ----------
-  (async () => {
-    await loadRegions();
-    if (currentUser) {
-      document.getElementById('authWrapper').style.display = 'none';
-      document.getElementById('mainAppWrapper').classList.add('active');
-      initSocket();
-      loadRestaurants();
-      renderCart();
-      showScreen('homeScreen');
-    } else {
-      document.getElementById('authWrapper').style.display = 'block';
-    }
-    initCategoryFilters();
-  })();
+});
 </script>
 </body>
 </html>
