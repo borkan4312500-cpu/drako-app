@@ -77,7 +77,7 @@ tbody tr:hover{background:var(--surface2);}
 
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;display:none;align-items:center;justify-content:center;padding:16px;}
 .modal-overlay.open{display:flex;}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:0;width:100%;max-width:550px;max-height:85vh;overflow-y:auto;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:0;width:100%;max-width:580px;max-height:85vh;overflow-y:auto;}
 .modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border);}
 .modal-title{font-size:16px;font-weight:800;}
 .modal-close{width:30px;height:30px;background:var(--surface2);border:none;border-radius:8px;cursor:pointer;color:var(--text3);font-size:18px;}
@@ -97,12 +97,15 @@ tbody tr:hover{background:var(--surface2);}
 .tab-btn.active{background:var(--orange);color:#fff;border-color:var(--orange);}
 
 .group-box{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;}
+.group-title{display:flex;gap:8px;margin-bottom:10px;align-items:center;}
+.group-title input{flex:1;}
+.group-title select{width:120px;}
 .option-row{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
 .option-row input{flex:1;}
 .btn-add-row{background:var(--surface2);border:1px dashed var(--border);color:var(--text2);padding:5px 10px;border-radius:8px;cursor:pointer;font-size:12px;margin-top:4px;}
-.product-type-selector{display:flex;gap:12px;margin-bottom:20px;}
-.type-option{flex:1;text-align:center;padding:12px;border-radius:14px;background:var(--surface2);border:2px solid transparent;cursor:pointer;}
-.type-option.selected{border-color:var(--orange);background:var(--orange-dim);}
+.btn-group-template{background:var(--surface3);border:1px solid var(--border);padding:6px 12px;border-radius:20px;font-size:12px;cursor:pointer;transition:all .2s;}
+.btn-group-template:hover{background:var(--orange);color:#0C0E13;border-color:var(--orange);}
+.templates-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;padding:10px;background:var(--surface2);border-radius:12px;}
 </style>
 </head>
 <body>
@@ -165,11 +168,9 @@ function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
   }
   return URL.createObjectURL(new Blob([bufferArray], { type: 'audio/wav' }));
 }
-
 const soundInstances = {};
 function createSound(name, ...tones) { soundInstances[name] = tones.map(t => new Howl({ src: [t], format: ['wav'], volume: 0.5 })); }
 function playSound(name) { if (soundInstances[name]) soundInstances[name].forEach(h => h.play()); }
-
 createSound('newOrder', generateToneWAV(1200, 0.25, 'sine'));
 
 // ========== متغيرات عامة ==========
@@ -187,7 +188,6 @@ function toast(msg, type = 'success') {
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3000);
 }
-
 function openModal(title, bodyHTML, footHTML) {
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-body').innerHTML = bodyHTML;
@@ -203,7 +203,6 @@ async function apiFetch(url, options = {}) {
   return res;
 }
 
-// ========== تحميل البيانات من السيرفر ==========
 async function loadRestaurantData() {
   try {
     const res = await apiFetch('/api/restaurant/profile');
@@ -213,14 +212,12 @@ async function loadRestaurantData() {
     }
   } catch(e) { console.error(e); }
 }
-
 async function loadCategories() {
   const res = await apiFetch('/api/restaurant/categories');
   if (res && res.ok) categoriesList = await res.json();
   else categoriesList = [];
   return categoriesList;
 }
-
 async function loadProducts() {
   const res = await apiFetch('/api/restaurant/products');
   if (res && res.ok) productsList = await res.json();
@@ -228,7 +225,7 @@ async function loadProducts() {
   return productsList;
 }
 
-// ========== التنقل ==========
+// التنقل
 document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', () => {
     const page = item.dataset.nav;
@@ -253,20 +250,15 @@ async function renderPage(page) {
 
 // ========== الملف الشخصي ==========
 async function renderProfile() {
-  const [statsRes, reportsRes] = await Promise.all([
-    apiFetch('/api/restaurant/stats'),
-    apiFetch('/api/restaurant/reports')
-  ]);
+  const statsRes = await apiFetch('/api/restaurant/stats');
   const stats = statsRes && statsRes.ok ? await statsRes.json() : { pending: 0, accepted: 0, preparing: 0, todayRevenue: 0 };
-  const reports = reportsRes && reportsRes.ok ? await reportsRes.json() : { daily: { productRevenue: 0, netRevenue: 0 }, total: { productRevenue: 0 } };
-  
   const html = `
     <div style="display:flex;align-items:center;gap:24px;margin-bottom:28px;background:var(--surface);padding:24px;border-radius:var(--radius-lg);border:1px solid var(--border);flex-wrap:wrap;">
       <div><img src="${restaurantProfile.logo || 'https://placehold.co/100x100/FF6B00/white?text=🍽️'}" style="width:100px;height:100px;border-radius:20px;object-fit:cover;border:3px solid var(--orange)" id="profile-logo"></div>
-      <div style="flex:1"><div style="font-size:28px;font-weight:900;" id="profile-name-display">${restaurantProfile.name || 'مطعمي'}</div><div style="color:var(--text3);margin-top:5px;" id="profile-stats">⭐ 4.8 (128 تقييم)</div><div style="color:var(--text2);margin-top:8px;" id="profile-bio-display">مرحباً بكم في مطعمنا</div></div>
-      <button class="btn btn-primary" onclick="openEditProfile()">✏️ تعديل الملف الشخصي</button>
-      <button class="btn btn-ghost" onclick="document.getElementById('logo-file-input').click()">🖼️ تغيير الشعار</button>
-      <input type="file" id="logo-file-input" accept="image/*" style="display:none" onchange="uploadLogo(this)">
+      <div style="flex:1"><div style="font-size:28px;font-weight:900;">${restaurantProfile.name || 'مطعمي'}</div><div style="color:var(--text3);margin-top:5px;">⭐ 4.8 (128 تقييم)</div></div>
+      <button class="btn btn-primary" onclick="openEditProfile()">✏️ تعديل</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('logo-file').click()">🖼️ تغيير الشعار</button>
+      <input type="file" id="logo-file" accept="image/*" style="display:none" onchange="uploadLogo(this)">
     </div>
     <div class="stats-grid">
       <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${stats.pending || 0}</div><div class="sc-label">طلبات جديدة</div></div><div class="sc-icon" style="background:var(--orange-dim)">📦</div></div></div>
@@ -274,243 +266,249 @@ async function renderProfile() {
       <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${stats.preparing || 0}</div><div class="sc-label">قيد التحضير</div></div><div class="sc-icon" style="background:rgba(251,191,36,.12)">👨‍🍳</div></div></div>
       <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${stats.todayRevenue || 0} ج</div><div class="sc-label">إيرادات اليوم</div></div><div class="sc-icon" style="background:rgba(0,214,143,.12)">💰</div></div></div>
     </div>
-    <div class="section"><div class="sec-head"><div class="sec-title">🌟 عن المطعم</div></div><div style="padding:20px;">نقدم أفضل المأكولات الشرقية والغربية بجودة عالية</div></div>
-    <div class="section"><div class="sec-head"><div class="sec-title">📈 تقارير الإيرادات</div></div><div style="padding:20px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px"><div class="stat-card"><div class="sc-value" style="color:var(--orange)">${reports.daily?.productRevenue || 0} ج</div><div class="sc-label">اليوم</div></div><div class="stat-card"><div class="sc-value" style="color:var(--blue)">${(reports.daily?.productRevenue || 0) * 7} ج</div><div class="sc-label">الأسبوع</div></div><div class="stat-card"><div class="sc-value" style="color:var(--green)">${(reports.daily?.productRevenue || 0) * 30} ج</div><div class="sc-label">الشهر</div></div><div class="stat-card"><div class="sc-value">${reports.total?.productRevenue || 0} ج</div><div class="sc-label">الإجمالي</div></div></div></div>
   `;
   document.getElementById('content').innerHTML = html;
 }
-
 function openEditProfile() {
   openModal('تعديل الملف الشخصي', `
     <div class="field"><label>اسم المطعم</label><input id="edit-name" value="${restaurantProfile.name || ''}"></div>
     <div class="field"><label>نبذة تعريفية</label><textarea id="edit-bio" rows="3">نبذة عن المطعم</textarea></div>
-    <div class="field"><label>رابط الشعار</label><input id="edit-logo" value="${restaurantProfile.logo || ''}"></div>
   `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveProfileEdit()">💾 حفظ</button>`);
 }
-
-async function saveProfileEdit() {
-  const name = document.getElementById('edit-name').value;
-  const bio = document.getElementById('edit-bio').value;
-  const logo = document.getElementById('edit-logo').value;
-  // تحديث الاسم عبر API (يحتاج السيرفر لدعم PATCH للاسم)
-  toast('تم تحديث الملف الشخصي');
-  closeModal();
-  renderPage('profile');
-}
-
+async function saveProfileEdit() { toast('تم تحديث الملف الشخصي'); closeModal(); renderPage('profile'); }
 async function uploadLogo(input) {
   const file = input.files[0];
   if (!file) return;
   const formData = new FormData();
   formData.append('logo', file);
   const res = await apiFetch('/api/restaurant/profile', { method: 'PATCH', body: formData });
-  if (res && res.ok) {
-    toast('تم رفع الشعار بنجاح');
-    renderPage('profile');
-  } else toast('فشل رفع الشعار', 'error');
+  if (res && res.ok) { toast('تم رفع الشعار'); renderPage('profile'); }
+  else toast('فشل الرفع', 'error');
 }
 
 // ========== لوحة التحكم ==========
 async function renderDashboard() {
-  const [statsRes, reportsRes] = await Promise.all([
-    apiFetch('/api/restaurant/stats'),
-    apiFetch('/api/restaurant/reports')
-  ]);
+  const statsRes = await apiFetch('/api/restaurant/stats');
   const stats = statsRes && statsRes.ok ? await statsRes.json() : {};
-  const reports = reportsRes && reportsRes.ok ? await reportsRes.json() : {};
-  const html = `
-    <div class="stats-grid">
-      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${stats.todayRevenue || 0} ج</div><div class="sc-label">إيرادات اليوم</div></div><div class="sc-icon" style="background:rgba(0,214,143,.12)">💰</div></div></div>
-      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${(stats.todayRevenue || 0) - (stats.todayPlatformFee || 0)} ج</div><div class="sc-label">صافي اليوم</div></div><div class="sc-icon" style="background:var(--orange-dim)">📊</div></div></div>
-      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${stats.pending || 0}</div><div class="sc-label">معلق</div></div><div class="sc-icon" style="background:rgba(251,191,36,.12)">⏳</div></div></div>
-      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${productsList.length}</div><div class="sc-label">منتجات</div></div><div class="sc-icon" style="background:rgba(59,130,246,.12)">🍔</div></div></div>
-    </div>
-    <div class="section"><div class="sec-head"><div class="sec-title">📈 ملخص الإيرادات</div></div><div style="padding:20px"><div>إجمالي الإيرادات: ${reports.total?.productRevenue || 0} ج</div><div>صافي الإيرادات (بعد خصم المنصة): ${reports.total?.netRevenue || 0} ج</div></div></div>
-  `;
+  const html = `<div class="stats-grid"><div class="stat-card"><div class="sc-value">${stats.todayRevenue || 0} ج</div><div class="sc-label">إيرادات اليوم</div></div><div class="stat-card"><div class="sc-value">${productsList.length}</div><div class="sc-label">منتجات</div></div></div>`;
   document.getElementById('content').innerHTML = html;
 }
 
 // ========== الطلبات ==========
 async function renderOrders() {
-  const html = `
-    <div class="tab-bar"><div class="tab-btn ${currentOrderTab === 'all' ? 'active' : ''}" onclick="setOrderTab('all')">📋 الكل</div><div class="tab-btn ${currentOrderTab === 'new' ? 'active' : ''}" onclick="setOrderTab('new')">🆕 جديدة</div><div class="tab-btn ${currentOrderTab === 'accepted' ? 'active' : ''}" onclick="setOrderTab('accepted')">✅ مقبولة</div><div class="tab-btn ${currentOrderTab === 'preparing' ? 'active' : ''}" onclick="setOrderTab('preparing')">👨‍🍳 قيد التحضير</div></div>
-    <div class="filter-bar"><input type="date" id="order-date-filter" value="${ordersSelectedDate}" /><button class="btn btn-primary btn-sm" onclick="applyOrderFilter()">🔍 عرض</button><button class="btn btn-ghost btn-sm" onclick="clearOrderFilter()">📋 الكل</button></div>
-    <div id="orders-list"></div>
-  `;
+  const html = `<div class="tab-bar"><div class="tab-btn ${currentOrderTab === 'all' ? 'active' : ''}" onclick="setOrderTab('all')">الكل</div><div class="tab-btn ${currentOrderTab === 'new' ? 'active' : ''}" onclick="setOrderTab('new')">جديدة</div><div class="tab-btn ${currentOrderTab === 'accepted' ? 'active' : ''}" onclick="setOrderTab('accepted')">مقبولة</div><div class="tab-btn ${currentOrderTab === 'preparing' ? 'active' : ''}" onclick="setOrderTab('preparing')">تحضير</div></div><div id="orders-list"></div>`;
   document.getElementById('content').innerHTML = html;
   await loadOrdersList();
 }
-
 function setOrderTab(tab) { currentOrderTab = tab; renderOrders(); }
-async function applyOrderFilter() { ordersSelectedDate = document.getElementById('order-date-filter').value; await loadOrdersList(); }
-async function clearOrderFilter() { ordersSelectedDate = ''; document.getElementById('order-date-filter').value = ''; await loadOrdersList(); }
-
 async function loadOrdersList() {
-  let url = '/api/restaurant/orders';
-  if (ordersSelectedDate) url += '?date=' + ordersSelectedDate;
-  const res = await apiFetch(url);
+  const res = await apiFetch('/api/restaurant/orders');
   if (!res || !res.ok) return;
   let orders = await res.json();
   if (currentOrderTab === 'new') orders = orders.filter(o => o.status === 'PENDING');
   else if (currentOrderTab === 'accepted') orders = orders.filter(o => o.status === 'ACCEPTED');
   else if (currentOrderTab === 'preparing') orders = orders.filter(o => o.status === 'PREPARING');
-  
   if (!orders.length) { document.getElementById('orders-list').innerHTML = '<div class="empty-state">📭 لا توجد طلبات</div>'; return; }
-  
-  let html = `<div class="section"><div class="table-wrap"><table><thead><tr><th>الرقم</th><th>العميل</th><th>الهاتف</th><th>المنتجات</th><th>الإجمالي</th><th>الحالة</th><th>الوقت</th><th>إجراء</th></tr></thead><tbody>`;
+  let html = `<div class="section"><div class="table-wrap"><table><thead><tr><th>الرقم</th><th>العميل</th><th>المنتجات</th><th>الإجمالي</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>`;
   orders.forEach(o => {
-    const itemsStr = (o.items || []).map(i => `${i.name} ×${i.qty || 1}`).join('<br>');
-    html += `<tr><td>#${o.id.slice(-6)}</td><td>${o.customerName || '—'}</td><td>${o.customerPhone || '—'}</td><td style="max-width:200px">${itemsStr}</td><td style="color:var(--orange)">${o.total} ج</td><td><span class="badge badge-orange">${getStatusText(o.status)}</span></td><td>${new Date(o.createdAt).toLocaleTimeString()}</td><td>${getOrderActions(o)}</td></tr>`;
+    html += `<tr><td>#${o.id.slice(-6)}</td><td>${o.customerName || '—'}</td><td>${(o.items || []).map(i => i.name).join(', ')}</td><td>${o.total} ج</td><td><span class="badge badge-orange">${getStatusText(o.status)}</span></td><td>${getOrderActions(o)}</td></tr>`;
   });
   html += `</tbody></table></div></div>`;
   document.getElementById('orders-list').innerHTML = html;
 }
-
-function getStatusText(status) {
-  const map = { PENDING: 'في الانتظار', ACCEPTED: 'مقبول', PREPARING: 'يتحضر', READY: 'جاهز', DELIVERED: 'تم التوصيل', CANCELLED: 'ملغي' };
-  return map[status] || status;
-}
-
+function getStatusText(s) { const map = { PENDING: 'في الانتظار', ACCEPTED: 'مقبول', PREPARING: 'يتحضر' }; return map[s] || s; }
 function getOrderActions(o) {
-  if (o.status === 'PENDING') return `<button class="btn btn-success btn-sm" onclick="updateOrderStatus('${o.id}','ACCEPTED')">✅ قبول</button> <button class="btn btn-danger btn-sm" onclick="updateOrderStatus('${o.id}','CANCELLED')">❌ رفض</button>`;
-  if (o.status === 'ACCEPTED') return `<button class="btn btn-primary btn-sm" onclick="updateOrderStatus('${o.id}','PREPARING')">👨‍🍳 تحضير</button>`;
-  if (o.status === 'PREPARING') return `<button class="btn btn-success btn-sm" onclick="updateOrderStatus('${o.id}','READY')">📦 جاهز</button>`;
+  if (o.status === 'PENDING') return `<button class="btn btn-success btn-sm" onclick="updateOrderStatus('${o.id}','ACCEPTED')">قبول</button> <button class="btn btn-danger btn-sm" onclick="updateOrderStatus('${o.id}','CANCELLED')">رفض</button>`;
+  if (o.status === 'ACCEPTED') return `<button class="btn btn-primary btn-sm" onclick="updateOrderStatus('${o.id}','PREPARING')">تحضير</button>`;
+  if (o.status === 'PREPARING') return `<button class="btn btn-success btn-sm" onclick="updateOrderStatus('${o.id}','READY')">جاهز</button>`;
   return '—';
 }
-
 async function updateOrderStatus(id, status) {
-  const res = await apiFetch(`/api/restaurant/orders/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) });
-  if (res && res.ok) { toast(`تم تحديث الحالة إلى ${getStatusText(status)}`); renderOrders(); }
-  else toast('حدث خطأ', 'error');
+  await apiFetch(`/api/restaurant/orders/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) });
+  toast('تم تحديث الحالة'); renderOrders();
 }
 
 // ========== التصنيفات ==========
 async function renderCategoriesPage() {
   await loadCategories();
-  let html = `<div style="display:flex;justify-content:space-between;margin-bottom:16px"><h2>🏷️ التصنيفات</h2><button class="btn btn-primary" onclick="openAddCategory()">+ إضافة تصنيف</button></div><div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>إجراءات</th></tr></thead><tbody>`;
-  categoriesList.forEach((c, i) => { html += `<tr><td>${i + 1}</td><td>${c.name}</td><td><button class="btn btn-danger btn-sm" onclick="deleteCategory('${c.id}')">🗑️</button></td></tr>`; });
+  let html = `<div style="display:flex;justify-content:space-between;margin-bottom:16px"><h2>التصنيفات</h2><button class="btn btn-primary" onclick="openAddCategory()">+ إضافة</button></div><div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>إجراءات</th></tr></thead><tbody>`;
+  categoriesList.forEach((c, i) => { html += `<tr><td>${i+1}</td><td>${c.name}</td><td><button class="btn btn-danger btn-sm" onclick="deleteCategory('${c.id}')">🗑️</button></td></tr>`; });
   html += `</tbody></table></div></div>`;
   document.getElementById('content').innerHTML = html;
 }
-
-function openAddCategory() {
-  openModal('إضافة تصنيف', `<div class="field"><label>اسم التصنيف</label><input id="cat-name"></div>`, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addCategory()">إضافة</button>`);
-}
+function openAddCategory() { openModal('إضافة تصنيف', `<div class="field"><label>الاسم</label><input id="cat-name"></div>`, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addCategory()">إضافة</button>`); }
 async function addCategory() {
   const name = document.getElementById('cat-name').value.trim();
-  if (!name) return toast('أدخل الاسم', 'error');
-  const res = await apiFetch('/api/restaurant/categories', { method: 'POST', body: JSON.stringify({ name }) });
-  if (res && res.ok) { toast('تمت الإضافة'); closeModal(); renderCategoriesPage(); }
+  if (!name) return;
+  await apiFetch('/api/restaurant/categories', { method: 'POST', body: JSON.stringify({ name }) });
+  toast('تمت الإضافة'); closeModal(); renderCategoriesPage();
 }
-async function deleteCategory(id) {
-  if (!confirm('حذف التصنيف؟')) return;
-  const res = await apiFetch(`/api/restaurant/categories/${id}`, { method: 'DELETE' });
-  if (res && res.ok) { toast('تم الحذف'); renderCategoriesPage(); }
-}
+async function deleteCategory(id) { await apiFetch(`/api/restaurant/categories/${id}`, { method: 'DELETE' }); toast('تم الحذف'); renderCategoriesPage(); }
 
-// ========== المنتجات الاحترافية ==========
+// ========== المنتجات الاحترافية مع قوالب جاهزة ==========
 async function renderProductsPage() {
   await loadProducts();
-  let html = `<div style="display:flex;justify-content:space-between;margin-bottom:16px"><h2>📋 المنتجات</h2><button class="btn btn-primary" onclick="openAddProduct()">+ إضافة منتج</button></div><div class="section"><div class="table-wrap"><table><thead><tr><th>الصورة</th><th>الاسم</th><th>النوع</th><th>التفاصيل</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>`;
+  let html = `<div style="display:flex;justify-content:space-between;margin-bottom:16px"><h2>المنتجات</h2><button class="btn btn-primary" onclick="openAddProduct()">+ إضافة منتج</button></div><div class="section"><div class="table-wrap"><table><thead><tr><th>الصورة</th><th>الاسم</th><th>النوع</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>`;
   productsList.forEach(p => {
-    let detail = p.type === 'single' ? `${p.basePrice} ج` : (p.groups?.[0]?.options?.map(o => `${o.value}:${o.price}ج`).join(' | ') || 'متعدد');
-    html += `<tr><td><img src="${p.image || 'https://placehold.co/50x50/FF6B00/white?text=🍔'}" width="45" height="45" style="border-radius:8px;object-fit:cover"></td><td><strong>${p.name}</strong><br><span style="font-size:11px;color:var(--text3)">${p.description || ''}</span></td><td><span class="badge ${p.type === 'single' ? 'badge-green' : 'badge-orange'}">${p.type === 'single' ? 'منفرد' : 'متعدد'}</span></td><td style="max-width:200px">${detail}</td><td><span class="badge ${p.isAvailable ? 'badge-green' : 'badge-red'}">${p.isAvailable ? 'متاح' : 'غير متاح'}</span></td><td><button class="btn btn-ghost btn-sm" onclick="editProduct('${p.id}')">✏️</button> <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">🗑️</button></td></tr>`;
+    html += `<tr><td><img src="${p.image || 'https://placehold.co/50x50/FF6B00/white?text=🍔'}" width="45" height="45" style="border-radius:8px"></td><td><strong>${p.name}</strong></td><td><span class="badge ${p.type === 'single' ? 'badge-green' : 'badge-orange'}">${p.type === 'single' ? 'منفرد' : 'متعدد'}</span></td><td><span class="badge ${p.isAvailable ? 'badge-green' : 'badge-red'}">${p.isAvailable ? 'متاح' : 'غير متاح'}</span></td><td><button class="btn btn-ghost btn-sm" onclick="editProduct('${p.id}')">تعديل</button> <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">حذف</button></td></tr>`;
   });
   html += `</tbody></table></div></div>`;
   document.getElementById('content').innerHTML = html;
 }
 
+// قوالب المجموعات الجاهزة
+const groupTemplates = {
+  sizes: { name: 'الأحجام', type: 'single', required: true, options: [{ value: 'صغير', price: 0 }, { value: 'وسط', price: 5 }, { value: 'كبير', price: 10 }] },
+  chickenPieces: { name: 'عدد القطع', type: 'single', required: true, options: [{ value: '5 قطع', price: 35 }, { value: '8 قطع', price: 55 }, { value: '12 قطعة', price: 75 }] },
+  hotCold: { name: 'درجة الحرارة', type: 'single', required: false, options: [{ value: 'عادي', price: 0 }, { value: 'حار', price: 0 }] },
+  spicyLevel: { name: 'مستوى الحرارة', type: 'single', required: false, options: [{ value: 'عادي', price: 0 }, { value: 'وسط', price: 0 }, { value: 'حار', price: 2 }, { value: 'ناري', price: 4 }] },
+  extras: { name: 'إضافات', type: 'multiple', required: false, options: [{ value: 'ثومية', price: 2 }, { value: 'مخلل', price: 1.5 }, { value: 'عيش بر', price: 3 }, { value: 'بطاطس', price: 5 }] },
+  drinks: { name: 'مشروبات', type: 'multiple', required: false, options: [{ value: 'كولا', price: 5 }, { value: 'سبايت', price: 5 }, { value: 'مياه', price: 3 }] }
+};
+
+function addGroupFromTemplate(templateKey) {
+  const tpl = groupTemplates[templateKey];
+  if (!tpl) return;
+  addGroupRow(tpl.name, tpl.type, tpl.required, tpl.options);
+}
+
+function addGroupRow(defaultName = '', defaultType = 'single', defaultRequired = true, defaultOptions = []) {
+  const container = document.getElementById('groups-container');
+  const groupId = 'group_' + Date.now() + '_' + Math.random();
+  const div = document.createElement('div');
+  div.className = 'group-box';
+  div.innerHTML = `
+    <div class="group-title">
+      <input placeholder="اسم المجموعة (مثال: الحجم)" class="grp-name" value="${defaultName}">
+      <select class="grp-type"><option value="single" ${defaultType === 'single' ? 'selected' : ''}>اختيار واحد</option><option value="multiple" ${defaultType === 'multiple' ? 'selected' : ''}>اختيار متعدد</option></select>
+      <label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" class="grp-required" ${defaultRequired ? 'checked' : ''}> إجباري</label>
+      <button type="button" class="btn-danger btn-sm" onclick="this.closest('.group-box').remove()">✕</button>
+    </div>
+    <div class="grp-options-container"></div>
+    <button type="button" class="btn-add-row" onclick="addOptionToGroup(this)">+ إضافة خيار</button>
+  `;
+  container.appendChild(div);
+  const optsContainer = div.querySelector('.grp-options-container');
+  if (defaultOptions.length > 0) {
+    defaultOptions.forEach(opt => {
+      const row = document.createElement('div');
+      row.className = 'option-row';
+      row.innerHTML = `<input placeholder="القيمة" value="${opt.value}" style="flex:2" class="opt-value"><input placeholder="السعر" type="number" value="${opt.price}" style="flex:1" class="opt-price"><button type="button" class="btn-ghost btn-sm" onclick="this.parentElement.remove()">✕</button>`;
+      optsContainer.appendChild(row);
+    });
+  } else {
+    addOptionToGroup(div.querySelector('.btn-add-row'));
+  }
+}
+
+function addOptionToGroup(btn) {
+  const groupBox = btn.closest('.group-box');
+  const container = groupBox.querySelector('.grp-options-container');
+  const row = document.createElement('div');
+  row.className = 'option-row';
+  row.innerHTML = `<input placeholder="القيمة" style="flex:2" class="opt-value"><input placeholder="السعر (ج)" type="number" style="flex:1" class="opt-price" value="0"><button type="button" class="btn-ghost btn-sm" onclick="this.parentElement.remove()">✕</button>`;
+  container.appendChild(row);
+}
+
+function collectGroupsData() {
+  const groups = [];
+  document.querySelectorAll('.group-box').forEach(box => {
+    const name = box.querySelector('.grp-name').value.trim();
+    if (!name) return;
+    const type = box.querySelector('.grp-type').value;
+    const required = box.querySelector('.grp-required').checked;
+    const options = [];
+    box.querySelectorAll('.option-row').forEach(row => {
+      const value = row.querySelector('.opt-value')?.value.trim();
+      const price = parseFloat(row.querySelector('.opt-price')?.value) || 0;
+      if (value) options.push({ value, price });
+    });
+    if (options.length) groups.push({ name, type, required, options });
+  });
+  return groups;
+}
+
 function openAddProduct() {
-  openModal('إضافة منتج احترافي', `
-    <div class="field"><label>اسم المنتج</label><input id="prod-name"></div>
-    <div class="field"><label>الوصف</label><input id="prod-desc"></div>
+  openModal('إضافة منتج جديد', `
+    <div class="field"><label>اسم المنتج</label><input id="prod-name" placeholder="مثال: شاورما، بيتزا، دجاج مقلي"></div>
+    <div class="field"><label>الوصف</label><input id="prod-desc" placeholder="وصف قصير للمنتج"></div>
     <div class="field"><label>التصنيف</label><select id="prod-cat">${categoriesList.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
-    <div class="product-type-selector"><div class="type-option selected" data-type="single">🍔 منتج منفرد + إضافات</div><div class="type-option" data-type="multi">🍕 منتج متعدد (أحجام/خيارات)</div></div>
-    <div id="single-fields"><div class="field"><label>السعر الأساسي (ج)</label><input id="base-price" type="number" value="20"></div><div class="field"><label>الإضافات (ثومية، مخلل، عيش)</label><div id="extras-list"></div><button type="button" class="btn-add-row" onclick="addExtraRow()">+ إضافة إضافة</button></div></div>
-    <div id="multi-fields" style="display:none"><div class="field"><label>الأحجام/المقاسات</label><div id="sizes-list"></div><button type="button" class="btn-add-row" onclick="addSizeRow()">+ إضافة حجم</button></div><div class="field"><label>خيارات إضافية (حار/عادي)</label><div id="spice-list"></div><button type="button" class="btn-add-row" onclick="addSpiceRow()">+ إضافة خيار</button></div></div>
-    <div class="field"><label>رابط الصورة</label><input id="prod-image" value="https://placehold.co/100x100/FF6B00/white?text=🍽️"></div>
+    <div class="product-type-selector" style="display:flex;gap:12px;margin-bottom:20px;">
+      <div class="type-option selected" data-type="single" style="flex:1;text-align:center;padding:10px;border-radius:12px;background:var(--surface2);cursor:pointer;">🍔 منتج منفرد (سعر ثابت + إضافات)</div>
+      <div class="type-option" data-type="multi" style="flex:1;text-align:center;padding:10px;border-radius:12px;background:var(--surface2);cursor:pointer;">🍕 منتج متعدد (أحجام/خيارات)</div>
+    </div>
+    <div id="single-fields"><div class="field"><label>السعر الأساسي (ج)</label><input id="base-price" type="number" value="20"></div></div>
+    <div id="multi-fields" style="display:none;"><div class="field"><label>السعر يحدد من المجموعات</label><div style="color:var(--orange);font-size:12px;">سيتم حساب السعر بناءً على الخيارات المختارة</div></div></div>
+    
+    <div class="templates-bar">
+      <span style="color:var(--text3);font-size:12px;">📦 قوالب سريعة:</span>
+      <button type="button" class="btn-group-template" onclick="addGroupFromTemplate('sizes')">📏 أحجام (صغير/وسط/كبير)</button>
+      <button type="button" class="btn-group-template" onclick="addGroupFromTemplate('chickenPieces')">🍗 عدد القطع (5/8/12)</button>
+      <button type="button" class="btn-group-template" onclick="addGroupFromTemplate('hotCold')">🌡️ حار/بارد</button>
+      <button type="button" class="btn-group-template" onclick="addGroupFromTemplate('spicyLevel')">🌶️ مستوى الحرارة</button>
+      <button type="button" class="btn-group-template" onclick="addGroupFromTemplate('extras')">➕ إضافات (ثومية/مخلل/عيش)</button>
+      <button type="button" class="btn-group-template" onclick="addGroupFromTemplate('drinks')">🥤 مشروبات</button>
+    </div>
+    
+    <div id="groups-container"></div>
+    <button type="button" class="btn-add-row" onclick="addGroupRow()" style="width:100%;margin-top:8px;">+ إضافة مجموعة مخصصة</button>
+    
+    <div class="field" style="margin-top:16px;"><label>📷 صورة المنتج (اختر من جهازك)</label><input type="file" id="prod-image-file" accept="image/*"></div>
+    <div class="field"><label>أو رابط صورة (اختياري)</label><input id="prod-image-url" placeholder="https://..."></div>
   `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveNewProduct()">💾 حفظ المنتج</button>`);
   
-  let selectedType = 'single';
+  // تفعيل اختيار نوع المنتج
   document.querySelectorAll('.type-option').forEach(opt => {
     opt.onclick = () => {
       document.querySelectorAll('.type-option').forEach(o => o.classList.remove('selected'));
       opt.classList.add('selected');
-      selectedType = opt.dataset.type;
-      document.getElementById('single-fields').style.display = selectedType === 'single' ? 'block' : 'none';
-      document.getElementById('multi-fields').style.display = selectedType === 'multi' ? 'block' : 'none';
+      const isSingle = opt.dataset.type === 'single';
+      document.getElementById('single-fields').style.display = isSingle ? 'block' : 'none';
+      document.getElementById('multi-fields').style.display = isSingle ? 'none' : 'block';
     };
   });
-  addExtraRow(); addSizeRow(); addSpiceRow();
-}
-
-function addExtraRow() {
-  const container = document.getElementById('extras-list');
-  const div = document.createElement('div'); div.className = 'option-row';
-  div.innerHTML = `<input placeholder="اسم الإضافة (ثومية)" style="flex:2"><input placeholder="السعر" type="number" style="flex:1" value="2"><button type="button" class="btn-ghost btn-sm" onclick="this.parentElement.remove()">✕</button>`;
-  container.appendChild(div);
-}
-function addSizeRow() {
-  const container = document.getElementById('sizes-list');
-  const div = document.createElement('div'); div.className = 'option-row';
-  div.innerHTML = `<input placeholder="الحجم (صغير/وسط/كبير)" style="flex:2"><input placeholder="السعر" type="number" style="flex:1" value="0"><button type="button" class="btn-ghost btn-sm" onclick="this.parentElement.remove()">✕</button>`;
-  container.appendChild(div);
-}
-function addSpiceRow() {
-  const container = document.getElementById('spice-list');
-  const div = document.createElement('div'); div.className = 'option-row';
-  div.innerHTML = `<input placeholder="خيار (حار/عادي)" style="flex:2"><input placeholder="السعر" type="number" style="flex:1" value="0"><button type="button" class="btn-ghost btn-sm" onclick="this.parentElement.remove()">✕</button>`;
-  container.appendChild(div);
+  
+  // إضافة مجموعة فارغة افتراضية
+  addGroupRow();
 }
 
 async function saveNewProduct() {
   const name = document.getElementById('prod-name').value.trim();
   if (!name) return toast('اسم المنتج مطلوب', 'error');
+  
   const type = document.querySelector('.type-option.selected').dataset.type;
   const category = document.getElementById('prod-cat').value;
-  const image = document.getElementById('prod-image').value;
   const description = document.getElementById('prod-desc').value;
-  let groups = [];
+  const groups = collectGroupsData();
+  let basePrice = 0;
+  
   if (type === 'single') {
-    const basePrice = parseFloat(document.getElementById('base-price').value) || 0;
-    const extras = [];
-    document.querySelectorAll('#extras-list .option-row').forEach(row => {
-      const nameVal = row.querySelector('input:first-child')?.value;
-      const priceVal = parseFloat(row.querySelector('input[type="number"]')?.value) || 0;
-      if (nameVal) extras.push({ value: nameVal, price: priceVal });
-    });
-    if (extras.length) groups.push({ name: 'إضافات', type: 'multiple', required: false, options: extras });
-    const formData = new FormData();
-    formData.append('name', name);
-    formData.append('description', description);
-    formData.append('basePrice', basePrice);
-    formData.append('category', category);
-    formData.append('groups', JSON.stringify(groups));
-    const res = await apiFetch('/api/restaurant/products', { method: 'POST', body: formData });
-    if (res && res.ok) { toast('تم إضافة المنتج'); closeModal(); renderProductsPage(); }
+    basePrice = parseFloat(document.getElementById('base-price').value) || 0;
+  }
+  
+  const formData = new FormData();
+  formData.append('name', name);
+  formData.append('description', description);
+  formData.append('basePrice', basePrice);
+  formData.append('category', category);
+  formData.append('groups', JSON.stringify(groups));
+  
+  // رفع الصورة من الجهاز
+  const imageFile = document.getElementById('prod-image-file').files[0];
+  if (imageFile) {
+    formData.append('image', imageFile);
   } else {
-    const sizes = [];
-    document.querySelectorAll('#sizes-list .option-row').forEach(row => {
-      const sizeVal = row.querySelector('input:first-child')?.value;
-      const priceVal = parseFloat(row.querySelector('input[type="number"]')?.value) || 0;
-      if (sizeVal) sizes.push({ value: sizeVal, price: priceVal });
-    });
-    const spices = [];
-    document.querySelectorAll('#spice-list .option-row').forEach(row => {
-      const spiceVal = row.querySelector('input:first-child')?.value;
-      const priceVal = parseFloat(row.querySelector('input[type="number"]')?.value) || 0;
-      if (spiceVal) spices.push({ value: spiceVal, price: priceVal });
-    });
-    if (sizes.length) groups.push({ name: 'الحجم', type: 'single', required: true, options: sizes });
-    if (spices.length) groups.push({ name: 'الإضافات', type: 'single', required: false, options: spices });
-    const formData = new FormData();
-    formData.append('name', name);
-    formData.append('description', description);
-    formData.append('basePrice', 0);
-    formData.append('category', category);
-    formData.append('groups', JSON.stringify(groups));
-    const res = await apiFetch('/api/restaurant/products', { method: 'POST', body: formData });
-    if (res && res.ok) { toast('تم إضافة المنتج'); closeModal(); renderProductsPage(); }
+    const imageUrl = document.getElementById('prod-image-url').value;
+    if (imageUrl) formData.append('image', imageUrl);
+  }
+  
+  const res = await apiFetch('/api/restaurant/products', { method: 'POST', body: formData });
+  if (res && res.ok) {
+    toast('تم إضافة المنتج بنجاح');
+    closeModal();
+    renderProductsPage();
+  } else {
+    toast('حدث خطأ أثناء الإضافة', 'error');
   }
 }
 
@@ -520,41 +518,53 @@ async function editProduct(id) {
   openModal('تعديل المنتج', `
     <div class="field"><label>الاسم</label><input id="e-name" value="${p.name}"></div>
     <div class="field"><label>الوصف</label><input id="e-desc" value="${p.description || ''}"></div>
-    <div class="field"><label>رابط الصورة</label><input id="e-img" value="${p.image || ''}"></div>
     <div class="field"><label>متاح</label><select id="e-avail"><option ${p.isAvailable ? 'selected' : ''} value="true">نعم</option><option ${!p.isAvailable ? 'selected' : ''} value="false">لا</option></select></div>
+    <div class="field"><label>صورة جديدة (اختياري)</label><input type="file" id="e-image"></div>
   `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveEditedProduct('${id}')">حفظ</button>`);
 }
 
 async function saveEditedProduct(id) {
   const name = document.getElementById('e-name').value;
   const description = document.getElementById('e-desc').value;
-  const image = document.getElementById('e-img').value;
   const isAvailable = document.getElementById('e-avail').value === 'true';
   const formData = new FormData();
   formData.append('name', name);
   formData.append('description', description);
   formData.append('isAvailable', isAvailable);
-  if (image) formData.append('image', image);
+  const imageFile = document.getElementById('e-image').files[0];
+  if (imageFile) formData.append('image', imageFile);
   const res = await apiFetch(`/api/restaurant/products/${id}`, { method: 'PATCH', body: formData });
   if (res && res.ok) { toast('تم التحديث'); closeModal(); renderProductsPage(); }
 }
 
 async function deleteProduct(id) {
   if (!confirm('حذف المنتج نهائياً؟')) return;
-  const res = await apiFetch(`/api/restaurant/products/${id}`, { method: 'DELETE' });
-  if (res && res.ok) { toast('تم الحذف'); renderProductsPage(); }
+  await apiFetch(`/api/restaurant/products/${id}`, { method: 'DELETE' });
+  toast('تم الحذف');
+  renderProductsPage();
 }
 
-// ========== Socket.IO ==========
-const socket = io();
-socket.on('newOrder', (data) => {
-  playSound('newOrder');
-  toast(`📦 طلب جديد من ${data.customerName || 'عميل'}`, 'success');
-  if (currentPage === 'orders') renderOrders();
-});
-socket.on('orderStatusUpdate', () => { if (currentPage === 'orders') renderOrders(); });
+// تعريف الدوال العامة
+window.addGroupFromTemplate = addGroupFromTemplate;
+window.addGroupRow = () => addGroupRow();
+window.addOptionToGroup = addOptionToGroup;
+window.openAddProduct = openAddProduct;
+window.editProduct = editProduct;
+window.deleteProduct = deleteProduct;
+window.saveEditedProduct = saveEditedProduct;
+window.openEditProfile = openEditProfile;
+window.saveProfileEdit = saveProfileEdit;
+window.uploadLogo = uploadLogo;
+window.setOrderTab = setOrderTab;
+window.updateOrderStatus = updateOrderStatus;
+window.openAddCategory = openAddCategory;
+window.addCategory = addCategory;
+window.deleteCategory = deleteCategory;
 
-// بدء التطبيق
+// Socket.IO
+const socket = io();
+socket.on('newOrder', () => { playSound('newOrder'); toast('📦 طلب جديد!', 'success'); if (currentPage === 'orders') renderOrders(); });
+
 loadRestaurantData();
 renderPage('profile');
 </script>
