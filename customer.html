@@ -170,166 +170,31 @@
     </div>
 
     <div class="main-content" id="mainContent">
-      <!-- HOME SCREEN with categories -->
-      <section class="screen active" id="homeScreen">
-        <div style="background:linear-gradient(135deg,#FF6B00,#ff9a4d);padding:20px;border-radius:24px;color:white;margin-bottom:20px;">
-          <div style="font-size:24px;font-weight:900;">اطلب أكلك المفضل 🚀</div>
-          <div class="slogan" style="color:#fff;">أفضل المطاعم والعروض والتوصيل السريع</div>
-        </div>
-        <div class="search-box">🔍<input type="text" placeholder="ابحث عن مطعم أو منتج" id="searchInput" oninput="filterHomeItems()" /></div>
-        <div class="category-filters" id="categoryFilters">
-          <button class="filter-btn active" data-cat="restaurants">🍔 مطاعم</button>
-          <button class="filter-btn" data-cat="markets">🛒 ماركت</button>
-          <button class="filter-btn" data-cat="pharmacies">💊 صيدليات</button>
-          <button class="filter-btn" data-cat="special">✨ طلب خاص</button>
-        </div>
-        <div class="section-title" id="homeSectionTitle">🍔 المطاعم</div>
-        <div id="restaurantsContainer"></div>
-      </section>
-
+      <!-- HOME SCREEN -->
+      <section class="screen active" id="homeScreen">...</section>
       <!-- RESTAURANT MENU SCREEN -->
-      <section class="screen" id="restaurantScreen">
-        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;">
-          <button class="icon-btn" onclick="showScreen('homeScreen')">←</button>
-          <div class="logo"><span id="restaurantTitleHeader">المطعم</span></div>
-          <button class="icon-btn">♡</button>
-        </div>
-        <img id="restaurantHero" class="hero-image" src="" />
-        <div class="restaurant-info">
-          <h2 id="restaurantName"></h2>
-          <div class="meta" style="margin-top: 10px;"><span>⭐ 4.8</span><span>⏱ 30 دقيقة</span><span>+120 تقييم</span></div>
-          <div class="tabs" id="tabsContainer"></div>
-          <div id="productsContainer"></div>
-        </div>
-      </section>
-
-      <!-- SPECIAL ORDER SCREEN (markets, pharmacies, custom) -->
-      <section class="screen" id="specialOrderScreen">
-        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;">
-          <button class="icon-btn" onclick="showScreen('homeScreen')">←</button>
-          <div class="logo"><span id="specialOrderTitle">طلب ماركت</span></div>
-          <div></div>
-        </div>
-        <div style="background:white; border-radius:20px; padding:20px; margin-top:10px;">
-          <div class="input-group">
-            <label>📝 تفاصيل الطلب (المنتجات والكميات)</label>
-            <textarea id="specialOrderDetails" rows="5" style="width:100%; border:1px solid #ddd; border-radius:12px; padding:12px;"></textarea>
-          </div>
-          <div class="file-attachment">
-            <label for="attachFiles">📎 إرفاق ملفات (صور)</label>
-            <input type="file" id="attachFiles" multiple accept="image/*" onchange="previewFiles(this)">
-            <div class="preview-images" id="filePreview"></div>
-          </div>
-          <div class="summary">
-            <div class="summary-row"><span>🚚 رسوم التوصيل</span><span id="specialDeliveryFee">0 ج</span></div>
-            <div class="summary-row"><strong>الإجمالي</strong><strong class="summary-total" id="specialTotal">0 ج</strong></div>
-          </div>
-          <button class="btn" onclick="submitSpecialOrder()">📦 إرسال الطلب</button>
-        </div>
-      </section>
-
+      <section class="screen" id="restaurantScreen">...</section>
+      <!-- SPECIAL ORDER SCREEN -->
+      <section class="screen" id="specialOrderScreen">...</section>
       <!-- CART SCREEN -->
-      <section class="screen" id="cartScreen">
-        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;">
-          <button class="icon-btn" onclick="showScreen('homeScreen')">←</button>
-          <div class="logo">السلة</div>
-          <div></div>
-        </div>
-        <div id="cartItems"></div>
-        <div class="summary" id="cartSummary">
-          <div class="summary-row"><span>إجمالي المنتجات</span><span id="itemsTotal">0 ج</span></div>
-          <div class="summary-row"><span>رسوم التوصيل</span><span id="deliveryFee">0 ج</span></div>
-          <div class="summary-row"><strong>الإجمالي النهائي</strong><strong class="summary-total" id="finalTotal">0 ج</strong></div>
-        </div>
-        <br>
-        <button class="btn" onclick="proceedToCheckout()">إتمام الطلب</button>
-      </section>
-
+      <section class="screen" id="cartScreen">...</section>
       <!-- AREA SCREEN -->
-      <section class="screen" id="areaScreen">
-        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;">
-          <button class="icon-btn" onclick="showScreen('cartScreen')">←</button>
-          <div class="logo">اختر منطقتك</div>
-          <div></div>
-        </div>
-        <div class="slogan">اختر المنطقة لعرض رسوم التوصيل</div>
-        <div id="areasContainer"></div>
-        <button class="btn" onclick="confirmArea()">تأكيد المنطقة</button>
-      </section>
-
+      <section class="screen" id="areaScreen">...</section>
       <!-- CHECKOUT SCREEN -->
-      <section class="screen" id="checkoutScreen">
-        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;">
-          <button class="icon-btn" onclick="showScreen('areaScreen')">←</button>
-          <div class="logo">إتمام الطلب</div>
-          <div></div>
-        </div>
-        <div id="checkoutUserInfo"></div>
-        <div class="summary" style="margin-bottom:18px;"><div class="summary-row"><span>📍 المنطقة</span><span id="selectedAreaName"></span></div></div>
-        <div class="payment-item active" data-method="CASH" onclick="selectPayment(this, 'CASH')"><div>💵 كاش عند الاستلام</div><div class="radio"></div></div>
-        <div class="payment-item" data-method="VODAFONE" onclick="selectPayment(this, 'VODAFONE')"><div>📱 فودافون كاش</div><div class="radio"></div></div>
-        <div class="summary">
-          <div class="summary-row"><span>الإجمالي</span><span id="checkoutItemsTotal"></span></div>
-          <div class="summary-row"><span>التوصيل</span><span id="checkoutDelivery"></span></div>
-          <div class="summary-row"><strong>الإجمالي النهائي</strong><strong class="summary-total" id="checkoutFinal"></strong></div>
-        </div>
-        <br>
-        <button class="btn" onclick="submitOrder()">تأكيد الطلب</button>
-      </section>
-
+      <section class="screen" id="checkoutScreen">...</section>
       <!-- TRACK SCREEN -->
-      <section class="screen" id="trackScreen">
-        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;">
-          <button class="icon-btn" onclick="showScreen('homeScreen')">←</button>
-          <div class="logo">تتبع الطلب</div>
-          <div></div>
-        </div>
-        <div style="text-align:center; margin: 20px 0;">
-          <h2>حالة الطلب</h2>
-          <div style="color: #FF6B00; font-weight: bold; font-size: 18px;" id="trackOrderId"></div>
-        </div>
-        <div class="status-track" id="trackStatusContainer"></div>
-        <div class="details" id="trackDetails"></div>
-        <button class="btn" onclick="showScreen('homeScreen')">العودة للرئيسية</button>
-      </section>
-
+      <section class="screen" id="trackScreen">...</section>
       <!-- ORDERS SCREEN -->
-      <section class="screen" id="ordersScreen">
-        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;">
-          <button class="icon-btn" onclick="showScreen('homeScreen')">←</button>
-          <div class="logo">طلباتي</div>
-          <div></div>
-        </div>
-        <div class="tab-bar" id="orders-tab-bar" style="display:flex; gap: 10px; margin-bottom: 16px;">
-          <div class="tab active" onclick="switchOrdersTab('active')">🔄 النشطة</div>
-          <div class="tab" onclick="switchOrdersTab('archive')">📦 الأرشيف</div>
-        </div>
-        <div id="myOrdersList"></div>
-      </section>
-
+      <section class="screen" id="ordersScreen">...</section>
       <!-- ACCOUNT SCREEN -->
-      <section class="screen" id="accountScreen">
-        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;">
-          <button class="icon-btn" onclick="showScreen('homeScreen')">←</button>
-          <div class="logo">حسابي</div>
-          <div></div>
-        </div>
-        <div style="padding: 16px;" id="accountInfo">
-          <button class="btn outline-btn" onclick="showLoginScreen()">تسجيل الدخول</button>
-        </div>
-      </section>
+      <section class="screen" id="accountScreen">...</section>
     </div>
 
-    <div class="bottom-nav">
-      <div class="nav-item" onclick="navigateTo('homeScreen')">🏠<span>الرئيسية</span></div>
-      <div class="nav-item" onclick="navigateTo('cartScreen')">🛒<span>السلة</span><span class="badge" id="cartBadge">0</span></div>
-      <div class="nav-item" onclick="navigateTo('ordersScreen')">📦<span>طلباتي</span></div>
-      <div class="nav-item" onclick="navigateTo('accountScreen')">👤<span>حساب</span></div>
-    </div>
+    <div class="bottom-nav">...</div>
   </div>
 </div>
 
-<!-- PRODUCT SHEET (for restaurant items with options) -->
+<!-- PRODUCT SHEET -->
 <div class="sheet-overlay" id="productSheet">
   <div class="sheet-box">
     <button class="sheet-close" onclick="closeProductSheet()">✕</button>
@@ -910,6 +775,11 @@ function openProductSheet(product) {
         break;
       }
     }
+  }
+  // حالة إضافية: إذا كان المنتج لا يحتوي على أي مجموعة إجبارية بسعر موجب ولكن basePrice == 0
+  // فقد يكون منتجاً متعدداً أيضاً (مثل حالة الأحجام بسعر 0 ثم يُضاف سعر لاحق)
+  if (!isMulti && product.groups.some(g => g.required && g.options.length > 0 && g.options[0].price === 0 && g.options.some(opt => opt.price > 0))) {
+    isMulti = true;
   }
   window._isMultiProduct = isMulti;
   
