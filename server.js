@@ -12,11 +12,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// إعداد multer
+// إعداد multer لرفع الملفات (صور المنتجات، شعارات المطاعم، مرفقات الطلبات الخاصة)
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const dir = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir);
+    let dir = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
+    if (req.originalUrl.includes('/orders/special')) {
+      dir = path.join(dir, 'special_orders');
+    }
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
   filename: function (req, file, cb) {
@@ -26,6 +29,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 app.use('/uploads', express.static(process.env.UPLOADS_DIR || path.join(__dirname, 'uploads')));
+
 const http = require('http');
 const { Server } = require('socket.io');
 const server = http.createServer(app);
@@ -35,12 +39,20 @@ const DATA_DIR = process.env.DATA_DIR || __dirname;
 const DATA_FILE = path.join(DATA_DIR, 'data.json');
 const JWT_SECRET = process.env.JWT_SECRET || 'drako_secret_key_fallback';
 
-// دالة قراءة البيانات
+// قراءة البيانات مع تهيئة الجداول الجديدة
 function readData() {
   if (!fs.existsSync(DATA_FILE)) {
     const initial = {
       users: [],
       restaurants: [],
+      markets: [
+        { id: 'market1', name: 'كارفور ماركت', logo: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200', isOpen: true, deliveryFee: 10 },
+        { id: 'market2', name: 'المانيا سوبر ماركت', logo: 'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=200', isOpen: true, deliveryFee: 10 }
+      ],
+      pharmacies: [
+        { id: 'pharm1', name: 'صيدليات العزبي', logo: 'https://images.unsplash.com/photo-1584308666744-24d5c6dee668?w=200', isOpen: true, deliveryFee: 10 },
+        { id: 'pharm2', name: 'صيدليات دواء', logo: 'https://images.unsplash.com/photo-1631549916768-4119b2e5f926?w=200', isOpen: true, deliveryFee: 10 }
+      ],
       drivers: [],
       orders: [],
       products: [],
@@ -67,17 +79,18 @@ function readData() {
   if (!data.products) data.products = [];
   if (!data.categories) data.categories = [];
   if (!data.regions) data.regions = [];
+  if (!data.markets) data.markets = [];
+  if (!data.pharmacies) data.pharmacies = [];
   const adminUser = data.users.find(u => u.phone === '01000000000');
   if (adminUser && adminUser.role !== 'ADMIN') adminUser.role = 'ADMIN';
   return data;
 }
 
-// دالة كتابة البيانات
 function writeData(data) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 }
 
-// Middleware للـ API (يعطي 401 للمناداة البرمجية)
+// Middlewares
 function requireAuth(req, res, next) {
   const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'غير مصرح' });
@@ -92,24 +105,16 @@ function adminOnly(req, res, next) {
   next();
 }
 
-// Middleware لحماية صفحات HTML مع التحقق من الدور المطلوب
 function rolePageAuth(requiredRole) {
   return (req, res, next) => {
     const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
-    if (!token) {
-      return res.redirect('/login.html?redirect=' + encodeURIComponent(req.originalUrl));
-    }
+    if (!token) return res.redirect('/login.html?redirect=' + encodeURIComponent(req.originalUrl));
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
-      if (decoded.role !== requiredRole) {
-        // إذا الدور مش مطابق، يتم إعادة التوجيه إلى صفحة تسجيل الدخول مع خطأ
-        return res.redirect('/login.html?error=role');
-      }
+      if (decoded.role !== requiredRole) return res.redirect('/login.html?error=role');
       req.user = decoded;
       next();
-    } catch {
-      return res.redirect('/login.html?redirect=' + encodeURIComponent(req.originalUrl));
-    }
+    } catch { return res.redirect('/login.html?redirect=' + encodeURIComponent(req.originalUrl)); }
   };
 }
 
@@ -117,12 +122,11 @@ function rolePageAuth(requiredRole) {
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'customer.html')));
 app.get('/customer', (req, res) => res.sendFile(path.join(__dirname, 'customer.html')));
 app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, 'login.html')));
-// صفحات محمية بالأدوار
 app.get('/admin', rolePageAuth('ADMIN'), (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 app.get('/restaurant', rolePageAuth('RESTAURANT'), (req, res) => res.sendFile(path.join(__dirname, 'restaurant.html')));
 app.get('/driver', rolePageAuth('DRIVER'), (req, res) => res.sendFile(path.join(__dirname, 'driver.html')));
 
-// تسجيل الدخول (مُحدث ليدعم إعادة التوجيه بعد تسجيل الدخول)
+// تسجيل الدخول (يدعم إعادة التوجيه)
 app.post('/login', (req, res) => {
   const { phone, password, redirect } = req.body;
   const data = readData();
@@ -130,17 +134,8 @@ app.post('/login', (req, res) => {
   if (!user || !bcrypt.compareSync(password, user.password)) {
     return res.redirect('/login.html?error=1');
   }
-  const token = jwt.sign(
-    { id: user.id, role: user.role },
-    JWT_SECRET,
-    { expiresIn: '30d' }
-  );
-  res.cookie('token', token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    maxAge: 30 * 24 * 60 * 60 * 1000
-  });
-
+  const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
+  res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000 });
   let target = '/';
   switch (user.role) {
     case 'ADMIN': target = '/admin'; break;
@@ -148,21 +143,16 @@ app.post('/login', (req, res) => {
     case 'DRIVER': target = '/driver'; break;
     default: return res.send('تم الدخول');
   }
-
-  // إذا كان هناك redirect وهو آمن (يبدأ بنفس مسار الدور)، استخدمه
   if (redirect) {
-    const redirectPrefix = '/' + redirect.split('/')[1]; // مثلا /admin, /restaurant
-    if (target.startsWith(redirectPrefix)) {
-      target = redirect;
-    }
+    const redirectPrefix = '/' + redirect.split('/')[1];
+    if (target.startsWith(redirectPrefix)) target = redirect;
   }
-
   return res.redirect(target);
 });
 
 app.get('/logout', (req, res) => { res.clearCookie('token'); res.redirect('/'); });
 
-// ==================== أدمن ====================
+// ==================== ADMIN ====================
 app.get('/api/admin/stats', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   res.json({ users: data.users.length, restaurants: data.restaurants.length, drivers: data.drivers.length, orders: data.orders.length, totalRevenue: data.orders.reduce((s, o) => s + (o.total || 0), 0) });
@@ -391,13 +381,7 @@ app.get('/api/admin/reports/full', requireAuth, adminOnly, (req, res) => {
     const productRevenue = list.reduce((s, o) => s + (o.total - (o.deliveryFee || 0)), 0);
     const deliveryRevenue = list.reduce((s, o) => s + (o.deliveryFee || 0), 0);
     const platformFee = list.reduce((s, o) => s + (o.platformFee || 0), 0);
-    return {
-      productRevenue,
-      deliveryRevenue,
-      platformFee,
-      totalRevenue: productRevenue + deliveryRevenue,
-      count: list.length
-    };
+    return { productRevenue, deliveryRevenue, platformFee, totalRevenue: productRevenue + deliveryRevenue, count: list.length };
   }
 
   function groupBy(list, key) {
@@ -450,7 +434,7 @@ app.get('/api/admin/reports/full', requireAuth, adminOnly, (req, res) => {
   });
 });
 
-// ==================== مسارات تحكم الأدمن في الطلبات ====================
+// مسارات تحكم الأدمن في الطلبات
 app.patch('/api/admin/orders/:id/approve', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const order = data.orders.find(o => o.id === req.params.id);
@@ -477,17 +461,15 @@ app.patch('/api/admin/orders/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const order = data.orders.find(o => o.id === req.params.id);
   if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
-  
   const { items, total, adminNotes } = req.body;
   if (items !== undefined) order.items = items;
   if (total !== undefined) order.total = Number(total);
   if (adminNotes !== undefined) order.adminNotes = adminNotes;
-  
   writeData(data);
   res.json({ success: true });
 });
 
-// ==================== مطعم ====================
+// ==================== RESTAURANT ====================
 app.get('/api/restaurant/profile', requireAuth, (req, res) => {
   if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
@@ -500,7 +482,7 @@ app.patch('/api/restaurant/profile', requireAuth, upload.single('logo'), (req, r
   const data = readData();
   const restaurant = data.restaurants.find(r => r.userId === req.user.id);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-  if (req.file) { restaurant.logo = '/uploads/' + req.file.filename; }
+  if (req.file) restaurant.logo = '/uploads/' + req.file.filename;
   writeData(data);
   res.json({ logo: restaurant.logo });
 });
@@ -510,25 +492,15 @@ app.get('/api/restaurant/orders', requireAuth, (req, res) => {
   const data = readData();
   const restaurant = data.restaurants.find(r => r.userId === req.user.id);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-
   let orders = data.orders.filter(o => o.restaurantId === restaurant.id && o.adminApproved === true);
-
-  if (req.query.date) {
-    const targetDate = req.query.date;
-    orders = orders.filter(o => o.createdAt && o.createdAt.startsWith(targetDate));
-  }
-
+  if (req.query.date) orders = orders.filter(o => o.createdAt && o.createdAt.startsWith(req.query.date));
   orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-  const enriched = orders.map(o => {
-    const customer = data.users.find(u => u.id === o.customerId) || null;
-    return {
-      ...o,
-      customerName: customer?.name || o.customerName || 'زائر',
-      customerPhone: customer?.phone || o.customerPhone || '',
-      items: o.items || []
-    };
-  });
+  const enriched = orders.map(o => ({
+    ...o,
+    customerName: o.customerName || 'زائر',
+    customerPhone: o.customerPhone || '',
+    items: o.items || []
+  }));
   res.json(enriched);
 });
 
@@ -541,22 +513,12 @@ app.patch('/api/restaurant/orders/:id', requireAuth, (req, res) => {
   if (!restaurant || restaurant.userId !== req.user.id) return res.status(403).json({ error: 'ليس مطعمك' });
   const { status } = req.body;
   if (!['ACCEPTED', 'PREPARING', 'READY', 'CANCELLED'].includes(status)) return res.status(400).json({ error: 'حالة غير صالحة' });
-
   order.status = status;
-
-  if (status === 'PREPARING') {
-    order.preparingAt = new Date().toISOString();
-  }
-
+  if (status === 'PREPARING') order.preparingAt = new Date().toISOString();
   writeData(data);
-
   io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
-  if (status === 'ACCEPTED') {
-    io.emit('orderAccepted', { orderId: order.id });
-  } else if (status === 'CANCELLED') {
-    io.emit('orderCancelled', { orderId: order.id });
-  }
-
+  if (status === 'ACCEPTED') io.emit('orderAccepted', { orderId: order.id });
+  else if (status === 'CANCELLED') io.emit('orderCancelled', { orderId: order.id });
   res.json({ success: true });
 });
 
@@ -619,27 +581,23 @@ app.post('/api/restaurant/products', requireAuth, upload.single('image'), (req, 
   const data = readData();
   const restaurant = data.restaurants.find(r => r.userId === req.user.id);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-
-  const { name, description, category, groups } = req.body;
+  const { name, description, category, groups, basePrice } = req.body;
   if (!name) return res.status(400).json({ error: 'اسم المنتج مطلوب' });
-
   let groupsParsed = [];
-  try { if (groups) groupsParsed = JSON.parse(groups); } catch(e) { return res.status(400).json({ error: 'صيغة المجموعات غير صحيحة' }); }
-
+  try { if (groups) groupsParsed = JSON.parse(groups); } catch(e) {}
   const imagePath = req.file ? '/uploads/' + req.file.filename : '';
-
   const product = {
     id: 'prod_' + Date.now(),
     restaurantId: restaurant.id,
     name,
     description: description || '',
-    basePrice: Number(req.body.basePrice) || 0,
+    basePrice: Number(basePrice) || 0,
     category: category || 'أخرى',
     image: imagePath,
     isAvailable: true,
-    groups: groupsParsed
+    groups: groupsParsed,
+    type: groupsParsed.length ? 'multi' : 'single'
   };
-
   data.products.push(product);
   writeData(data);
   res.json(product);
@@ -652,18 +610,14 @@ app.patch('/api/restaurant/products/:id', requireAuth, upload.single('image'), (
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
   const product = data.products.find(p => p.id === req.params.id && p.restaurantId === restaurant.id);
   if (!product) return res.status(404).json({ error: 'المنتج غير موجود' });
-
-  const { name, description, category, isAvailable, groups } = req.body;
+  const { name, description, category, isAvailable, groups, basePrice } = req.body;
   if (name !== undefined) product.name = name;
   if (description !== undefined) product.description = description;
   if (category !== undefined) product.category = category;
   if (isAvailable !== undefined) product.isAvailable = (isAvailable === 'true' || isAvailable === true);
-  if (req.body.basePrice !== undefined) product.basePrice = Number(req.body.basePrice);
-  if (groups !== undefined) {
-    try { product.groups = JSON.parse(groups); } catch(e) {}
-  }
+  if (basePrice !== undefined) product.basePrice = Number(basePrice);
+  if (groups !== undefined) { try { product.groups = JSON.parse(groups); } catch(e) {} }
   if (req.file) product.image = '/uploads/' + req.file.filename;
-
   writeData(data);
   res.json(product);
 });
@@ -680,26 +634,23 @@ app.delete('/api/restaurant/products/:id', requireAuth, (req, res) => {
   res.json({ success: true });
 });
 
-// تقارير المطعم (محدثة لتشمل نسبة المنصة)
+// تقارير وإحصائيات المطعم
 app.get('/api/restaurant/reports', requireAuth, (req, res) => {
   if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const restaurant = data.restaurants.find(r => r.userId === req.user.id);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-
   const orders = data.orders.filter(o => o.restaurantId === restaurant.id && o.adminApproved === true && o.status === 'DELIVERED');
   const today = new Date().toISOString().slice(0, 10);
   const now = new Date();
   const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay()).toISOString().slice(0, 10);
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-
   const filterByDate = (list, start) => list.filter(o => o.deliveredAt && o.deliveredAt >= start);
   const sumRevenue = (list) => {
     const productRevenue = list.reduce((s, o) => s + (o.total - (o.deliveryFee || 0)), 0);
     const platformFee = list.reduce((s, o) => s + (o.platformFee || 0), 0);
     return { productRevenue, platformFee, netRevenue: productRevenue - platformFee, totalOrders: list.length };
   };
-
   res.json({
     daily: sumRevenue(orders.filter(o => o.deliveredAt?.startsWith(today))),
     weekly: sumRevenue(filterByDate(orders, startOfWeek)),
@@ -708,19 +659,16 @@ app.get('/api/restaurant/reports', requireAuth, (req, res) => {
   });
 });
 
-// إحصائيات سريعة للمطعم (محدثة)
 app.get('/api/restaurant/stats', requireAuth, (req, res) => {
   if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const restaurant = data.restaurants.find(r => r.userId === req.user.id);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-
   const orders = data.orders.filter(o => o.restaurantId === restaurant.id && o.adminApproved === true);
   const today = new Date().toISOString().slice(0, 10);
   const todayDelivered = orders.filter(o => o.status === 'DELIVERED' && o.deliveredAt?.startsWith(today));
   const revenue = todayDelivered.reduce((s, o) => s + (o.total - (o.deliveryFee || 0)), 0);
   const platformFee = todayDelivered.reduce((s, o) => s + (o.platformFee || 0), 0);
-
   res.json({
     pending: orders.filter(o => o.status === 'PENDING').length,
     accepted: orders.filter(o => o.status === 'ACCEPTED').length,
@@ -733,14 +681,13 @@ app.get('/api/restaurant/stats', requireAuth, (req, res) => {
   });
 });
 
-// ==================== طيار ====================
+// ==================== DRIVER ====================
 app.get('/api/driver/available-orders', requireAuth, (req, res) => {
   if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const orders = data.orders.filter(o => o.status === 'READY' && !o.driverId).map(o => {
     const restaurant = data.restaurants.find(r => r.id === o.restaurantId);
-    const customer = data.users.find(u => u.id === o.customerId) || null;
-    return { ...o, restaurantName: restaurant?.name, customerName: customer?.name || o.customerName, customerAddress: o.address || '' };
+    return { ...o, restaurantName: restaurant?.name, customerAddress: o.address || '' };
   });
   res.json(orders);
 });
@@ -749,8 +696,7 @@ app.get('/api/driver/my-orders', requireAuth, (req, res) => {
   const data = readData();
   const orders = data.orders.filter(o => o.driverId === req.user.id && ['DRIVER_ASSIGNED', 'ON_THE_WAY'].includes(o.status)).map(o => {
     const restaurant = data.restaurants.find(r => r.id === o.restaurantId);
-    const customer = data.users.find(u => u.id === o.customerId) || null;
-    return { ...o, restaurantName: restaurant?.name, customerName: customer?.name || o.customerName, customerAddress: o.address || '' };
+    return { ...o, restaurantName: restaurant?.name, customerAddress: o.address || '' };
   });
   res.json(orders);
 });
@@ -762,13 +708,10 @@ app.patch('/api/driver/orders/:id/accept', requireAuth, (req, res) => {
   order.driverId = req.user.id;
   order.status = 'DRIVER_ASSIGNED';
   writeData(data);
-
   io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
   io.emit('driverArrived', { orderId: order.id, driverName: req.user.name || 'طيار' });
-
   res.json({ success: true });
 });
-
 app.patch('/api/driver/orders/:id/status', requireAuth, (req, res) => {
   if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
@@ -782,34 +725,23 @@ app.patch('/api/driver/orders/:id/status', requireAuth, (req, res) => {
     if (driver) driver.earnings = (driver.earnings || 0) + (order.deliveryFee || 10);
     order.deliveredAt = new Date().toISOString();
     const productValue = (order.total || 0) - (order.deliveryFee || 0);
-    const platformFee = Math.round(productValue * 0.12);
-    order.platformFee = platformFee;
+    order.platformFee = Math.round(productValue * 0.12);
   }
   writeData(data);
-
   io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
-
   res.json({ success: true });
 });
-
 app.get('/api/driver/earnings', requireAuth, (req, res) => {
   if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const driver = data.drivers.find(d => d.userId === req.user.id);
   const totalAllTime = driver?.earnings || 0;
-
   if (req.query.today === 'true') {
     const today = new Date().toISOString().slice(0, 10);
-    const todayDelivered = data.orders.filter(o =>
-      o.driverId === req.user.id &&
-      o.status === 'DELIVERED' &&
-      o.deliveredAt &&
-      o.deliveredAt.startsWith(today)
-    );
+    const todayDelivered = data.orders.filter(o => o.driverId === req.user.id && o.status === 'DELIVERED' && o.deliveredAt?.startsWith(today));
     const todayEarnings = todayDelivered.reduce((sum, o) => sum + (o.deliveryFee || 10), 0);
     return res.json({ total: todayEarnings, isToday: true });
   }
-
   res.json({ total: totalAllTime });
 });
 app.get('/api/driver/profile', requireAuth, (req, res) => {
@@ -818,12 +750,7 @@ app.get('/api/driver/profile', requireAuth, (req, res) => {
   const user = data.users.find(u => u.id === req.user.id);
   if (!user) return res.status(404).json({ error: 'المستخدم غير موجود' });
   const dp = data.drivers.find(d => d.userId === req.user.id) || {};
-  res.json({
-    name: user.name,
-    phone: user.phone,
-    isAvailable: dp.isAvailable !== false,
-    earnings: dp.earnings || 0
-  });
+  res.json({ name: user.name, phone: user.phone, isAvailable: dp.isAvailable !== false, earnings: dp.earnings || 0 });
 });
 app.patch('/api/driver/toggle-status', requireAuth, (req, res) => {
   if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
@@ -838,24 +765,17 @@ app.get('/api/driver/history', requireAuth, (req, res) => {
   if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   let orders = data.orders.filter(o => o.driverId === req.user.id && o.status === 'DELIVERED');
-
-  if (req.query.date) {
-    const targetDate = req.query.date;
-    orders = orders.filter(o => o.deliveredAt && o.deliveredAt.startsWith(targetDate));
-  }
-
+  if (req.query.date) orders = orders.filter(o => o.deliveredAt && o.deliveredAt.startsWith(req.query.date));
   orders.sort((a, b) => new Date(b.deliveredAt || b.createdAt) - new Date(a.deliveredAt || a.createdAt));
-
   const enriched = orders.map(o => {
     const restaurant = data.restaurants.find(r => r.id === o.restaurantId);
-    const customer = data.users.find(u => u.phone === o.customerPhone) || {};
     return {
       id: o.id,
       createdAt: o.createdAt,
       deliveredAt: o.deliveredAt,
       restaurantName: restaurant?.name,
-      customerName: o.customerName || customer.name || '—',
-      customerPhone: o.customerPhone || '—',
+      customerName: o.customerName,
+      customerPhone: o.customerPhone,
       address: o.address,
       total: o.total,
       deliveryFee: o.deliveryFee || 10,
@@ -866,7 +786,7 @@ app.get('/api/driver/history', requireAuth, (req, res) => {
   res.json(enriched);
 });
 
-// ==================== عميل ====================
+// ==================== CUSTOMER & PUBLIC ====================
 app.get('/api/restaurants', (req, res) => {
   const data = readData();
   const list = data.restaurants.filter(r => r.isOpen).map(r => ({ id: r.id, name: r.name, logo: r.logo || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=150&h=150&fit=crop' }));
@@ -876,53 +796,86 @@ app.get('/api/restaurants/:id/menu', (req, res) => {
   const data = readData();
   const restaurant = data.restaurants.find(r => r.id === req.params.id);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-  const getCategoryName = (catId) => {
-    if (!catId) return 'عام';
-    const cat = data.categories.find(c => c.id === catId && c.restaurantId === restaurant.id);
-    return cat ? cat.name : 'عام';
-  };
-  const products = data.products.filter(p => p.restaurantId === restaurant.id && p.isAvailable).map(p => ({ ...p, category: getCategoryName(p.category) }));
+  const products = data.products.filter(p => p.restaurantId === restaurant.id && p.isAvailable).map(p => ({ ...p, category: p.category || 'عام' }));
   res.json(products);
 });
 
+// الأسواق والصيدليات (جديد)
+app.get('/api/markets', (req, res) => {
+  const data = readData();
+  const openMarkets = data.markets.filter(m => m.isOpen !== false);
+  res.json(openMarkets);
+});
+app.get('/api/pharmacies', (req, res) => {
+  const data = readData();
+  const openPharmacies = data.pharmacies.filter(p => p.isOpen !== false);
+  res.json(openPharmacies);
+});
+
+// الطلب الخاص (ماركت، صيدلية، طلب مفتوح) مع رفع الملفات
+app.post('/api/orders/special', upload.array('files', 10), async (req, res) => {
+  let { orderData } = req.body;
+  try { orderData = JSON.parse(orderData); } catch(e) { return res.status(400).json({ error: 'بيانات الطلب غير صحيحة' }); }
+  const data = readData();
+  const { orderType, storeId, orderDetails, customerName, customerPhone, address, regionName, paymentMethod, deliveryFee } = orderData;
+  if (!customerName || !customerPhone) return res.status(400).json({ error: 'بيانات العميل ناقصة' });
+  const files = req.files || [];
+  const filePaths = files.map(f => '/uploads/special_orders/' + f.filename);
+  const newOrder = {
+    id: 'ord_' + Date.now(),
+    type: 'special',
+    orderType,                 // 'market', 'pharmacy', 'custom'
+    storeId: storeId || null,
+    orderDetails: orderDetails || '',
+    attachments: filePaths,
+    customerName,
+    customerPhone,
+    address: address || '',
+    regionName: regionName || '',
+    paymentMethod: paymentMethod || 'CASH',
+    deliveryFee: deliveryFee || 10,
+    total: (deliveryFee || 10) + (orderData.total ? orderData.total - (deliveryFee || 10) : 0),
+    status: 'PENDING',
+    adminApproved: false,
+    createdAt: new Date().toISOString(),
+    deliveredAt: null,
+    items: []
+  };
+  data.orders.push(newOrder);
+  writeData(data);
+  io.emit('newSpecialOrder', { orderId: newOrder.id, orderType, storeId });
+  res.json({ success: true, orderId: newOrder.id });
+});
+
+// طلب عادي
 function customerAuth(req, res, next) {
   const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
   if (token) {
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
-      if (decoded.role === 'CUSTOMER') {
-        req.customer = decoded;
-      }
+      if (decoded.role === 'CUSTOMER') req.customer = decoded;
     } catch (e) {}
   }
   next();
 }
-
 app.post('/api/orders', customerAuth, (req, res) => {
   const data = readData();
   let { restaurantId, items, total, customerName, customerPhone, address, paymentMethod, deliveryFee } = req.body;
-  
   if (req.customer) {
     const user = data.users.find(u => u.id === req.customer.id);
     if (user) {
       customerName = user.name;
       customerPhone = user.phone;
-      if (!address && user.address) {
-        address = user.address;
-      }
+      if (!address && user.address) address = user.address;
       if (!deliveryFee && user.regionId) {
         const region = data.regions.find(r => r.id === user.regionId);
         if (region) deliveryFee = region.fee;
       }
     }
   }
-
-  if (!restaurantId || !total || !customerName || !customerPhone || !address) {
-    return res.status(400).json({ error: 'بيانات الطلب ناقصة' });
-  }
+  if (!restaurantId || !total || !customerName || !customerPhone || !address) return res.status(400).json({ error: 'بيانات الطلب ناقصة' });
   const restaurant = data.restaurants.find(r => r.id === restaurantId);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-  
   const order = {
     id: 'ord_' + Date.now(),
     restaurantId,
@@ -942,9 +895,7 @@ app.post('/api/orders', customerAuth, (req, res) => {
   };
   data.orders.push(order);
   writeData(data);
-  
   io.emit('newOrder', { orderId: order.id, restaurantId, customerName });
-  
   res.json({ success: true, orderId: order.id });
 });
 
@@ -952,17 +903,29 @@ app.get('/api/orders/:id/track', (req, res) => {
   const data = readData();
   const order = data.orders.find(o => o.id === req.params.id);
   if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
-  const restaurant = data.restaurants.find(r => r.id === order.restaurantId);
-  res.json({ ...order, restaurantName: restaurant?.name });
+  let restaurantName = null, storeName = null;
+  if (order.type === 'special') {
+    if (order.orderType === 'market') {
+      const market = data.markets.find(m => m.id === order.storeId);
+      storeName = market ? market.name : 'ماركت';
+    } else if (order.orderType === 'pharmacy') {
+      const pharmacy = data.pharmacies.find(p => p.id === order.storeId);
+      storeName = pharmacy ? pharmacy.name : 'صيدلية';
+    } else { storeName = 'طلب خاص'; }
+  } else {
+    const restaurant = data.restaurants.find(r => r.id === order.restaurantId);
+    restaurantName = restaurant ? restaurant.name : null;
+  }
+  res.json({ ...order, restaurantName, storeName });
 });
 
-// ==================== مناطق عامة ====================
+// مناطق عامة
 app.get('/api/regions', (req, res) => {
   const data = readData();
   res.json(data.regions);
 });
 
-// ==================== حساب العميل ====================
+// حساب العميل
 app.post('/api/customer/register', (req, res) => {
   const { name, phone, password, regionId, address } = req.body;
   if (!name || !phone || !password) return res.status(400).json({ error: 'جميع الحقول مطلوبة' });
@@ -970,129 +933,57 @@ app.post('/api/customer/register', (req, res) => {
   if (data.users.find(u => u.phone === phone)) return res.status(400).json({ error: 'الهاتف مستخدم بالفعل' });
   const hashed = bcrypt.hashSync(password, 10);
   const userId = 'cus_' + Date.now();
-  data.users.push({
-    id: userId,
-    name,
-    phone,
-    password: hashed,
-    role: 'CUSTOMER',
-    regionId: regionId || '',
-    address: address || ''
-  });
+  data.users.push({ id: userId, name, phone, password: hashed, role: 'CUSTOMER', regionId: regionId || '', address: address || '' });
   writeData(data);
   const token = jwt.sign({ id: userId, role: 'CUSTOMER' }, JWT_SECRET, { expiresIn: '30d' });
   res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000 });
   res.json({ success: true, token, name, phone, regionId: regionId || '', address: address || '' });
 });
-
 app.post('/api/customer/login', (req, res) => {
   const { phone, password } = req.body;
   const data = readData();
   const user = data.users.find(u => u.phone === phone && u.role === 'CUSTOMER');
-  if (!user || !bcrypt.compareSync(password, user.password)) {
-    return res.status(401).json({ error: 'رقم الهاتف أو كلمة المرور غير صحيحة' });
-  }
+  if (!user || !bcrypt.compareSync(password, user.password)) return res.status(401).json({ error: 'رقم الهاتف أو كلمة المرور غير صحيحة' });
   const token = jwt.sign({ id: user.id, role: 'CUSTOMER' }, JWT_SECRET, { expiresIn: '30d' });
   res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000 });
-  res.json({
-    success: true,
-    token,
-    name: user.name,
-    phone: user.phone,
-    regionId: user.regionId || '',
-    address: user.address || ''
-  });
+  res.json({ success: true, token, name: user.name, phone: user.phone, regionId: user.regionId || '', address: user.address || '' });
 });
 
-// ==================== العملاء (أدمن) ====================
+// العملاء (أدمن)
 app.get('/api/admin/customers', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const search = req.query.search || '';
   let customers = data.users.filter(u => u.role === 'CUSTOMER');
-  
   if (search) {
     const q = search.toLowerCase();
-    customers = customers.filter(u => 
-      u.name.toLowerCase().includes(q) || 
-      u.phone.includes(q) ||
-      (u.address || '').toLowerCase().includes(q)
-    );
+    customers = customers.filter(u => u.name.toLowerCase().includes(q) || u.phone.includes(q) || (u.address || '').toLowerCase().includes(q));
   }
-
   const enriched = customers.map(u => {
     const region = data.regions.find(r => r.id === u.regionId);
     const orders = data.orders.filter(o => o.customerPhone === u.phone);
-    const lastOrder = orders.length ? orders.reduce((latest, o) => 
-      new Date(o.createdAt) > new Date(latest.createdAt) ? o : latest
-    ) : null;
-
-    return {
-      id: u.id,
-      name: u.name,
-      phone: u.phone,
-      regionId: u.regionId || '',
-      regionName: region ? region.name : '—',
-      regionFee: region ? region.fee : 0,
-      address: u.address || '—',
-      totalOrders: orders.length,
-      lastOrderDate: lastOrder ? lastOrder.createdAt : null
-    };
+    const lastOrder = orders.length ? orders.reduce((latest, o) => new Date(o.createdAt) > new Date(latest.createdAt) ? o : latest) : null;
+    return { id: u.id, name: u.name, phone: u.phone, regionId: u.regionId || '', regionName: region ? region.name : '—', regionFee: region ? region.fee : 0, address: u.address || '—', totalOrders: orders.length, lastOrderDate: lastOrder ? lastOrder.createdAt : null };
   });
-
   res.json(enriched);
 });
-
 app.get('/api/admin/customers/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const user = data.users.find(u => u.id === req.params.id && u.role === 'CUSTOMER');
   if (!user) return res.status(404).json({ error: 'العميل غير موجود' });
-
   const region = data.regions.find(r => r.id === user.regionId);
   const orders = data.orders.filter(o => o.customerPhone === user.phone);
-  const lastOrder = orders.length ? orders.reduce((latest, o) => 
-    new Date(o.createdAt) > new Date(latest.createdAt) ? o : latest
-  ) : null;
-
-  res.json({
-    id: user.id,
-    name: user.name,
-    phone: user.phone,
-    regionId: user.regionId || '',
-    regionName: region ? region.name : '—',
-    regionFee: region ? region.fee : 0,
-    address: user.address || '—',
-    totalOrders: orders.length,
-    lastOrderDate: lastOrder ? lastOrder.createdAt : null
-  });
+  const lastOrder = orders.length ? orders.reduce((latest, o) => new Date(o.createdAt) > new Date(latest.createdAt) ? o : latest) : null;
+  res.json({ id: user.id, name: user.name, phone: user.phone, regionId: user.regionId || '', regionName: region ? region.name : '—', regionFee: region ? region.fee : 0, address: user.address || '—', totalOrders: orders.length, lastOrderDate: lastOrder ? lastOrder.createdAt : null });
 });
-
 app.patch('/api/admin/customers/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const user = data.users.find(u => u.id === req.params.id && u.role === 'CUSTOMER');
   if (!user) return res.status(404).json({ error: 'العميل غير موجود' });
-
   const { name, phone, regionId, address } = req.body;
-  
-  if (name !== undefined) {
-    if (!name.trim()) return res.status(400).json({ error: 'الاسم لا يمكن أن يكون فارغاً' });
-    user.name = name.trim();
-  }
-  if (phone !== undefined) {
-    if (!phone.trim()) return res.status(400).json({ error: 'الهاتف لا يمكن أن يكون فارغاً' });
-    const existing = data.users.find(u => u.phone === phone.trim() && u.id !== user.id);
-    if (existing) return res.status(400).json({ error: 'الهاتف مستخدم من عميل آخر' });
-    user.phone = phone.trim();
-  }
-  if (regionId !== undefined) {
-    if (regionId && !data.regions.find(r => r.id === regionId)) {
-      return res.status(400).json({ error: 'المنطقة غير موجودة' });
-    }
-    user.regionId = regionId;
-  }
-  if (address !== undefined) {
-    user.address = address;
-  }
-  
+  if (name !== undefined) { if (!name.trim()) return res.status(400).json({ error: 'الاسم لا يمكن أن يكون فارغاً' }); user.name = name.trim(); }
+  if (phone !== undefined) { if (!phone.trim()) return res.status(400).json({ error: 'الهاتف لا يمكن أن يكون فارغاً' }); const existing = data.users.find(u => u.phone === phone.trim() && u.id !== user.id); if (existing) return res.status(400).json({ error: 'الهاتف مستخدم من عميل آخر' }); user.phone = phone.trim(); }
+  if (regionId !== undefined) { if (regionId && !data.regions.find(r => r.id === regionId)) return res.status(400).json({ error: 'المنطقة غير موجودة' }); user.regionId = regionId; }
+  if (address !== undefined) user.address = address;
   writeData(data);
   res.json({ success: true });
 });
@@ -1113,7 +1004,6 @@ setInterval(() => {
   const now = new Date();
   let changed = false;
   const updatedOrders = [];
-
   data.orders.forEach(order => {
     if (order.status === 'PREPARING' && order.preparingAt) {
       const preparingTime = new Date(order.preparingAt);
@@ -1125,12 +1015,9 @@ setInterval(() => {
       }
     }
   });
-
   if (changed) {
     writeData(data);
-    updatedOrders.forEach(o => {
-      io.emit('orderStatusUpdate', { orderId: o.id, status: o.status });
-    });
+    updatedOrders.forEach(o => io.emit('orderStatusUpdate', { orderId: o.id, status: o.status }));
     const readyCount = data.orders.filter(o => o.status === 'READY' && !o.driverId).length;
     io.emit('driver:newJob', { count: readyCount });
   }
