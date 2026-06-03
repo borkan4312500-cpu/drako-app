@@ -257,22 +257,37 @@
       document.getElementById('profileName').textContent = data.name;
       closeModal(); showToast('تم التحديث');
     }
-    async function uploadLogo(input) {
-      const file = input.files[0]; if (!file) return;
-      const fd = new FormData(); fd.append('logo', file);
-      const res = await apiFetch(API + '/market/profile', { method: 'PATCH', body: fd });
-      if (res.status === 401 || res.status === 403) {
-        showToast('انتهت الجلسة', true);
-        return;
-      }
-      const data = await res.json();
-      if (data.logo) {
-        document.getElementById('headerLogo').src = data.logo + '?t=' + Date.now();
-        document.getElementById('profileLogo').src = data.logo + '?t=' + Date.now();
-        currentMarketProfile.logo = data.logo;
-        showToast('تم رفع الشعار');
-      }
+   async function uploadLogo(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const fd = new FormData();
+  fd.append('logo', file);
+  try {
+    const res = await fetch(API + '/market/profile', {
+      method: 'PATCH',
+      credentials: 'include',
+      body: fd
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'فشل الرفع');
     }
+    const data = await res.json();
+    if (data.logo) {
+      const logoUrl = data.logo + '?t=' + Date.now();
+      document.getElementById('headerLogo').src = logoUrl;
+      const profileLogo = document.getElementById('profileLogo');
+      if (profileLogo) profileLogo.src = logoUrl;
+      currentMarketProfile.logo = data.logo;
+      showToast('✅ تم رفع الشعار');
+    } else {
+      showToast('⚠️ لم يتم استلام الشعار من السيرفر', true);
+    }
+  } catch(e) {
+    showToast('❌ فشل رفع الشعار: ' + e.message, true);
+    console.error(e);
+  }
+}
 
     // Orders (باقي الدوال كما هي بدون تغيير)
     async function renderOrders() {
