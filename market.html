@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
@@ -257,52 +257,43 @@
       document.getElementById('profileName').textContent = data.name;
       closeModal(); showToast('تم التحديث');
     }
-  async function uploadLogo(input) {
+ async function uploadLogo(input) {
   const file = input.files[0];
   if (!file) return;
-  
-  // التأكد من أن الملف صورة
   if (!file.type.startsWith('image/')) {
-    showToast('⚠️ يرجى اختيار ملف صورة', true);
+    showToast('⚠️ يرجى اختيار صورة فقط', true);
+    input.value = '';
     return;
   }
-  
   const fd = new FormData();
   fd.append('logo', file);
-  
   try {
     const res = await fetch(API + '/market/profile', {
       method: 'PATCH',
       credentials: 'include',
       body: fd
     });
-    
-    // محاولة قراءة الاستجابة كـ JSON، إذا فشل نعرض النص الخام
-    let data;
     const contentType = res.headers.get('content-type');
+    let data;
     if (contentType && contentType.includes('application/json')) {
       data = await res.json();
     } else {
       const text = await res.text();
-      throw new Error(text || 'استجابة غير JSON');
+      throw new Error('استجابة غير JSON: ' + text.substring(0, 100));
     }
-    
-    if (!res.ok) {
-      throw new Error(data.error || 'فشل رفع الشعار');
-    }
-    
+    if (!res.ok) throw new Error(data.error || 'فشل رفع الشعار');
     if (data.logo) {
       const logoUrl = data.logo + '?t=' + Date.now();
       document.getElementById('headerLogo').src = logoUrl;
       const profileLogo = document.getElementById('profileLogo');
       if (profileLogo) profileLogo.src = logoUrl;
-      currentMarketProfile.logo = data.logo;
+      currentMarketProfile.logo = data.logo;  // ✅ الصحيح
       showToast('✅ تم رفع الشعار');
     } else {
-      showToast('⚠️ لم يتم استلام الشعار من السيرفر', true);
+      showToast('⚠️ لم يتم إرجاع رابط الشعار', true);
     }
   } catch(e) {
-    showToast('❌ فشل رفع الشعار: ' + (e.message || 'خطأ غير معروف'), true);
+    showToast('❌ ' + (e.message || 'فشل رفع الشعار'), true);
     console.error(e);
   }
 }
