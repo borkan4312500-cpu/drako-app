@@ -541,10 +541,11 @@ app.patch('/api/admin/orders/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const order = data.orders.find(o => o.id === req.params.id);
   if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
-  const { items, total, adminNotes } = req.body;
+  const { items, total, adminNotes, orderNotes } = req.body;
   if (items !== undefined) order.items = items;
   if (total !== undefined) order.total = Number(total);
   if (adminNotes !== undefined) order.adminNotes = adminNotes;
+  if (orderNotes !== undefined) order.orderNotes = orderNotes;
   writeData(data);
   res.json({ success: true });
 });
@@ -762,24 +763,42 @@ app.get('/api/restaurant/stats', requireAuth, (req, res) => {
 });
 
 // ==================== DRIVER ====================
+function getStoreNameForOrder(order, data) {
+  if (order.type === 'special') {
+    if (order.orderType === 'market') {
+      const market = data.markets.find(m => m.id === order.storeId);
+      return market ? market.name : 'ماركت';
+    } else if (order.orderType === 'pharmacy') {
+      const pharmacy = data.pharmacies.find(p => p.id === order.storeId);
+      return pharmacy ? pharmacy.name : 'صيدلية';
+    }
+    return 'طلب خاص';
+  }
+  return null;
+}
+
 app.get('/api/driver/available-orders', requireAuth, (req, res) => {
   if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const orders = data.orders.filter(o => o.status === 'READY' && !o.driverId).map(o => {
     const restaurant = data.restaurants.find(r => r.id === o.restaurantId);
-    return { ...o, restaurantName: restaurant?.name, customerAddress: o.address || '' };
+    const storeName = getStoreNameForOrder(o, data);
+    return { ...o, restaurantName: restaurant?.name || storeName || '—', customerAddress: o.address || '' };
   });
   res.json(orders);
 });
+
 app.get('/api/driver/my-orders', requireAuth, (req, res) => {
   if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const orders = data.orders.filter(o => o.driverId === req.user.id && ['DRIVER_ASSIGNED', 'ON_THE_WAY'].includes(o.status)).map(o => {
     const restaurant = data.restaurants.find(r => r.id === o.restaurantId);
-    return { ...o, restaurantName: restaurant?.name, customerAddress: o.address || '' };
+    const storeName = getStoreNameForOrder(o, data);
+    return { ...o, restaurantName: restaurant?.name || storeName || '—', customerAddress: o.address || '' };
   });
   res.json(orders);
 });
+
 app.patch('/api/driver/orders/:id/accept', requireAuth, (req, res) => {
   if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
@@ -792,6 +811,7 @@ app.patch('/api/driver/orders/:id/accept', requireAuth, (req, res) => {
   io.emit('driverArrived', { orderId: order.id, driverName: req.user.name || 'طيار' });
   res.json({ success: true });
 });
+
 app.patch('/api/driver/orders/:id/status', requireAuth, (req, res) => {
   if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
@@ -811,6 +831,7 @@ app.patch('/api/driver/orders/:id/status', requireAuth, (req, res) => {
   io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
   res.json({ success: true });
 });
+
 app.get('/api/driver/earnings', requireAuth, (req, res) => {
   if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
@@ -824,6 +845,7 @@ app.get('/api/driver/earnings', requireAuth, (req, res) => {
   }
   res.json({ total: totalAllTime });
 });
+
 app.get('/api/driver/profile', requireAuth, (req, res) => {
   if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
@@ -832,6 +854,7 @@ app.get('/api/driver/profile', requireAuth, (req, res) => {
   const dp = data.drivers.find(d => d.userId === req.user.id) || {};
   res.json({ name: user.name, phone: user.phone, isAvailable: dp.isAvailable !== false, earnings: dp.earnings || 0 });
 });
+
 app.patch('/api/driver/toggle-status', requireAuth, (req, res) => {
   if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
@@ -841,6 +864,7 @@ app.patch('/api/driver/toggle-status', requireAuth, (req, res) => {
   writeData(data);
   res.json({ isAvailable: dp.isAvailable });
 });
+
 app.get('/api/driver/history', requireAuth, (req, res) => {
   if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
@@ -849,11 +873,12 @@ app.get('/api/driver/history', requireAuth, (req, res) => {
   orders.sort((a, b) => new Date(b.deliveredAt || b.createdAt) - new Date(a.deliveredAt || a.createdAt));
   const enriched = orders.map(o => {
     const restaurant = data.restaurants.find(r => r.id === o.restaurantId);
+    const storeName = getStoreNameForOrder(o, data);
     return {
       id: o.id,
       createdAt: o.createdAt,
       deliveredAt: o.deliveredAt,
-      restaurantName: restaurant?.name,
+      restaurantName: restaurant?.name || storeName || '—',
       customerName: o.customerName,
       customerPhone: o.customerPhone,
       address: o.address,
@@ -894,6 +919,7 @@ app.get('/api/markets', (req, res) => {
   const openMarkets = data.markets.filter(m => m.isOpen !== false);
   res.json(openMarkets);
 });
+
 app.get('/api/pharmacies', (req, res) => {
   const data = readData();
   const openPharmacies = data.pharmacies.filter(p => p.isOpen !== false);
@@ -1142,7 +1168,7 @@ app.delete('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
   res.json({ success: true });
 });
 
-// ========== MARKET PROFILE (لمالك الماركت) ==========
+// ========== MARKET PROFILE ==========
 app.get('/api/market/profile', requireAuth, (req, res) => {
   if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
@@ -1267,7 +1293,7 @@ app.patch('/api/market/orders/:id/invoice', requireAuth, (req, res) => {
   if (!market || order.storeId !== market.id) return res.status(403).json({ error: 'ليس طلبك' });
   const { invoiceAmount } = req.body;
   order.invoiceAmount = invoiceAmount;
-  order.invoiceBy = market.name;   // ✅ إضافة اسم الماركت
+  order.invoiceBy = market.name;
   order.total = parseFloat(invoiceAmount) + (order.deliveryFee || 0);
   order.status = 'INVOICE_ADDED';
   writeData(data);
@@ -1335,6 +1361,8 @@ app.patch('/api/pharmacy/orders/:id/invoice', requireAuth, (req, res) => {
   if (!pharmacy || order.storeId !== pharmacy.id) return res.status(403).json({ error: 'ليس طلبك' });
   const { invoiceAmount } = req.body;
   order.invoiceAmount = invoiceAmount;
+  order.invoiceBy = pharmacy.name;
+  order.total = parseFloat(invoiceAmount) + (order.deliveryFee || 0);
   order.status = 'INVOICE_ADDED';
   writeData(data);
   io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
