@@ -1366,6 +1366,17 @@ setInterval(() => {
     io.emit('driver:newJob', { count: readyCount });
   }
 }, 60000);
+// معالج أخطاء multer (يوضع بعد إعداد upload)
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    // خطأ من multer (مثل حجم ملف كبير)
+    return res.status(400).json({ error: 'خطأ في رفع الملف: ' + err.message });
+  } else if (err) {
+    // أي خطأ آخر
+    return res.status(500).json({ error: err.message });
+  }
+  next();
+});
 
 io.on('connection', (socket) => {
   console.log('عميل متصل:', socket.id);
