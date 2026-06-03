@@ -14,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
   <style>
-    /* ========== جميع التنسيقات الأصلية ========== */
+    /* جميع التنسيقات كما هي (لم تتغير) - تم نسخها من الكود الأصلي */
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
     html, body { overflow: hidden; height: 100%; overscroll-behavior: none; }
     body { background: #F7F7F7; color: #1A1A1A; max-width: 430px; margin: auto; height: 100%; position: relative; }
@@ -180,6 +180,10 @@
     .file-attachment label { display: inline-block; padding: 8px 16px; background: var(--brand); color: white; border-radius: 30px; font-size: 13px; cursor: pointer; }
     .preview-images { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
     .preview-images img { width: 70px; height: 70px; object-fit: cover; border-radius: 10px; border: 1px solid #ddd; }
+    /* إضافات لنموذج المنتجات المتعددة */
+    .special-product-row { margin-bottom: 16px; border-bottom: 1px solid #eee; padding-bottom: 12px; }
+    .row-2 { display: flex; gap: 8px; margin-bottom: 8px; }
+    .row-2 input { flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 8px; }
   </style>
 </head>
 <body>
@@ -218,9 +222,28 @@
         <img id="restaurantHero" class="hero-image" src="">
         <div class="restaurant-info"><h2 id="restaurantName"></h2><div class="meta" style="margin-top:10px;"><span>⭐ 4.8</span><span>⏱ 30 دقيقة</span><span>+120 تقييم</span></div><div class="tabs" id="tabsContainer"></div><div id="productsContainer"></div></div>
       </section>
+      <!-- شاشة الطلب الخاص المطورة -->
       <section class="screen" id="specialOrderScreen">
         <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;"><button class="icon-btn" onclick="showScreen('homeScreen')">←</button><div class="logo"><span id="specialOrderTitle">طلب ماركت</span></div><div></div></div>
-        <div class="special-order-card"><div class="field-group"><label class="field-label">📝 تفاصيل الطلب</label><div class="field-wrap"><textarea id="specialOrderDetails" rows="5" placeholder="اكتب طلبك بالتفصيل (أسماء المنتجات، الكميات، ملاحظات...)"></textarea></div></div><div class="file-attachment"><label for="attachFiles">📎 إرفاق ملفات (صور)</label><input type="file" id="attachFiles" multiple accept="image/*" onchange="previewFiles(this)"><div class="preview-images" id="filePreview"></div></div><div class="summary"><div class="summary-row"><span>🚚 رسوم التوصيل</span><span id="specialDeliveryFee">0 ج</span></div><div class="summary-row"><strong>الإجمالي</strong><strong class="summary-total" id="specialTotal">0 ج</strong></div></div><button class="btn" onclick="submitSpecialOrder()">📦 إرسال الطلب</button></div>
+        <div class="special-order-card">
+          <div id="specialProductsList"></div>
+          <button class="btn outline-btn" style="margin-bottom:16px;" onclick="addProductRow()">+ إضافة منتج آخر</button>
+          <div class="field-group">
+            <label>📝 ملاحظات عامة على الطلب</label>
+            <textarea id="specialOrderNotes" rows="3" placeholder="أي ملاحظات إضافية..."></textarea>
+          </div>
+          <div class="file-attachment">
+            <label for="attachFiles">📎 إرفاق ملفات (اختياري)</label>
+            <input type="file" id="attachFiles" multiple accept="image/*" onchange="previewFiles(this)">
+            <div class="preview-images" id="filePreview"></div>
+          </div>
+          <div class="summary">
+            <div class="summary-row"><span>مجموع المنتجات</span><span id="specialProductsTotal">0 ج</span></div>
+            <div class="summary-row"><span>🚚 رسوم التوصيل</span><span id="specialDeliveryFee">0 ج</span></div>
+            <div class="summary-row"><strong>الإجمالي النهائي</strong><strong class="summary-total" id="specialTotal">0 ج</strong></div>
+          </div>
+          <button class="btn" onclick="submitSpecialOrder()">📦 إرسال الطلب</button>
+        </div>
       </section>
       <section class="screen" id="cartScreen">
         <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;"><button class="icon-btn" onclick="showScreen('homeScreen')">←</button><div class="logo">السلة</div><div></div></div>
@@ -278,6 +301,7 @@ let currentCategory = 'restaurants';
 let selectedFiles = [];
 let specialOrderType = null;
 let specialOrderStoreId = null;
+let specialProducts = []; // مصفوفة المنتجات للطلب الخاص
 
 window._ordersTab = 'active';
 window._trackingOrderId = null;
@@ -391,7 +415,7 @@ function initSocket() { if(socket) return; socket=io(); socket.on('orderStatusUp
 
 // ========== Main App Functions ==========
 function navigateTo(screenId) { if((screenId==='ordersScreen'||screenId==='accountScreen')&&!currentUser) { showScreen('loginScreen'); return; } showScreen(screenId); }
-function showScreen(id) { document.querySelectorAll('#mainAppWrapper .screen').forEach(s=>s.classList.remove('active')); const target=document.getElementById(id); if(target) target.classList.add('active'); document.querySelectorAll('.nav-item').forEach((n,i)=>{ const navIds=['homeScreen','cartScreen','ordersScreen','accountScreen']; if(navIds[i]===id) n.classList.add('active'); else n.classList.remove('active'); }); if(id==='accountScreen') renderAccountScreen(); if(id==='areaScreen'){ loadRegions(); preselectArea(); } if(id==='checkoutScreen') renderCheckoutUserInfo(); if(id==='ordersScreen') loadMyOrders(); pushToHistory(id); saveCurrentScreen(id); }
+function showScreen(id) { document.querySelectorAll('#mainAppWrapper .screen').forEach(s=>s.classList.remove('active')); const target=document.getElementById(id); if(target) target.classList.add('active'); document.querySelectorAll('.nav-item').forEach((n,i)=>{ const navIds=['homeScreen','cartScreen','ordersScreen','accountScreen']; if(navIds[i]===id) n.classList.add('active'); else n.classList.remove('active'); }); if(id==='accountScreen') renderAccountScreen(); if(id==='areaScreen'){ loadRegions(); preselectArea(); } if(id==='checkoutScreen') renderCheckoutUserInfo(); if(id==='ordersScreen') loadMyOrders(); if(id==='specialOrderScreen') updateSpecialTotals(); pushToHistory(id); saveCurrentScreen(id); }
 function renderCheckoutUserInfo() { const div=document.getElementById('checkoutUserInfo'); if(currentUser) div.innerHTML=`<p style="color:#888">مرحباً، ${currentUser.name}</p>`; else div.innerHTML=`<div class="input-group"><label>الاسم</label><input id="customerName" placeholder="اكتب اسمك" /></div><div class="input-group"><label>رقم الهاتف</label><input id="customerPhone" placeholder="01xxxxxxxxx" /></div>`; }
 function renderAccountScreen() { const cont=document.getElementById('accountInfo'); if(currentUser){ const rn=allRegions.find(r=>r.id===currentUser.regionId)?.name||'غير محدد'; cont.innerHTML=`<div class="profile-card"><div class="profile-avatar">👤</div><div class="info-row"><span class="info-label">الاسم</span><span class="info-value">${currentUser.name}</span></div><div class="info-row"><span class="info-label">رقم الهاتف</span><span class="info-value">${currentUser.phone}</span></div><div class="info-row"><span class="info-label">المنطقة</span><span class="info-value">${rn}</span></div><div class="info-row"><span class="info-label">العنوان</span><span class="info-value">${currentUser.address||'—'}</span></div><button class="btn-primary" style="margin-top:16px;" onclick="openEditModal()">✏️ تعديل البيانات</button><button class="btn-ghost" style="margin-top:12px;" onclick="logout()">🚪 تسجيل الخروج</button></div>`; } else cont.innerHTML=`<div class="profile-card"><button class="btn" onclick="location.reload()">تسجيل الدخول</button><button class="btn-ghost" style="margin-top:10px;" onclick="location.reload()">إنشاء حساب</button></div>`; }
 function logout() { currentUser=null; localStorage.removeItem('drako_user'); localStorage.removeItem('drako_current_screen'); localStorage.removeItem('drako_screen_history'); if(socket) socket.disconnect(); socket=null; document.getElementById('mainAppWrapper').classList.remove('active'); document.getElementById('authWrapper').classList.remove('hide'); cart=[]; saveCart(); goToLogin(); }
@@ -400,7 +424,7 @@ function logout() { currentUser=null; localStorage.removeItem('drako_user'); loc
 async function loadRegions() { try { const res=await apiFetch(API+'/regions'); allRegions=await res.json(); } catch(e){} renderAreas(); }
 function renderAreas() { const container=document.getElementById('areasContainer'); if(!allRegions.length) return; container.innerHTML=allRegions.map(a=>`<div class="area-item ${selectedArea?.id===a.id?'active':''}" onclick="selectArea('${a.id}')"><div><strong>${a.name}</strong></div><div style="display:flex;align-items:center;gap:12px;"><strong>${a.fee} ج</strong><div class="radio"></div></div></div>`).join(''); }
 function preselectArea() { if(currentUser&&currentUser.regionId&&!selectedArea){ selectedArea=allRegions.find(r=>r.id===currentUser.regionId)||null; renderAreas(); } }
-function selectArea(id) { selectedArea=allRegions.find(a=>a.id===id); renderAreas(); }
+function selectArea(id) { selectedArea=allRegions.find(a=>a.id===id); renderAreas(); updateSpecialTotals(); // تحديث رسوم التوصيل في الطلب الخاص }
 function confirmArea() { if(!selectedArea){ showToast('⚠️ اختر منطقة'); return; } document.getElementById('selectedAreaName').innerText=selectedArea.name+' - '+selectedArea.fee+' ج'; updateTotals(); showScreen('checkoutScreen'); }
 function selectPayment(el,method) { document.querySelectorAll('.payment-item').forEach(i=>i.classList.remove('active')); el.classList.add('active'); paymentMethod=method; }
 
@@ -446,47 +470,105 @@ function filterHomeItems() {
   } else { renderHomeItems(); }
 }
 
-// ========== Special Order ==========
+// ========== Special Order (improved) ==========
 function openSpecialOrder(type, id) {
-  specialOrderType=type; specialOrderStoreId=id;
-  let title=type==='market'?'طلب ماركت':(type==='pharmacy'?'طلب صيدلية':'طلب خاص');
-  document.getElementById('specialOrderTitle').innerText=title;
-  document.getElementById('specialOrderDetails').value='';
-  document.getElementById('filePreview').innerHTML='';
-  selectedFiles=[];
-  document.getElementById('attachFiles').value='';
-  updateSpecialDeliveryFee();
+  specialOrderType = type;
+  specialOrderStoreId = id;
+  let title = type === 'market' ? 'طلب ماركت' : (type === 'pharmacy' ? 'طلب صيدلية' : 'طلب خاص');
+  document.getElementById('specialOrderTitle').innerText = title;
+  // إعادة تعيين المنتجات
+  specialProducts = [{ name: '', price: 0, quantity: 1, notes: '' }];
+  renderSpecialProducts();
+  document.getElementById('specialOrderNotes').value = '';
+  document.getElementById('filePreview').innerHTML = '';
+  selectedFiles = [];
+  document.getElementById('attachFiles').value = '';
+  updateSpecialTotals();
   showScreen('specialOrderScreen');
 }
-function updateSpecialDeliveryFee() {
-  let fee=selectedArea?selectedArea.fee:10;
-  document.getElementById('specialDeliveryFee').innerText=fee+' ج';
-  document.getElementById('specialTotal').innerText=fee+' ج';
+function renderSpecialProducts() {
+  const container = document.getElementById('specialProductsList');
+  container.innerHTML = specialProducts.map((p, idx) => `
+    <div class="special-product-row">
+      <div class="row-2">
+        <input type="text" placeholder="اسم المنتج" value="${p.name}" onchange="updateSpecialProduct(${idx}, 'name', this.value)">
+        <input type="number" placeholder="سعر الوحدة" value="${p.price}" onchange="updateSpecialProduct(${idx}, 'price', parseFloat(this.value)||0)">
+        <input type="number" placeholder="الكمية" value="${p.quantity}" min="1" onchange="updateSpecialProduct(${idx}, 'quantity', parseInt(this.value)||1)">
+        <button class="icon-btn" onclick="removeSpecialProduct(${idx})" style="background:#ffebee; color:red;">🗑</button>
+      </div>
+      <textarea placeholder="ملاحظات على هذا المنتج (اختياري)" rows="1" onchange="updateSpecialProduct(${idx}, 'notes', this.value)">${p.notes}</textarea>
+    </div>
+  `).join('');
+}
+function addProductRow() {
+  specialProducts.push({ name: '', price: 0, quantity: 1, notes: '' });
+  renderSpecialProducts();
+}
+function removeSpecialProduct(index) {
+  specialProducts.splice(index, 1);
+  if (specialProducts.length === 0) specialProducts.push({ name: '', price: 0, quantity: 1, notes: '' });
+  renderSpecialProducts();
+  updateSpecialTotals();
+}
+function updateSpecialProduct(index, field, value) {
+  specialProducts[index][field] = value;
+  updateSpecialTotals();
+}
+function updateSpecialTotals() {
+  let productsTotal = specialProducts.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+  let fee = selectedArea ? selectedArea.fee : 10;
+  document.getElementById('specialProductsTotal').innerText = productsTotal + ' ج';
+  document.getElementById('specialDeliveryFee').innerText = fee + ' ج';
+  document.getElementById('specialTotal').innerText = (productsTotal + fee) + ' ج';
 }
 function previewFiles(input) {
-  let preview=document.getElementById('filePreview');
-  preview.innerHTML='';
-  selectedFiles=Array.from(input.files);
-  selectedFiles.forEach(file=>{ let reader=new FileReader(); reader.onload=e=>{ let img=document.createElement('img'); img.src=e.target.result; preview.appendChild(img); }; reader.readAsDataURL(file); });
+  let preview = document.getElementById('filePreview');
+  preview.innerHTML = '';
+  selectedFiles = Array.from(input.files);
+  selectedFiles.forEach(file => {
+    let reader = new FileReader();
+    reader.onload = e => {
+      let img = document.createElement('img');
+      img.src = e.target.result;
+      preview.appendChild(img);
+    };
+    reader.readAsDataURL(file);
+  });
 }
 async function submitSpecialOrder() {
-  if(!currentUser){ showToast('⚠️ يرجى تسجيل الدخول أولاً'); return; }
-  let details=document.getElementById('specialOrderDetails').value.trim();
-  if(!details && specialOrderType!=='custom'){ showToast('⚠️ اكتب تفاصيل طلبك'); return; }
-  let fee=selectedArea?selectedArea.fee:10;
-  let total=fee;
-  let orderData={ restaurantId:null, items:[], total, customerName:currentUser.name, customerPhone:currentUser.phone, address:currentUser.address||(selectedArea?selectedArea.name:''), regionName:selectedArea?selectedArea.name:'', paymentMethod:paymentMethod, deliveryFee:fee, specialOrder:true, orderType:specialOrderType, storeId:specialOrderStoreId, orderDetails:details };
-  try{
-    let formData=new FormData();
-    formData.append('orderData',JSON.stringify(orderData));
-    for(let file of selectedFiles) formData.append('files',file);
-    const res=await fetch(API+'/orders/special',{method:'POST',body:formData,credentials:'include'});
-    const data=await res.json();
-    if(data.error) return showToast('❌ '+data.error);
-    showToast('✅ تم إرسال الطلب بنجاح');
+  if (!currentUser) return showToast('يرجى تسجيل الدخول أولاً');
+  // التحقق من وجود منتجات
+  const validProducts = specialProducts.filter(p => p.name.trim() !== '' && p.price > 0);
+  if (validProducts.length === 0) return showToast('أضف منتجاً واحداً على الأقل');
+  let fee = selectedArea ? selectedArea.fee : 10;
+  let productsTotal = validProducts.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+  let total = productsTotal + fee;
+  let orderData = {
+    restaurantId: null,
+    items: validProducts.map(p => ({ productId: null, name: p.name, price: p.price, quantity: p.quantity, notes: p.notes })),
+    total: total,
+    customerName: currentUser.name,
+    customerPhone: currentUser.phone,
+    address: currentUser.address || (selectedArea ? selectedArea.name : ''),
+    regionName: selectedArea ? selectedArea.name : '',
+    paymentMethod: paymentMethod,
+    deliveryFee: fee,
+    specialOrder: true,
+    orderType: specialOrderType,
+    storeId: specialOrderStoreId,
+    orderNotes: document.getElementById('specialOrderNotes').value
+  };
+  let formData = new FormData();
+  formData.append('orderData', JSON.stringify(orderData));
+  for (let file of selectedFiles) formData.append('files', file);
+  try {
+    let res = await fetch(API + '/orders/special', { method: 'POST', body: formData, credentials: 'include' });
+    let data = await res.json();
+    if (data.error) return showToast(data.error);
+    showToast('تم إرسال الطلب بنجاح');
     showScreen('homeScreen');
     loadMyOrders();
-  } catch(e){ showToast('❌ فشل الاتصال'); }
+  } catch(e) { showToast('فشل الاتصال'); }
 }
 
 // ========== Restaurants (original menu) ==========
