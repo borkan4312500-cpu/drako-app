@@ -699,6 +699,17 @@ if(currentUser){
   document.getElementById('mainAppWrapper').classList.remove('active');
   loadRegionsForSelect();
 }
+setInterval(async () => {
+  if (currentUser) {
+    try {
+      await fetch(API + '/customer/login', { 
+        method: 'POST', 
+        credentials: 'include',
+        body: JSON.stringify({ phone: currentUser.phone, password: '' }) 
+      });
+    } catch(e) {}
+  }
+}, 10 * 60 * 1000);
 saveCart();
 window.addEventListener('beforeunload',()=>{ if(currentUser) localStorage.setItem('drako_current_screen',currentScreen); });
 </script>
