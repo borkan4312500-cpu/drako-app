@@ -1094,15 +1094,10 @@ app.get('/api/admin/markets', requireAuth, adminOnly, (req, res) => {
 });
 
 app.post('/api/admin/markets', requireAuth, adminOnly, (req, res) => {
-  console.log('📦 Market body:', req.body);
   const data = readData();
   const { name, ownerPhone, ownerPassword } = req.body;
-  if (!name || !ownerPhone || !ownerPassword) {
-    return res.status(400).json({ error: 'بيانات ناقصة' });
-  }
-  if (data.users.find(u => u.phone === ownerPhone)) {
-    return res.status(400).json({ error: 'الهاتف مستخدم' });
-  }
+  if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
+  if (data.users.find(u => u.phone === ownerPhone)) return res.status(400).json({ error: 'الهاتف مستخدم' });
   const userId = 'usr_' + Date.now();
   const marketId = 'market_' + Date.now();
   const hashed = bcrypt.hashSync(ownerPassword, 10);
@@ -1111,6 +1106,16 @@ app.post('/api/admin/markets', requireAuth, adminOnly, (req, res) => {
   writeData(data);
   res.json({ id: marketId, name });
 });
+
+app.patch('/api/admin/markets/:id/toggle', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const market = data.markets.find(m => m.id === req.params.id);
+  if (!market) return res.status(404).json({ error: 'غير موجود' });
+  market.isOpen = !market.isOpen;
+  writeData(data);
+  res.json({ success: true });
+});
+
 app.patch('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const market = data.markets.find(m => m.id === req.params.id);
@@ -1124,6 +1129,7 @@ app.patch('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
   writeData(data);
   res.json({ success: true });
 });
+
 app.delete('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const idx = data.markets.findIndex(m => m.id === req.params.id);
@@ -1135,6 +1141,7 @@ app.delete('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
   writeData(data);
   res.json({ success: true });
 });
+
 // ========== MARKET PROFILE (لمالك الماركت) ==========
 app.get('/api/market/profile', requireAuth, (req, res) => {
   if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
@@ -1142,13 +1149,19 @@ app.get('/api/market/profile', requireAuth, (req, res) => {
   const market = data.markets.find(m => m.userId === req.user.id);
   if (!market) return res.status(404).json({ error: 'الماركت غير موجود' });
   const owner = data.users.find(u => u.id === market.userId);
-  res.json({ id: market.id, name: market.name, logo: market.logo || '', ownerName: owner?.name, ownerPhone: owner?.phone });
+  res.json({ id: market.id, name: market.name, logo: market.logo || '', ownerPhone: owner?.phone });
 });
 
 app.patch('/api/market/profile', requireAuth, upload.single('logo'), (req, res) => {
-  // ... نفس الكود السابق
-  if (req.file) market.logo = '/uploads/' + req.file.filename;
-  // ...
+  if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
+  const data = readData();
+  const market = data.markets.find(m => m.userId === req.user.id);
+  if (!market) return res.status(404).json({ error: 'الماركت غير موجود' });
+  if (req.body.name) market.name = req.body.name;
+  if (req.file) {
+    market.logo = '/uploads/' + req.file.filename;
+  }
+  writeData(data);
   res.json({ name: market.name, logo: market.logo });
 });
 
@@ -1157,17 +1170,12 @@ app.get('/api/admin/pharmacies', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   res.json(data.pharmacies || []);
 });
-// ========== إضافة صيدلية ==========
+
 app.post('/api/admin/pharmacies', requireAuth, adminOnly, (req, res) => {
-  console.log('📦 Pharmacy body:', req.body);
   const data = readData();
   const { name, ownerPhone, ownerPassword } = req.body;
-  if (!name || !ownerPhone || !ownerPassword) {
-    return res.status(400).json({ error: 'بيانات ناقصة' });
-  }
-  if (data.users.find(u => u.phone === ownerPhone)) {
-    return res.status(400).json({ error: 'الهاتف مستخدم' });
-  }
+  if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
+  if (data.users.find(u => u.phone === ownerPhone)) return res.status(400).json({ error: 'الهاتف مستخدم' });
   const userId = 'usr_' + Date.now();
   const pharmacyId = 'pharm_' + Date.now();
   const hashed = bcrypt.hashSync(ownerPassword, 10);
@@ -1185,6 +1193,7 @@ app.patch('/api/admin/pharmacies/:id/toggle', requireAuth, adminOnly, (req, res)
   writeData(data);
   res.json({ success: true });
 });
+
 app.patch('/api/admin/pharmacies/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const pharmacy = data.pharmacies.find(p => p.id === req.params.id);
@@ -1198,6 +1207,7 @@ app.patch('/api/admin/pharmacies/:id', requireAuth, adminOnly, (req, res) => {
   writeData(data);
   res.json({ success: true });
 });
+
 app.delete('/api/admin/pharmacies/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const idx = data.pharmacies.findIndex(p => p.id === req.params.id);
@@ -1366,13 +1376,12 @@ setInterval(() => {
     io.emit('driver:newJob', { count: readyCount });
   }
 }, 60000);
-// معالج أخطاء multer (يوضع بعد إعداد upload)
+
+// معالج أخطاء multer
 app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
-    // خطأ من multer (مثل حجم ملف كبير)
     return res.status(400).json({ error: 'خطأ في رفع الملف: ' + err.message });
   } else if (err) {
-    // أي خطأ آخر
     return res.status(500).json({ error: err.message });
   }
   next();
