@@ -205,35 +205,29 @@ tbody tr:hover{background:var(--surface2);}
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-// ========== إصلاح مشكلة التحقق من المصادقة (تم تعديل checkAuth) ==========
+// ========== إصلاح apiFetch للتعامل مع 403 والـ credentials ==========
 async function apiFetch(url, options = {}) {
   const res = await fetch(url, { ...options, credentials: 'include', headers: { ...(options.headers || {}), ...(typeof options.body === 'string' ? { 'Content-Type': 'application/json' } : {}) } });
-  if (res.status === 401) { 
-    // حفظ الصفحة الحالية لإعادة التوجيه بعد تسجيل الدخول
+  if (res.status === 401 || res.status === 403) {
     localStorage.setItem('redirectAfterLogin', window.location.pathname);
-    window.location.href = '/login.html'; 
+    window.location.href = '/login.html';
+    throw new Error('غير مصرح');
   }
   return res;
 }
 
+// ========== دالة التحقق من المصادقة (معدلة) ==========
 async function checkAuth() {
   try {
-    // استخدام apiFetch بدلاً من fetch العادي لضمان إرسال التوكن
     const res = await apiFetch('/api/restaurant/profile');
-    if (res.status === 401) {
-      window.location.href = '/login.html';
-      return false;
-    }
     const data = await res.json();
-    // تخزين معرف المطعم واسمه للاستخدام العالمي
     window.myRestaurantId = data.id;
     localStorage.setItem('restaurantId', data.id);
     localStorage.setItem('restaurantName', data.name);
     if (data.logo) localStorage.setItem('restaurantLogo', data.logo);
     return true;
   } catch(e) {
-    console.error('Auth check error:', e);
-    window.location.href = '/login.html';
+    console.error('Auth error:', e);
     return false;
   }
 }
@@ -342,7 +336,7 @@ async function renderPage(page) {
   } catch (e) { toast('خطأ في التحميل', 'error'); console.error(e); }
 }
 
-// ========== الملف الشخصي (مُعدل لحفظ الصورة محلياً) ==========
+// ========== الملف الشخصي (محسن) ==========
 async function renderProfile() {
   let profile = null;
   let stats = null;
@@ -353,10 +347,8 @@ async function renderProfile() {
     stats = await statsRes.json();
   } catch(e) { console.error(e); }
   
-  // استخدام البيانات من localStorage كنسخ احتياطي
   const name = profile?.name || localStorage.getItem('restaurantName') || 'مطعمي';
   let logo = profile?.logo || localStorage.getItem('restaurantLogo') || '';
-  // إضافة timestamp لتجنب الكاش
   if (logo && !logo.includes('?t=')) logo += '?t=' + Date.now();
   
   window.myRestaurantId = profile?.id || localStorage.getItem('restaurantId');
@@ -427,7 +419,7 @@ async function uploadLogo(input) {
   } else toast('فشل الرفع', 'error');
 }
 
-// ========== باقي الدوال (دون تغيير) ==========
+// ========== DASHBOARD ==========
 async function loadDashboard() {
   const [profile, stats, reports] = await Promise.all([
     apiFetch(API + '/restaurant/profile').then(r => r.json()).catch(() => ({ name: 'مطعمي', logo: '' })),
@@ -474,6 +466,7 @@ async function uploadLogoDashboard() {
   } else toast('فشل الرفع', 'error');
 }
 
+// ========== ORDERS (نفس الأصلي) ==========
 let ordersSelectedDate = new Date().toISOString().slice(0, 10);
 let currentOrderTab = 'all';
 function setOrdersTab(tab) { currentOrderTab = tab; }
@@ -511,7 +504,7 @@ async function loadOrdersData(){
   const orders = await res.json();
   const filtered = getFilteredOrders(orders);
   if(!filtered.length){ container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><div>لا توجد طلبات</div></div>`; return; }
-  let html = `<div class="section"><div class="sec-head"><div class="sec-title">📦 ${filtered.length} طلب</div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>العميل</th><th>الهاتف</th><th>الأصناف</th><th>الإجمالي</th><th>الحالة</th><th>الوقت</th><th>إجراء</th></tr></thead><tbody>`;
+  let html = `<div class="section"><div class="sec-head"><div class="sec-title">📦 ${filtered.length} طلب</div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>العميل</th><th>الهاتف</th><th>الأصناف</th><th>الإجمالي</th><th>الحالة</th><th>الوقت</th><th>إجراء</th></td></thead><tbody>`;
   filtered.forEach(o => {
     const itemsStr = (o.items||[]).map(i=>`<strong>${i.name}</strong> ×${i.quantity||1}`).join('<br>')||'—';
     const productTotal = (o.total||0)-(o.deliveryFee||0);
@@ -528,7 +521,7 @@ async function loadOrdersData(){
       <td>${statusHTML}</td>
       <td>${new Date(o.createdAt).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})}</td>
       <td>${getOrderActions(o)}</td>
-    </tr>`;
+    <tr>`;
   });
   html += `</tbody></table></div></div>`;
   container.innerHTML = html;
@@ -548,6 +541,7 @@ function applyOrderFilter(){ const inp = document.getElementById('order-date-inp
 function setTodayOrders(){ ordersSelectedDate = new Date().toISOString().slice(0,10); document.getElementById('order-date-input').value = ordersSelectedDate; loadOrdersData(); }
 function clearOrderFilter(){ ordersSelectedDate = ''; document.getElementById('order-date-input').value = ''; loadOrdersData(); }
 
+// ========== CATEGORIES ==========
 async function loadCategories() {
   const res = await apiFetch(API + '/restaurant/categories');
   const cats = await res.json();
@@ -591,11 +585,41 @@ async function deleteCategory(id) {
   loadCategories(); toast('تم الحذف');
 }
 
+// ========== PRODUCTS (تصميم جديد وكروت) ==========
 async function loadProducts() {
   await loadCategoriesOptions();
   const prodRes = await apiFetch(API + '/restaurant/products');
   const products = await prodRes.json();
-  document.getElementById('content').innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:16px"><h2>📋 المنتجات</h2><button class="btn btn-primary" onclick="showAddProduct()">+ إضافة منتج</button></div><div class="section"><div class="table-wrap"></td><thead><tr><th>الصورة</th><th>الاسم</th><th>المجموعات</th><th>التصنيف</th><th>متاح</th><th>إجراءات</th></tr></thead><tbody>${products.map(p => { const groupsStr = (p.groups || []).map(g => `<div style="font-size:11px;color:var(--text2)">${g.name}: ${g.options?.map(o=>`${o.value}(${o.price}ج)`).join(', ')||''}</div>`).join(''); return `<tr><td>${p.image?`<img src="${p.image}" style="width:42px;height:42px;border-radius:8px;object-fit:cover">`:'—'}</td><td style="font-weight:600">${p.name}</td><td>${groupsStr || '—'}</td><td>${p.category||'—'}</td><td><span class="badge ${p.isAvailable?'badge-green':'badge-red'}">${p.isAvailable?'نعم':'لا'}</span></td><td><button class="btn btn-ghost btn-sm" onclick="editProduct('${p.id}')">✏️</button> <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">🗑️</button></td></tr>`; }).join('')}</tbody></table></div></div>`;
+  let html = `
+    <div style="display:flex;justify-content:space-between;margin-bottom:24px">
+      <h2>📋 المنتجات</h2>
+      <button class="btn btn-primary" onclick="showAddProduct()">+ إضافة منتج</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:20px">
+  `;
+  products.forEach(p => {
+    const groupsStr = (p.groups || []).map(g => `<div style="font-size:11px;color:#aaa">${g.name}: ${g.options?.map(o=>`${o.value}(${o.price}ج)`).join(', ')}</div>`).join('');
+    html += `
+      <div style="background:var(--surface2);border-radius:16px;border:1px solid var(--border);overflow:hidden;transition:0.2s">
+        <div style="height:140px;background:#2a2a2a;display:flex;align-items:center;justify-content:center">
+          ${p.image ? `<img src="${p.image}" style="width:100%;height:100%;object-fit:cover">` : '<span style="color:var(--text3)">📷 لا توجد صورة</span>'}
+        </div>
+        <div style="padding:16px">
+          <div style="font-weight:800;font-size:18px;margin-bottom:6px">${p.name}</div>
+          <div style="color:var(--orange);font-weight:700;margin-bottom:8px">${p.basePrice || 0} ج</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:12px">${p.description || ''}</div>
+          ${groupsStr ? `<div style="font-size:11px;margin-top:8px;border-top:1px solid var(--border);padding-top:8px">${groupsStr}</div>` : ''}
+          <div style="display:flex;justify-content:space-between;margin-top:12px">
+            <button class="btn btn-sm btn-ghost" onclick="editProduct('${p.id}')">✏️ تعديل</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.id}')">🗑️ حذف</button>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  html += `</div>`;
+  if(!products.length) html = `<div class="empty-state"><div class="icon">📋</div><div class="msg">لا توجد منتجات، أضف منتجك الأول</div></div>`;
+  document.getElementById('content').innerHTML = html;
 }
 function showAddProduct() {
   const catOptions = window._catOptions;
