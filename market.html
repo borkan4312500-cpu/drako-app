@@ -379,6 +379,7 @@
 
       openModal(`طلب #${id.slice(-6)}`, `
         <div style="margin-bottom:12px;"><strong>العميل:</strong> ${order.customerName}</div>
+        <div style="margin-bottom:12px;"><strong>المنطقة:</strong> ${order.regionName || '—'}</div>
         <div style="margin-bottom:12px;"><strong>العنوان:</strong> ${order.address}</div>
         ${notesHtml}
         <div style="margin-bottom:12px;"><strong>المنتجات:</strong></div>
