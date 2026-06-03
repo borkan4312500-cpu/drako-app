@@ -279,6 +279,7 @@ let currentCategory = 'restaurants';
 let selectedFiles = [];
 let specialOrderType = null;
 let specialOrderStoreId = null;
+let pendingSpecialOrderData = null;
 
 window._ordersTab = 'active';
 window._trackingOrderId = null;
@@ -491,24 +492,56 @@ function previewFiles(input) {
 }
 async function submitSpecialOrder() {
   if(!currentUser){ showToast('⚠️ يرجى تسجيل الدخول أولاً'); return; }
-  let details=document.getElementById('specialOrderDetails').value.trim();
+  let details = document.getElementById('specialOrderDetails').value.trim();
   if(!details && specialOrderType!=='custom'){ showToast('⚠️ اكتب تفاصيل طلبك'); return; }
-  let fee=selectedArea?selectedArea.fee:10;
-  let total=fee;
-  let orderData={ restaurantId:null, items:[], total, customerName:currentUser.name, customerPhone:currentUser.phone, address:currentUser.address||(selectedArea?selectedArea.name:''), regionName:selectedArea?selectedArea.name:'', paymentMethod:paymentMethod, deliveryFee:fee, specialOrder:true, orderType:specialOrderType, storeId:specialOrderStoreId, orderDetails:details };
-  try{
-    let formData=new FormData();
-    formData.append('orderData',JSON.stringify(orderData));
-    for(let file of selectedFiles) formData.append('files',file);
-    const res=await fetch(API+'/orders/special',{method:'POST',body:formData,credentials:'include'});
-    const data=await res.json();
+
+  // تحديد المنطقة (استخدم المحددة مسبقاً أو الافتراضية من الحساب)
+  if (!selectedArea) {
+    if (currentUser.regionId && allRegions.length) {
+      const region = allRegions.find(r => r.id === currentUser.regionId);
+      if (region) selectedArea = region;
+    }
+    if (!selectedArea) {
+      // حفظ بيانات الطلب مؤقتاً وتوجيه إلى اختيار المنطقة
+      pendingSpecialOrderData = {
+        type: specialOrderType,
+        storeId: specialOrderStoreId,
+        details: details
+      };
+      showToast('⚠️ يرجى اختيار المنطقة أولاً');
+      showScreen('areaScreen');
+      return;
+    }
+  }
+
+  let fee = selectedArea.fee;
+  let total = fee; // سيتم تعديله لاحقاً عند إضافة الفاتورة
+  let orderData = {
+    restaurantId: null,
+    items: [],
+    total,
+    customerName: currentUser.name,
+    customerPhone: currentUser.phone,
+    address: currentUser.address || selectedArea.name,
+    regionName: selectedArea.name,
+    paymentMethod: paymentMethod,
+    deliveryFee: fee,
+    orderType: specialOrderType,
+    storeId: specialOrderStoreId,
+    orderNotes: details   // ✅ نستخدم orderNotes كما يتوقعه السيرفر
+  };
+  try {
+    let formData = new FormData();
+    formData.append('orderData', JSON.stringify(orderData));
+    for(let file of selectedFiles) formData.append('files', file);
+    const res = await fetch(API+'/orders/special', { method:'POST', body:formData, credentials:'include' });
+    const data = await res.json();
     if(data.error) return showToast('❌ '+data.error);
     showToast('✅ تم إرسال الطلب بنجاح');
     showScreen('homeScreen');
     loadMyOrders();
-  } catch(e){ showToast('❌ فشل الاتصال'); }
+  } catch(e) { showToast('❌ فشل الاتصال'); }
 }
-
 // ========== Restaurants (original menu) ==========
 async function loadRestaurants() { try { const res=await apiFetch(API+'/restaurants'); restaurants=await res.json(); renderHomeItems(); } catch(e){ console.log(e); } }
 async function openRestaurant(id) {
@@ -623,7 +656,9 @@ function renderCart() {
 function updateCartItem(i,d){ let nq=cart[i].quantity+d; if(nq<=0) cart.splice(i,1); else cart[i].quantity=nq; saveCart(); renderCart(); }
 function removeCartItem(i){ cart.splice(i,1); saveCart(); renderCart(); }
 function updateTotals() { const itemsTotal=cart.reduce((a,b)=>a+(b.price*(b.quantity||1)),0); const fee=selectedArea?selectedArea.fee:0; const final=itemsTotal+fee; document.getElementById('itemsTotal').innerText=itemsTotal+' ج'; document.getElementById('deliveryFee').innerText=fee+' ج'; document.getElementById('finalTotal').innerText=final+' ج'; document.getElementById('checkoutItemsTotal').innerText=itemsTotal+' ج'; document.getElementById('checkoutDelivery').innerText=fee+' ج'; document.getElementById('checkoutFinal').innerText=final+' ج'; }
-function proceedToCheckout() { if(!cart.length) return showToast('⚠️ السلة فارغة'); if(currentUser&&currentUser.regionId&&allRegions.length){ const region=allRegions.find(r=>r.id===currentUser.regionId); if(region){ selectedArea=region; updateTotals(); document.getElementById('selectedAreaName').innerText=region.name+' - '+region.fee+' ج'; renderCheckoutUserInfo(); showScreen('checkoutScreen'); return; } } showScreen('areaScreen'); }
+function proceedToCheckout() { if(!cart.length) return showToast('⚠️ السلة فارغة'); if(currentUser&&currentUser.regionId&&allRegions.length){ const region=allRegions.find(r=>r.id===currentUser.regionId); if(region){ selectedArea=region; updateTotals(); document.getElementById('selectedAreaName').innerText=region.name+' - '+region.fee+' ج'; renderCheckoutUserInfo(); showScreen('checkoutScreen'); return; } } showScreen('areaScreen'); }if (currentUser && currentUser.regionId && allRegions.length) {
+  selectedArea = allRegions.find(r => r.id === currentUser.regionId) || null;
+}
 
 // ========== Order Functions ==========
 async function submitOrder() { if(!selectedArea){ showToast('⚠️ يرجى اختيار المنطقة أولاً'); showScreen('areaScreen'); return; } let name,phone,address; if(currentUser){ name=currentUser.name; phone=currentUser.phone; address=currentUser.address; } else { name=document.getElementById('customerName')?.value.trim(); phone=document.getElementById('customerPhone')?.value.trim(); if(!name||!phone){ showToast('⚠️ اكمل البيانات'); return; } } const itemsTotal=cart.reduce((a,b)=>a+(b.price*(b.quantity||1)),0); const total=itemsTotal+(selectedArea.fee||0); const orderData={ restaurantId:selectedRestaurant?.id, items:cart.map(i=>({ productId:i.productId, name:i.name, price:i.price, quantity:i.quantity||1, selectedOptions:i.selectedOptions||[], notes:i.notes||'' })), total, customerName:name, customerPhone:phone, address:address||selectedArea.name, regionName:selectedArea.name, paymentMethod, deliveryFee:selectedArea.fee||0 }; try{ const res=await apiFetch(API+'/orders',{method:'POST',body:JSON.stringify(orderData)}); const data=await res.json(); if(data.error){ showToast('❌ '+data.error); return; } cart=[]; saveCart(); renderCart(); trackOrder(data.orderId); showToast('✅ تم إرسال الطلب بنجاح'); } catch(e){ console.error(e); showToast('❌ فشل في الاتصال بالسيرفر'); } }
