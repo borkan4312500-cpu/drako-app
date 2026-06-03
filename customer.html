@@ -213,6 +213,7 @@
         <div class="section-title" id="homeSectionTitle">🍔 المطاعم</div>
         <div id="restaurantsContainer"></div>
       </section>
+      <!-- باقي الأقسام (restaurantScreen, specialOrderScreen, cartScreen, ...) بدون تغيير -->
       <section class="screen" id="restaurantScreen">
         <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;"><button class="icon-btn" onclick="showScreen('homeScreen')">←</button><div class="logo"><span id="restaurantTitleHeader">المطعم</span></div><button class="icon-btn">♡</button></div>
         <img id="restaurantHero" class="hero-image" src="">
@@ -283,17 +284,6 @@ window._ordersTab = 'active';
 window._trackingOrderId = null;
 window._currentQty = 1;
 window._currentUnitPrice = 0;
-
-markets = [
-  { id: 'market1', name: 'كارفور ماركت', logo: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200', type: 'market' },
-  { id: 'market2', name: 'المانيا سوبر ماركت', logo: 'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=200', type: 'market' },
-  { id: 'market3', name: 'هايبر وان', logo: 'https://images.unsplash.com/photo-1534452203293-494d7ddbf7e0?w=200', type: 'market' }
-];
-pharmacies = [
-  { id: 'pharm1', name: 'صيدليات العزبي', logo: 'https://images.unsplash.com/photo-1584308666744-24d5c6dee668?w=200', type: 'pharmacy' },
-  { id: 'pharm2', name: 'صيدليات دواء', logo: 'https://images.unsplash.com/photo-1631549916768-4119b2e5f926?w=200', type: 'pharmacy' },
-  { id: 'pharm3', name: 'صيدليات نوبل', logo: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e0dd?w=200', type: 'pharmacy' }
-];
 
 // ========== Swipe to Go Back ==========
 document.getElementById('swipeOverlay').addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; });
@@ -382,8 +372,8 @@ function goStep2() { let n=document.getElementById('regName').value.trim(), p=do
 async function loadRegionsForSelect() { try { const res=await apiFetch(API+'/regions'); allRegions=await res.json(); } catch(e) { allRegions=[{id:'reg_1',name:'مساكن جمصة',fee:10},{id:'reg_2',name:'15 مايو',fee:15},{id:'reg_3',name:'المنصورة الجديدة',fee:20},{id:'reg_4',name:'الدلتا',fee:25},{id:'reg_5',name:'الشيخ زايد',fee:30}]; } let sel=document.getElementById('regRegion'); if(sel) sel.innerHTML='<option value="">اختر منطقتك</option>'+allRegions.map(r=>`<option value="${r.id}">${r.name} — ${r.fee} ج توصيل</option>`).join(''); let editSel=document.getElementById('editRegion'); if(editSel) editSel.innerHTML=allRegions.map(r=>`<option value="${r.id}">${r.name} — ${r.fee} ج</option>`).join(''); }
 
 // ========== Auth Functions ==========
-async function customerLogin() { let phone=document.getElementById('loginPhone').value.trim(), pass=document.getElementById('loginPass').value; if(!phone||!pass) return showToast('⚠️ أكمل الحقول'); try { const res=await apiFetch(API+'/customer/login',{method:'POST',body:JSON.stringify({phone,password:pass})}); const data=await res.json(); if(data.error) return showToast('❌ '+data.error); currentUser={id:data.id,name:data.name,phone:data.phone,regionId:data.regionId,address:data.address,token:data.token}; localStorage.setItem('drako_user',JSON.stringify(currentUser)); document.getElementById('authWrapper').classList.add('hide'); document.getElementById('mainAppWrapper').classList.add('active'); initSocket(); loadRestaurants(); renderCart(); if(!restoreCurrentScreen()) showScreen('homeScreen'); showToast('✅ مرحباً '+data.name); } catch(e){ showToast('❌ فشل الاتصال'); } }
-async function customerRegister() { let name=document.getElementById('regName').value.trim(), phone=document.getElementById('regPhone').value.trim(), pass=document.getElementById('regPass').value, regionId=document.getElementById('regRegion').value, address=document.getElementById('regAddress').value.trim(); if(!name||!phone||!pass) return showToast('⚠️ أكمل الحقول'); if(!regionId) return showToast('⚠️ اختر المنطقة'); if(!address) return showToast('⚠️ أدخل العنوان التفصيلي'); try { const res=await apiFetch(API+'/customer/register',{method:'POST',body:JSON.stringify({name,phone,password:pass,regionId,address})}); const data=await res.json(); if(data.error) return showToast('❌ '+data.error); currentUser={id:data.id,name:data.name,phone:data.phone,regionId:data.regionId,address:data.address,token:data.token}; localStorage.setItem('drako_user',JSON.stringify(currentUser)); document.getElementById('authWrapper').classList.add('hide'); document.getElementById('mainAppWrapper').classList.add('active'); initSocket(); loadRestaurants(); renderCart(); showScreen('homeScreen'); showToast('🎉 تم إنشاء حسابك بنجاح'); } catch(e){ showToast('❌ فشل الاتصال'); } }
+async function customerLogin() { let phone=document.getElementById('loginPhone').value.trim(), pass=document.getElementById('loginPass').value; if(!phone||!pass) return showToast('⚠️ أكمل الحقول'); try { const res=await apiFetch(API+'/customer/login',{method:'POST',body:JSON.stringify({phone,password:pass})}); const data=await res.json(); if(data.error) return showToast('❌ '+data.error); currentUser={id:data.id,name:data.name,phone:data.phone,regionId:data.regionId,address:data.address,token:data.token}; localStorage.setItem('drako_user',JSON.stringify(currentUser)); document.getElementById('authWrapper').classList.add('hide'); document.getElementById('mainAppWrapper').classList.add('active'); initSocket(); loadRestaurants(); loadMarketsAndPharmacies(); renderCart(); if(!restoreCurrentScreen()) showScreen('homeScreen'); showToast('✅ مرحباً '+data.name); } catch(e){ showToast('❌ فشل الاتصال'); } }
+async function customerRegister() { let name=document.getElementById('regName').value.trim(), phone=document.getElementById('regPhone').value.trim(), pass=document.getElementById('regPass').value, regionId=document.getElementById('regRegion').value, address=document.getElementById('regAddress').value.trim(); if(!name||!phone||!pass) return showToast('⚠️ أكمل الحقول'); if(!regionId) return showToast('⚠️ اختر المنطقة'); if(!address) return showToast('⚠️ أدخل العنوان التفصيلي'); try { const res=await apiFetch(API+'/customer/register',{method:'POST',body:JSON.stringify({name,phone,password:pass,regionId,address})}); const data=await res.json(); if(data.error) return showToast('❌ '+data.error); currentUser={id:data.id,name:data.name,phone:data.phone,regionId:data.regionId,address:data.address,token:data.token}; localStorage.setItem('drako_user',JSON.stringify(currentUser)); document.getElementById('authWrapper').classList.add('hide'); document.getElementById('mainAppWrapper').classList.add('active'); initSocket(); loadRestaurants(); loadMarketsAndPharmacies(); renderCart(); showScreen('homeScreen'); showToast('🎉 تم إنشاء حسابك بنجاح'); } catch(e){ showToast('❌ فشل الاتصال'); } }
 function openEditModal() { document.getElementById('editName').value=currentUser?.name||''; document.getElementById('editPhone').value=currentUser?.phone||''; document.getElementById('editAddress').value=currentUser?.address||''; let er=document.getElementById('editRegion'); if(er&&currentUser?.regionId) er.value=currentUser.regionId; document.getElementById('editModal').classList.add('open'); }
 function closeEditModal() { document.getElementById('editModal').classList.remove('open'); }
 async function updateProfile() { let n=document.getElementById('editName').value.trim(), p=document.getElementById('editPhone').value.trim(), a=document.getElementById('editAddress').value.trim(), r=document.getElementById('editRegion').value; if(!n||p.length<11||!a||!r) return showToast('⚠️ بيانات ناقصة'); currentUser.name=n; currentUser.phone=p; currentUser.address=a; currentUser.regionId=r; localStorage.setItem('drako_user',JSON.stringify(currentUser)); renderAccountScreen(); closeEditModal(); showToast('✅ تم تحديث البيانات'); }
@@ -421,6 +411,28 @@ function initCategoryFilters() {
     });
   });
 }
+
+/* ⬇️ تعديل: دالة جلب الأسواق والصيدليات الحقيقية من السيرفر */
+async function loadMarketsAndPharmacies() {
+  try {
+    const [mRes, pRes] = await Promise.all([
+      apiFetch(API + '/markets'),
+      apiFetch(API + '/pharmacies')
+    ]);
+    markets = await mRes.json();
+    pharmacies = await pRes.json();
+  } catch (e) {
+    console.log(e);
+    markets = [];
+    pharmacies = [];
+  }
+  // إعادة عرض القسم الحالي إن كان يتعلق بهما
+  if (currentCategory === 'markets' || currentCategory === 'pharmacies') {
+    renderHomeItems();
+  }
+}
+
+/* ⬇️ تعديل: استخدام الشعارات الحقيقية مع دعم المسارات المحلية */
 function renderHomeItems() {
   const container=document.getElementById('restaurantsContainer');
   if(currentCategory==='restaurants') {
@@ -428,21 +440,29 @@ function renderHomeItems() {
     container.innerHTML=restaurants.map(r=>`<div class="restaurant-card" onclick="openRestaurant('${r.id}')"><img src="${(r.logo&&r.logo.startsWith('/uploads'))?r.logo:(r.logo||'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200')}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'"><div class="restaurant-content"><h3>${r.name}</h3><div class="meta"><span>⭐ 4.8</span><span>⏱ 30-45 دقيقة</span></div><div class="minimum">🚚 توصيل سريع • حد أدنى 50 ج</div><button class="btn menu-btn" onclick="event.stopPropagation(); openRestaurant('${r.id}')">🍽 عرض المنيو</button></div></div>`).join('');
   } else if(currentCategory==='markets') {
     if(!markets.length){ container.innerHTML='<div class="empty">لا توجد أسواق</div>'; return; }
-    container.innerHTML=markets.map(m=>`<div class="restaurant-card" onclick="openSpecialOrder('market','${m.id}')"><img src="${m.logo}"><div class="restaurant-content"><h3>${m.name}</h3><div class="meta"><span>⭐ 4.5</span><span>⏱ توصيل سريع</span></div><div class="minimum">🛒 أضف طلبك بالتفاصيل والصور</div><button class="btn menu-btn" onclick="event.stopPropagation(); openSpecialOrder('market','${m.id}')">📝 طلب الآن</button></div></div>`).join('');
+    container.innerHTML=markets.map(m=>{
+      const imgSrc = (m.logo && m.logo.startsWith('/uploads')) ? m.logo : (m.logo || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200');
+      return `<div class="restaurant-card" onclick="openSpecialOrder('market','${m.id}')"><img src="${imgSrc}" onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=200'"><div class="restaurant-content"><h3>${m.name}</h3><div class="meta"><span>⭐ 4.5</span><span>⏱ توصيل سريع</span></div><div class="minimum">🛒 أضف طلبك بالتفاصيل والصور</div><button class="btn menu-btn" onclick="event.stopPropagation(); openSpecialOrder('market','${m.id}')">📝 طلب الآن</button></div></div>`;
+    }).join('');
   } else if(currentCategory==='pharmacies') {
     if(!pharmacies.length){ container.innerHTML='<div class="empty">لا توجد صيدليات</div>'; return; }
-    container.innerHTML=pharmacies.map(p=>`<div class="restaurant-card" onclick="openSpecialOrder('pharmacy','${p.id}')"><img src="${p.logo}"><div class="restaurant-content"><h3>${p.name}</h3><div class="meta"><span>⭐ 4.7</span><span>⏱ توصيل فوري</span></div><div class="minimum">💊 اطلب أدويتك ومستلزماتك</div><button class="btn menu-btn" onclick="event.stopPropagation(); openSpecialOrder('pharmacy','${p.id}')">📝 طلب الآن</button></div></div>`).join('');
+    container.innerHTML=pharmacies.map(p=>{
+      const imgSrc = (p.logo && p.logo.startsWith('/uploads')) ? p.logo : (p.logo || 'https://images.unsplash.com/photo-1584308666744-24d5c6dee668?w=200');
+      return `<div class="restaurant-card" onclick="openSpecialOrder('pharmacy','${p.id}')"><img src="${imgSrc}" onerror="this.src='https://images.unsplash.com/photo-1584308666744-24d5c6dee668?w=200'"><div class="restaurant-content"><h3>${p.name}</h3><div class="meta"><span>⭐ 4.7</span><span>⏱ توصيل فوري</span></div><div class="minimum">💊 اطلب أدويتك ومستلزماتك</div><button class="btn menu-btn" onclick="event.stopPropagation(); openSpecialOrder('pharmacy','${p.id}')">📝 طلب الآن</button></div></div>`;
+    }).join('');
   } else if(currentCategory==='special') {
     container.innerHTML=`<div class="restaurant-card" onclick="openSpecialOrder('custom',null)"><img src="https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=200"><div class="restaurant-content"><h3>طلب خاص</h3><div class="meta"><span>✨ مخصص</span><span>📝 اكتب طلبك</span></div><div class="minimum">أي طلب غير موجود في القوائم - أرفق الصور والتفاصيل</div><button class="btn menu-btn" onclick="event.stopPropagation(); openSpecialOrder('custom',null)">📝 تقديم طلب</button></div></div>`;
   }
 }
+
+/* ⬇️ تعديل: فلترة البحث مع الشعارات */
 function filterHomeItems() {
   let q=document.getElementById('searchInput').value.trim().toLowerCase();
   if(currentCategory==='restaurants') {
     let filtered=restaurants.filter(r=>r.name.toLowerCase().includes(q));
     const container=document.getElementById('restaurantsContainer');
     if(!filtered.length){ container.innerHTML='<div class="empty">لا توجد مطاعم</div>'; return; }
-    container.innerHTML=filtered.map(r=>`<div class="restaurant-card" onclick="openRestaurant('${r.id}')"><img src="${(r.logo&&r.logo.startsWith('/uploads'))?r.logo:(r.logo||'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200')}"><div class="restaurant-content"><h3>${r.name}</h3><div class="meta"><span>⭐ 4.8</span><span>⏱ 30-45 دقيقة</span></div><button class="btn menu-btn" onclick="event.stopPropagation(); openRestaurant('${r.id}')">🍽 عرض المنيو</button></div></div>`).join('');
+    container.innerHTML=filtered.map(r=>`<div class="restaurant-card" onclick="openRestaurant('${r.id}')"><img src="${(r.logo&&r.logo.startsWith('/uploads'))?r.logo:(r.logo||'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200')}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'"><div class="restaurant-content"><h3>${r.name}</h3><div class="meta"><span>⭐ 4.8</span><span>⏱ 30-45 دقيقة</span></div><button class="btn menu-btn" onclick="event.stopPropagation(); openRestaurant('${r.id}')">🍽 عرض المنيو</button></div></div>`).join('');
   } else { renderHomeItems(); }
 }
 
@@ -522,7 +542,7 @@ function renderProducts(list=products) {
   }).join('');
 }
 
-// ========== Product Sheet (fixed price calculation) ==========
+// ========== Product Sheet (كما هي بدون تغيير) ==========
 function openProductSheet(product) {
   currentProduct=product;
   const hasGroups=product.groups&&product.groups.length>0;
@@ -618,7 +638,7 @@ async function loadMyOrders() { const container=document.getElementById('myOrder
 if(currentUser){
   document.getElementById('authWrapper').classList.add('hide');
   document.getElementById('mainAppWrapper').classList.add('active');
-  initSocket(); loadRestaurants(); renderCart(); loadRegionsForSelect();
+  initSocket(); loadRestaurants(); loadMarketsAndPharmacies(); renderCart(); loadRegionsForSelect();
   if(!restoreCurrentScreen()) showScreen('homeScreen');
   initCategoryFilters();
 } else {
