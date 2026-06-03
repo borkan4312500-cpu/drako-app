@@ -257,22 +257,40 @@
       document.getElementById('profileName').textContent = data.name;
       closeModal(); showToast('تم التحديث');
     }
-   async function uploadLogo(input) {
+  async function uploadLogo(input) {
   const file = input.files[0];
   if (!file) return;
+  
+  // التأكد من أن الملف صورة
+  if (!file.type.startsWith('image/')) {
+    showToast('⚠️ يرجى اختيار ملف صورة', true);
+    return;
+  }
+  
   const fd = new FormData();
   fd.append('logo', file);
+  
   try {
     const res = await fetch(API + '/market/profile', {
       method: 'PATCH',
       credentials: 'include',
       body: fd
     });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'فشل الرفع');
+    
+    // محاولة قراءة الاستجابة كـ JSON، إذا فشل نعرض النص الخام
+    let data;
+    const contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      data = await res.json();
+    } else {
+      const text = await res.text();
+      throw new Error(text || 'استجابة غير JSON');
     }
-    const data = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(data.error || 'فشل رفع الشعار');
+    }
+    
     if (data.logo) {
       const logoUrl = data.logo + '?t=' + Date.now();
       document.getElementById('headerLogo').src = logoUrl;
@@ -284,7 +302,7 @@
       showToast('⚠️ لم يتم استلام الشعار من السيرفر', true);
     }
   } catch(e) {
-    showToast('❌ فشل رفع الشعار: ' + e.message, true);
+    showToast('❌ فشل رفع الشعار: ' + (e.message || 'خطأ غير معروف'), true);
     console.error(e);
   }
 }
