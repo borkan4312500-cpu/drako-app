@@ -238,6 +238,42 @@ app.patch('/api/admin/drivers/:id/block', requireAuth, adminOnly, (req, res) => 
   res.json({ isActive: user.isActive });
 });
 
+// === تفاصيل الطيار (تمت الإضافة) ===
+app.get('/api/admin/drivers/:id/details', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const user = data.users.find(u => u.id === req.params.id && u.role === 'DRIVER');
+  if (!user) return res.status(404).json({ error: 'الطيار غير موجود' });
+  const driver = data.drivers.find(d => d.userId === user.id) || {};
+  const today = new Date().toISOString().slice(0, 10);
+  const todayOrders = data.orders.filter(o => 
+    o.driverId === user.id && 
+    o.status === 'DELIVERED' && 
+    o.deliveredAt && o.deliveredAt.startsWith(today)
+  );
+  const todayRevenue = todayOrders.reduce((sum, o) => sum + (o.deliveryFee || 0), 0);
+  const enrichedOrders = todayOrders.map(o => ({
+    id: o.id,
+    createdAt: o.createdAt,
+    deliveredAt: o.deliveredAt,
+    customerName: o.customerName,
+    total: o.total,
+    deliveryFee: o.deliveryFee,
+    restaurantName: data.restaurants.find(r => r.id === o.restaurantId)?.name || 'طلب خاص',
+    address: o.address
+  }));
+  res.json({
+    id: user.id,
+    name: user.name,
+    phone: user.phone,
+    isAvailable: driver.isAvailable !== false,
+    isActive: user.isActive !== false,
+    earnings: driver.earnings || 0,
+    todayOrdersCount: todayOrders.length,
+    todayRevenue: todayRevenue,
+    todayOrders: enrichedOrders
+  });
+});
+
 // مناطق (أدمن)
 app.get('/api/admin/regions', requireAuth, adminOnly, (req, res) => { const data = readData(); res.json(data.regions); });
 app.post('/api/admin/regions', requireAuth, adminOnly, (req, res) => {
@@ -1040,6 +1076,7 @@ app.delete('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
   writeData(data);
   res.json({ success: true });
 });
+
 // نفس المسارات للصيدليات (يمكنك تكرارها)
 app.get('/api/admin/pharmacies', requireAuth, adminOnly, (req, res) => {
   const data = readData();
