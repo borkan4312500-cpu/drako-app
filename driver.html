@@ -8,7 +8,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Drako Rider</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-<!-- Howler.js CDN -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
 <style>
 /* ── TOKENS ─────────────────────────────────────── */
@@ -202,7 +201,7 @@ async function checkAuth() {
   try {
     const res = await fetch('/api/admin/stats', { credentials: 'include' });
     if (res.status === 401) {
-      window.location.href = '/login.html';  // تم التعديل هنا
+      window.location.href = '/login.html';
     }
   } catch(e) {
     window.location.href = '/login.html';
@@ -262,7 +261,6 @@ function playSound(name) {
   }
 }
 
-// إنشاء أصوات الطيار
 createSound('newJob', generateToneWAV(800, 0.12, 'square'), generateToneWAV(1000, 0.12, 'square'));
 createSound('orderDelivered', generateToneWAV(600, 0.15, 'sine'), generateToneWAV(900, 0.15, 'sine'));
 createSound('driverAssigned', generateToneWAV(500, 0.1, 'sine'));
@@ -439,14 +437,18 @@ async function tabAvailable() {
 
 function buildAvailableCard(o) {
   const productTotal = (o.total || 0) - (o.deliveryFee || 0);
+  // ✅ إضافة الفاتورة
+  const invoiceLine = o.invoiceAmount ? 
+    `<div class="oc-row"><div class="icon">💰</div><div><div class="val">${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div><div class="lbl">الفاتورة</div></div></div>` : '';
+  
   return `<div class="order-card new-order" id="oc-${o.id}">
     <div class="oc-header"><div class="oc-id">#${o.id.slice(-6)}</div><div style="display:flex;align-items:center;gap:8px">${sBadge(o.status)}<div class="oc-timer">⏱ ${relTime(o.createdAt)}</div></div></div>
     <div class="oc-body">
-      <div class="oc-row"><div class="icon">🍽️</div><div><div class="val">${o.restaurantName || '—'}</div><div class="lbl">المطعم</div></div></div>
+      <div class="oc-row"><div class="icon">🍽️</div><div><div class="val">${o.restaurantName || '—'}</div><div class="lbl">المطعم / المتجر</div></div></div>
       <div class="oc-row"><div class="icon">👤</div><div><div class="val">${o.customerName || '—'}</div><div class="lbl">العميل</div></div></div>
       <div class="oc-row"><div class="icon">🌍</div><div><div class="val">${o.regionName || '—'}</div><div class="lbl">المنطقة</div></div></div>
       <div class="oc-row"><div class="icon">📍</div><div><div class="val">${o.address || o.customerAddress || '—'}</div><div class="lbl">العنوان</div></div></div>
-     ${o.invoiceAmount ? `<div>💰 الفاتورة: ${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div>` : ''}
+      ${invoiceLine}
       <div class="oc-items-box">${renderItemsList(o.items)}</div>
     </div>
     <div class="oc-footer">
@@ -501,15 +503,20 @@ function buildActiveCard(o) {
   const curIdx = steps.findIndex(s => s.key === o.status);
   const stepsHTML = `<div class="steps-wrap">${steps.map((s, i) => `<div class="step-item"><div class="step-dot ${i < curIdx ? 'done' : i === curIdx ? 'active' : ''}">${i < curIdx ? '✓' : i + 1}</div><div class="step-lbl">${s.lbl}</div></div>${i < steps.length - 1 ? `<div class="step-line ${i < curIdx ? 'done' : ''}"></div>` : ''}`).join('')}</div>`;
   const productTotal = (o.total || 0) - (o.deliveryFee || 0);
+  // ✅ إضافة الفاتورة
+  const invoiceLine = o.invoiceAmount ? 
+    `<div class="oc-row"><div class="icon">💰</div><div><div class="val">${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div><div class="lbl">الفاتورة</div></div></div>` : '';
+  
   return `<div class="order-card active-order" id="oc-${o.id}">
     <div class="oc-header"><div class="oc-id">#${o.id.slice(-6)}</div><div style="display:flex;align-items:center;gap:8px">${sBadge(o.status)}<div class="oc-timer">⏱ ${relTime(o.createdAt)}</div></div></div>
     <div class="oc-body">
       ${stepsHTML}
-      <div class="oc-row"><div class="icon">🍽️</div><div><div class="val">${o.restaurantName || '—'}</div><div class="lbl">المطعم</div></div></div>
+      <div class="oc-row"><div class="icon">🍽️</div><div><div class="val">${o.restaurantName || '—'}</div><div class="lbl">المطعم / المتجر</div></div></div>
       <div class="oc-row"><div class="icon">👤</div><div><div class="val">${o.customerName || '—'}</div><div class="lbl">العميل</div></div></div>
       <div class="oc-row"><div class="icon">🌍</div><div><div class="val">${o.regionName || '—'}</div><div class="lbl">المنطقة</div></div></div>
       <div class="oc-row"><div class="icon">📍</div><div><div class="val">${o.address || o.customerAddress || '—'}</div><div class="lbl">عنوان التوصيل</div></div></div>
       ${o.customerPhone ? `<div class="oc-row"><div class="icon">📞</div><div><div class="val"><a href="tel:${o.customerPhone}" style="color:var(--orange);text-decoration:none">${o.customerPhone}</a></div><div class="lbl">اتصل بالعميل</div></div></div>` : ''}
+      ${invoiceLine}
       <div class="oc-items-box">${renderItemsList(o.items)}</div>
     </div>
     <div class="oc-footer">
@@ -597,6 +604,10 @@ async function loadHistoryOrders() {
 
     const cardsHTML = orders.map(o => {
       const productTotal = (o.total || 0) - (o.deliveryFee || 0);
+      // ✅ إضافة الفاتورة في السجل
+      const invoiceLine = o.invoiceAmount ? 
+        `<div class="oc-row"><div class="icon">💰</div><div><div class="val">${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div><div class="lbl">الفاتورة</div></div></div>` : '';
+      
       return `
         <div class="order-card" style="border-color:rgba(0,214,143,.2);">
           <div class="oc-header">
@@ -604,14 +615,15 @@ async function loadHistoryOrders() {
             <span class="badge badge-green">✓ موصّل</span>
           </div>
           <div class="oc-body">
-            <div class="oc-row"><div class="icon">🍽️</div><div><div class="val">${o.restaurantName || '—'}</div><div class="lbl">المطعم</div></div></div>
+            <div class="oc-row"><div class="icon">🍽️</div><div><div class="val">${o.restaurantName || '—'}</div><div class="lbl">المطعم / المتجر</div></div></div>
             <div class="oc-row"><div class="icon">👤</div><div><div class="val">${o.customerName || '—'}</div><div class="lbl">العميل</div></div></div>
             <div class="oc-row"><div class="icon">🌍</div><div><div class="val">${o.regionName || '—'}</div><div class="lbl">المنطقة</div></div></div>
             <div class="oc-row"><div class="icon">📍</div><div><div class="val">${o.address || '—'}</div><div class="lbl">العنوان</div></div></div>
             <div class="oc-row"><div class="icon">📞</div><div><div class="val"><a href="tel:${o.customerPhone}" style="color:var(--orange);text-decoration:none">${o.customerPhone || '—'}</a></div><div class="lbl">رقم العميل</div></div></div>
+            ${invoiceLine}
             <div class="oc-items-box">${renderItemsList(o.items)}</div>
             <div class="oc-row">
-              <div class="icon">💰</div>
+              <div class="icon">💳</div>
               <div>
                 <div class="val">الإجمالي: ${o.total} ج <span style="font-size:10px;color:var(--text3)">(المنتجات: ${productTotal} ج + التوصيل: ${o.deliveryFee||0} ج)</span></div>
                 <div class="lbl">عمولتك: ${o.deliveryFee || 10} ج</div>
@@ -706,11 +718,9 @@ socket.on('driver:newJob', (data) => {
 });
 
 socket.on('orderStatusUpdate', (data) => {
-  // لما يسلم الطلب ويستلم فلوس
   if (data.status === 'DELIVERED') {
     playSound('orderDelivered');
   }
-  // تحديث الواجهات حسب الحاجة
   if (currentTab === 'active') {
     tabActive();
   } else if (currentTab === 'available') {
