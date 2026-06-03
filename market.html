@@ -81,7 +81,7 @@
       <div class="modal-title">تعديل الملف</div>
       <button class="close-modal" onclick="closeProfileModal()">✕</button>
     </div>
-    <img class="logo-preview" id="profileLogoPreview" src="">
+    <img class="logo-preview" id="profileLogoPreview" src="" onerror="this.src='https://via.placeholder.com/90'">
     <div class="field">
       <label>اسم الماركت</label>
       <input type="text" id="profileName">
@@ -129,10 +129,19 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-  // ========== Global ==========
   const API = '/api';
-  let currentUser = null;
   let currentMarketProfile = null;
+  let ordersData = [];
+  let currentOrderId = null;
+  let currentProductIndex = null;
+
+  function showToast(msg, isError = false) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.style.background = isError ? '#F05252' : '#1E2535';
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2500);
+  }
 
   function showErrorAndRedirect(msg) {
     document.getElementById('errorMessage').innerText = msg;
@@ -140,29 +149,29 @@
     setTimeout(() => { window.location.href = '/login.html'; }, 3000);
   }
 
-  async function checkAuth() {
-    try {
-      const res = await fetch(API + '/market/orders', { credentials: 'include' });
+  async function apiFetch(url, options = {}) {
+    const res = await fetch(url, { ...options, credentials: 'include', headers: { ...(options.headers||{}), 'Content-Type': options.body instanceof FormData ? undefined : 'application/json' } });
+    if (!res.ok) {
       if (res.status === 403 || res.status === 401) {
-        showErrorAndRedirect('ليس لديك صلاحية الوصول. جاري التحويل...');
-        return false;
+        showErrorAndRedirect('ليس لديك صلاحية. جاري إعادة التوجيه...');
+        throw new Error('Auth');
       }
-      return true;
-    } catch(e) {
-      showErrorAndRedirect('فشل الاتصال');
-      return false;
+      const err = await res.json();
+      throw new Error(err.error || 'Request failed');
     }
+    return res.json();
   }
 
   async function loadProfile() {
     try {
-      const res = await fetch(API + '/market/profile', { credentials: 'include' });
-      currentMarketProfile = await res.json();
+      currentMarketProfile = await apiFetch(API + '/market/profile');
       if (currentMarketProfile.logo) {
         document.getElementById('marketLogo').src = currentMarketProfile.logo;
         document.getElementById('marketLogo').style.display = 'block';
       }
-    } catch(e) { /* ignore */ }
+    } catch(e) {
+      // إذا فشل، ربما المسار غير موجود بعد - لا شيء
+    }
   }
 
   function openProfileModal() {
@@ -181,7 +190,7 @@
     const file = document.getElementById('profileLogo').files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (e) => { document.getElementById('profileLogoPreview').src = e.target.result; };
+      reader.onload = e => { document.getElementById('profileLogoPreview').src = e.target.result; };
       reader.readAsDataURL(file);
     }
   }
@@ -194,40 +203,225 @@
     form.append('name', name);
     if (logoFile) form.append('logo', logoFile);
     try {
-      const res = await fetch(API + '/market/profile', { method: 'PATCH', credentials: 'include', body: form });
-      const data = await res.json();
-      if (data.error) return showToast(data.error, true);
+      const data = await apiFetch(API + '/market/profile', { method: 'PATCH', body: form });
       currentMarketProfile.name = data.name;
       currentMarketProfile.logo = data.logo;
-      document.getElementById('marketLogo').src = data.logo;
+      document.getElementById('marketLogo').src = data.logo || '';
       document.getElementById('marketLogo').style.display = data.logo ? 'block' : 'none';
       closeProfileModal();
       showToast('تم تحديث الملف');
     } catch(e) {
-      showToast('فشل التحديث', true);
+      showToast(e.message || 'فشل التحديث', true);
     }
   }
 
-  // (باقي الدوال loadOrders, renderOrders, editProduct, addProductToOrder, acceptOrder, setInvoice, markReady, ... تبقى كما هي دون تغيير)
-
-  // دالة loadOrders تحتاج إلى استدعاء loadProfile معها
   async function loadOrders() {
     try {
-      const orders = await apiFetch(API + '/market/orders');
-      ordersData = orders;
-      renderStats(orders);
-      renderOrders(orders);
+      ordersData = await apiFetch(API + '/market/orders');
+      renderStats(ordersData);
+      renderOrders(ordersData);
     } catch(e) {
       console.error(e);
+      showToast('فشل تحميل الطلبات', true);
     }
   }
 
-  // Initialization
-  (async function init() {
-    const ok = await checkAuth();
-    if (ok) {
-      await loadProfile();
+  function renderStats(orders) {
+    const pending = orders.filter(o => o.status === 'PENDING').length;
+    const accepted = orders.filter(o => ['ACCEPTED', 'INVOICE_ADDED'].includes(o.status)).length;
+    const ready = orders.filter(o => o.status === 'READY').length;
+    document.getElementById('statsContainer').innerHTML = `
+      <div class="stat-card"><div class="stat-title">جديد</div><div class="stat-value">${pending}</div></div>
+      <div class="stat-card"><div class="stat-title">تحضير</div><div class="stat-value">${accepted}</div></div>
+      <div class="stat-card"><div class="stat-title">جاهز</div><div class="stat-value">${ready}</div></div>
+      <div class="stat-card"><div class="stat-title">إجمالي</div><div class="stat-value">${orders.length}</div></div>
+    `;
+  }
+
+  function renderOrders(orders) {
+    const container = document.getElementById('ordersContainer');
+    if (!orders.length) {
+      container.innerHTML = '<div class="empty-state"><i class="fas fa-box-open"></i><div>لا توجد طلبات حالياً</div></div>';
+      return;
+    }
+    container.innerHTML = orders.map(order => `
+      <div class="order-card">
+        <div class="order-header">
+          <div class="order-id">طلب #${order.id.slice(-8)}</div>
+          <div class="order-status">${getStatusText(order.status)}</div>
+        </div>
+        <div class="order-body">
+          <div class="customer-info">
+            <div class="customer-name">${escapeHtml(order.customerName)}</div>
+            <div class="customer-phone">📞 ${order.customerPhone}</div>
+            <div class="customer-address">📍 ${order.address || '—'}</div>
+          </div>
+          <div class="products-title">المنتجات المطلوبة</div>
+          <div id="products-list-${order.id}">
+            ${renderProducts(order.items, order.id)}
+          </div>
+          <button class="add-product-btn" onclick="addProductToOrder('${order.id}')">+ إضافة منتج جديد</button>
+          ${(order.status === 'PENDING' || order.status === 'ACCEPTED') ? `
+            <div class="invoice-section">
+              <input type="number" id="invoice-${order.id}" placeholder="قيمة الفاتورة الفعلية (ج)" class="invoice-input">
+              <button class="btn" onclick="setInvoice('${order.id}')">تحديد الفاتورة</button>
+            </div>
+          ` : ''}
+          ${order.invoiceAmount ? `<div class="invoice-section">💰 قيمة الفاتورة: ${order.invoiceAmount} ج</div>` : ''}
+        </div>
+        <div class="order-footer">
+          <div class="total-amount">الإجمالي: <span>${order.total} ج</span></div>
+          <div>
+            ${order.status === 'PENDING' ? `<button class="btn btn-outline" onclick="acceptOrder('${order.id}')">قبول</button>` : ''}
+            ${order.status === 'ACCEPTED' || order.status === 'INVOICE_ADDED' ? `<button class="btn" onclick="markReady('${order.id}')">تجهيز</button>` : ''}
+            ${order.status === 'READY' ? '<span style="color:#2ECC71">جاهز للتوصيل</span>' : ''}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderProducts(items, orderId) {
+    if (!items || !items.length) return '<div style="color:#8B95A8; padding: 8px 0;">لا توجد منتجات</div>';
+    return items.map((item, idx) => `
+      <div class="product-item">
+        <div class="product-info">
+          <div class="product-name">${escapeHtml(item.name)}</div>
+          <div class="product-details">${item.quantity} × ${item.price} ج ${item.notes ? '| 📝 '+escapeHtml(item.notes) : ''}</div>
+        </div>
+        <div class="product-actions">
+          <button class="edit-product" onclick="editProduct('${orderId}', ${idx})"><i class="fas fa-edit"></i></button>
+          <button class="delete-product" onclick="deleteProduct('${orderId}', ${idx})"><i class="fas fa-trash-alt"></i></button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]);
+  }
+
+  function editProduct(orderId, idx) {
+    const order = ordersData.find(o => o.id === orderId);
+    if (!order) return;
+    const product = order.items[idx];
+    if (!product) return;
+    currentOrderId = orderId;
+    currentProductIndex = idx;
+    document.getElementById('modalTitle').innerText = 'تعديل المنتج';
+    document.getElementById('productName').value = product.name;
+    document.getElementById('productPrice').value = product.price;
+    document.getElementById('productQuantity').value = product.quantity;
+    document.getElementById('productNotes').value = product.notes || '';
+    document.getElementById('productModal').classList.add('active');
+  }
+
+  function deleteProduct(orderId, idx) {
+    if (confirm('هل تريد حذف هذا المنتج من الطلب؟')) {
+      updateOrderProducts(orderId, items => items.filter((_, i) => i !== idx));
+    }
+  }
+
+  function addProductToOrder(orderId) {
+    currentOrderId = orderId;
+    currentProductIndex = -1;
+    document.getElementById('modalTitle').innerText = 'إضافة منتج جديد';
+    document.getElementById('productName').value = '';
+    document.getElementById('productPrice').value = '';
+    document.getElementById('productQuantity').value = 1;
+    document.getElementById('productNotes').value = '';
+    document.getElementById('productModal').classList.add('active');
+  }
+
+  async function saveProductChanges() {
+    const name = document.getElementById('productName').value.trim();
+    const price = parseFloat(document.getElementById('productPrice').value);
+    const quantity = parseInt(document.getElementById('productQuantity').value);
+    const notes = document.getElementById('productNotes').value.trim();
+
+    if (!name || isNaN(price) || price <= 0 || isNaN(quantity) || quantity < 1) {
+      showToast('البيانات غير صحيحة', true);
+      return;
+    }
+    const newProduct = { name, price, quantity, notes };
+    if (currentProductIndex === -1) {
+      await updateOrderProducts(currentOrderId, items => [...items, newProduct]);
+    } else {
+      await updateOrderProducts(currentOrderId, items => items.map((item, i) => i === currentProductIndex ? newProduct : item));
+    }
+    closeProductModal();
+  }
+
+  async function updateOrderProducts(orderId, updateFn) {
+    try {
+      const order = ordersData.find(o => o.id === orderId);
+      if (!order) throw new Error('Order not found');
+      const newItems = updateFn([...order.items]);
+      const itemsTotal = newItems.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+      const newTotal = itemsTotal + (order.deliveryFee || 0);
+      await apiFetch(API + '/market/orders/' + orderId + '/items', {
+        method: 'PATCH',
+        body: JSON.stringify({ items: newItems, total: newTotal })
+      });
+      order.items = newItems;
+      order.total = newTotal;
+      // تحديث جزئي للواجهة
+      const productsListEl = document.getElementById(`products-list-${orderId}`);
+      if (productsListEl) productsListEl.innerHTML = renderProducts(newItems, orderId);
+      showToast('تم تحديث الطلب');
+    } catch(e) {
+      showToast(e.message || 'فشل التحديث', true);
+    }
+  }
+
+  async function acceptOrder(orderId) {
+    try {
+      await apiFetch(API + '/market/orders/' + orderId + '/accept', { method: 'PATCH' });
+      showToast('تم قبول الطلب');
       loadOrders();
+    } catch(e) { showToast(e.message, true); }
+  }
+
+  async function setInvoice(orderId) {
+    const amount = parseFloat(document.getElementById(`invoice-${orderId}`).value);
+    if (isNaN(amount) || amount <= 0) return showToast('أدخل قيمة صحيحة', true);
+    try {
+      await apiFetch(API + '/market/orders/' + orderId + '/invoice', { method: 'PATCH', body: JSON.stringify({ invoiceAmount: amount }) });
+      showToast('تم تحديث الفاتورة');
+      loadOrders();
+    } catch(e) { showToast(e.message, true); }
+  }
+
+  async function markReady(orderId) {
+    try {
+      await apiFetch(API + '/market/orders/' + orderId + '/ready', { method: 'PATCH' });
+      showToast('تم تجهيز الطلب');
+      loadOrders();
+    } catch(e) { showToast(e.message, true); }
+  }
+
+  function getStatusText(status) {
+    const map = { PENDING: 'جديد', ACCEPTED: 'قيد التحضير', INVOICE_ADDED: 'تمت الفاتورة', READY: 'جاهز', DELIVERED: 'تم التوصيل', CANCELLED: 'ملغي' };
+    return map[status] || status;
+  }
+
+  function closeProductModal() { document.getElementById('productModal').classList.remove('active'); }
+  function refreshOrders() { loadOrders(); }
+  function logout() { window.location.href = '/logout'; }
+
+  // Socket updates
+  const socket = io();
+  socket.on('orderStatusUpdate', () => loadOrders());
+  socket.on('newSpecialOrder', () => { loadOrders(); showToast('طلب جديد وصل!'); });
+
+  // Init
+  (async function() {
+    try {
+      await loadProfile();
+      await loadOrders();
+    } catch(e) {
+      // سيفشل فقط إذا فشل المصادقة وتم توجيهه بالفعل
     }
   })();
 </script>
