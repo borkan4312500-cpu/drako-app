@@ -172,10 +172,19 @@ async function checkAuth() {
   try {
     const res = await fetch('/api/admin/stats', { credentials: 'include' });
     if (res.status === 401) {
-      window.location.href = '/login.html';
+      // عرض رسالة انتهاء الجلسة مع زر تسجيل الدخول
+      document.body.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:var(--bg);color:var(--text);flex-direction:column;gap:20px">
+          <div style="font-size:22px;font-weight:800">انتهت الجلسة</div>
+          <button onclick="window.location.href='/login.html'" style="background:var(--orange);border:none;color:#fff;padding:12px 28px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer">تسجيل الدخول</button>
+        </div>
+      `;
+      return false;
     }
+    return true;
   } catch(e) {
-    window.location.href = '/login.html';
+    document.body.innerHTML = `<div style="display:flex;...">فشل الاتصال</div>`;
+    return false;
   }
 }
 checkAuth();
@@ -1007,6 +1016,12 @@ socket.on('orderCancelled', (data) => {
   playSound('orderCancelled');
   toast('تم إلغاء طلب #' + (data.orderId || '').slice(-6), 'error');
 });
+// تجديد الجلسة بصمت كل 10 دقائق
+setInterval(async () => {
+  try {
+    await fetch('/api/admin/stats', { credentials: 'include' });
+  } catch(e) {}
+}, 10 * 60 * 1000);
 
 socket.on('driverArrived', (data) => {
   playSound('driverArrived');
