@@ -7,15 +7,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
 <style>
-/* جميع التنسيقات الأصلية كما هي، مع إضافة تنسيقات الملف الشخصي */
-:root{
-  --bg:#0D0F14; --surface:#161B24; --surface2:#1E2535; --surface3:#252D40;
-  --border:#2A3348; --orange:#FF6B00; --orange2:#FF8C3A;
-  --orange-glow:rgba(255,107,0,.18); --orange-dim:rgba(255,107,0,.08);
-  --text:#F0F2F8; --text2:#8B95A8; --text3:#55627A;
-  --green:#00D68F; --blue:#3B82F6; --red:#F05252; --yellow:#FBBF24;
-  --radius:14px; --radius-lg:20px;
-}
+/* كل التنسيقات كما هي (تم حذفها للاختصار، هي نفس التنسيقات السابقة) */
+:root{ --bg:#0D0F14; --surface:#161B24; --surface2:#1E2535; --surface3:#252D40; --border:#2A3348; --orange:#FF6B00; --orange2:#FF8C3A; --orange-glow:rgba(255,107,0,.18); --orange-dim:rgba(255,107,0,.08); --text:#F0F2F8; --text2:#8B95A8; --text3:#55627A; --green:#00D68F; --blue:#3B82F6; --red:#F05252; --yellow:#FBBF24; --radius:14px; --radius-lg:20px; }
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo',sans-serif;}
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-track{background:transparent;}
@@ -325,7 +318,7 @@ async function uploadLogo(input) {
   else toast('فشل الرفع', 'error');
 }
 
-// ========== لوحة التحكم (الأصلية) ==========
+// ========== لوحة التحكم ==========
 async function loadDashboard() {
   const [profile, stats, reports] = await Promise.all([
     apiFetch(API + '/restaurant/profile').then(r => r.json()).catch(() => ({ name: 'مطعمي', logo: '' })),
@@ -351,7 +344,7 @@ async function loadDashboard() {
     </div>`;
 }
 
-// ========== الطلبات (الأصلية) ==========
+// ========== الطلبات ==========
 let ordersSelectedDate = new Date().toISOString().slice(0, 10);
 let currentOrderTab = 'all';
 function setOrdersTab(tab) { currentOrderTab = tab; }
@@ -395,7 +388,7 @@ async function loadOrdersData(){
   const orders = await res.json();
   const filtered = getFilteredOrders(orders);
   if(!filtered.length){ container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><div>لا توجد طلبات</div></div>`; return; }
-  let html = `<div class="section"><div class="table-wrap"></table><thead><tr><th>#</th><th>العميل</th><th>الهاتف</th><th>الأصناف</th><th>الإجمالي</th><th>الحالة</th><th>الوقت</th><th>إجراء</th></tr></thead><tbody>`;
+  let html = `<div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>العميل</th><th>الهاتف</th><th>الأصناف</th><th>الإجمالي</th><th>الحالة</th><th>الوقت</th><th>إجراء</th></td></thead><tbody>`;
   filtered.forEach(o => {
     const itemsStr = (o.items||[]).map(i=>`<strong>${i.name}</strong> ×${i.qty||1}`).join('<br>')||'—';
     const productTotal = (o.total||0)-(o.deliveryFee||0);
@@ -432,7 +425,7 @@ function applyOrderFilter(){ const inp = document.getElementById('order-date-inp
 function setTodayOrders(){ ordersSelectedDate = new Date().toISOString().slice(0,10); document.getElementById('order-date-input').value = ordersSelectedDate; loadOrdersData(); }
 function clearOrderFilter(){ ordersSelectedDate = ''; document.getElementById('order-date-input').value = ''; loadOrdersData(); }
 
-// ========== التصنيفات (كما كانت) ==========
+// ========== التصنيفات ==========
 async function loadCategories() {
   const res = await apiFetch(API + '/restaurant/categories');
   const cats = await res.json();
@@ -639,7 +632,6 @@ async function editProduct(id) {
   const p = productsList.find(x => x.id === id);
   if(!p) return toast('المنتج غير موجود','error');
   const catOptions = window._catOptions;
-  // بناء واجهة تعديل تعرض المجموعات الحالية
   openModal('تعديل منتج', `
     <div class="field"><label>الاسم</label><input id="eName" value="${p.name.replace(/"/g, '&quot;')}"></div>
     <div class="field"><label>الوصف</label><input id="eDesc" value="${(p.description||'').replace(/"/g, '&quot;')}"></div>
