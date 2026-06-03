@@ -54,6 +54,8 @@
     .product-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
     .product-item:last-child { border-bottom: none; }
     .error-box { background: #FFF3EB; border: 1px solid var(--brand); border-radius: 16px; padding: 20px; margin: 20px; text-align: center; }
+    .attachments { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+    .attachments img { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; cursor: pointer; border: 1px solid #eee; }
   </style>
 </head>
 <body>
@@ -108,7 +110,6 @@
     async function apiFetch(url, options = {}) {
       const res = await fetch(url, { ...options, credentials: 'include', headers: { ...(options.headers||{}), 'Content-Type': options.body instanceof FormData ? undefined : 'application/json' } });
       if (res.status === 401 || res.status === 403) {
-        // لا نعيد توجيه تلقائي، نترك للدوال الأعلى التعامل
         return res;
       }
       return res;
@@ -274,7 +275,7 @@
       }
     }
 
-    // ========== الطلبات (باقي الدوال كما هي) ==========
+    // ========== الطلبات ==========
     async function renderOrders() {
       document.getElementById('mainContent').innerHTML = `
         <div style="display:flex; gap:10px; margin-bottom:16px;">
@@ -357,13 +358,24 @@
           </div>
         </div>
       `).join('');
+      // عرض المرفقات
+      let attachmentsHtml = '';
+      if (order.attachments && order.attachments.length) {
+        attachmentsHtml = `
+          <div style="margin-top:12px;"><strong>📎 المرفقات:</strong></div>
+          <div class="attachments">
+            ${order.attachments.map(url => `<img src="${url}" onclick="window.open('${url}')">`).join('')}
+          </div>
+        `;
+      }
       openModal(`طلب #${id.slice(-6)}`, `
-        <div style="margin-bottom:12px;"><strong>العميل:</strong> ${order.customerName} (${order.customerPhone})</div>
+        <div style="margin-bottom:12px;"><strong>العميل:</strong> ${order.customerName}</div>
         <div style="margin-bottom:12px;"><strong>العنوان:</strong> ${order.address}</div>
         <div style="margin-bottom:12px;"><strong>المنتجات:</strong></div>
         ${productsHtml}
         <button class="btn btn-sm" style="margin-top:12px" onclick="addProductToOrder('${id}')">+ إضافة منتج</button>
         ${order.invoiceAmount ? `<div style="margin-top:12px;"><strong>الفاتورة:</strong> ${order.invoiceAmount} ج</div>` : ''}
+        ${attachmentsHtml}
         <div style="margin-top:12px;"><strong>الإجمالي:</strong> ${order.total} ج</div>
       `);
     }
