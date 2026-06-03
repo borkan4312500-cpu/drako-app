@@ -16,122 +16,56 @@
       --bg: #F7F7F7; --card: #FFFFFF; --text: #1A1A1A; --text-muted: #7A7A7A;
       --border: #EBEBEB; --radius: 18px; --radius-sm: 12px;
     }
-    /* Header */
     .header {
       background: rgba(255,255,255,0.94); backdrop-filter: blur(14px);
       padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;
       border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 100;
       position: sticky; top: 0;
     }
-    .logo {
-      display: flex; align-items: center; gap: 10px;
-    }
-    .logo img {
-      width: 38px; height: 38px; border-radius: 12px; object-fit: cover; background: var(--brand-light);
-    }
-    .logo-text {
-      font-size: 18px; font-weight: 800; background: linear-gradient(135deg, var(--brand), #ff8c3a);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo img { width: 38px; height: 38px; border-radius: 12px; object-fit: cover; background: var(--brand-light); }
+    .logo-text { font-size: 18px; font-weight: 800; background: linear-gradient(135deg, var(--brand), #ff8c3a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     .header-actions { display: flex; gap: 10px; }
-    .icon-btn {
-      background: #F5F5F5; border: none; color: #666; width: 40px; height: 40px;
-      border-radius: 12px; font-size: 18px; cursor: pointer; display: flex;
-      align-items: center; justify-content: center; transition: 0.2s;
-    }
+    .icon-btn { background: #F5F5F5; border: none; color: #666; width: 40px; height: 40px; border-radius: 12px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
     .icon-btn:active { background: var(--brand); color: white; }
-
-    /* Main Content */
     .main-content { flex: 1; overflow-y: auto; padding: 16px; padding-bottom: 80px; }
-
-    /* Cards */
-    .section-card {
-      background: var(--card); border-radius: var(--radius); padding: 20px; margin-bottom: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--border);
-    }
+    .section-card { background: var(--card); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--border); }
     .section-title { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
-
-    /* Stats Row */
     .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
-    .stat-card {
-      background: var(--card); border-radius: var(--radius); padding: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center; border: 1px solid var(--border);
-    }
+    .stat-card { background: var(--card); border-radius: var(--radius); padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center; border: 1px solid var(--border); }
     .stat-value { font-size: 28px; font-weight: 800; color: var(--brand); }
     .stat-label { font-size: 12px; color: var(--text-muted); }
-
-    /* Buttons */
-    .btn {
-      background: var(--brand); border: none; color: white; border-radius: 14px; padding: 10px 16px;
-      font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex;
-      align-items: center; gap: 6px; text-decoration: none; box-shadow: 0 4px 12px rgba(255,107,0,0.25);
-    }
+    .btn { background: var(--brand); border: none; color: white; border-radius: 14px; padding: 10px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; box-shadow: 0 4px 12px rgba(255,107,0,0.25); }
     .btn-outline { background: transparent; border: 1.5px solid var(--brand); color: var(--brand); box-shadow: none; }
     .btn-sm { padding: 6px 12px; font-size: 12px; }
     .btn-block { width: 100%; justify-content: center; margin-top: 12px; }
-
-    /* Forms */
     .field { margin-bottom: 14px; }
     .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted); }
-    .field input, .field select {
-      width: 100%; background: #F5F5F5; border: 1px solid var(--border); border-radius: 12px;
-      padding: 12px; font-size: 14px; color: var(--text);
-    }
-
-    /* Table */
-    .order-row {
-      background: var(--card); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid var(--border); display: flex;
-      justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
-    }
+    .field input, .field select { width: 100%; background: #F5F5F5; border: 1px solid var(--border); border-radius: 12px; padding: 12px; font-size: 14px; color: var(--text); }
+    .order-row { background: var(--card); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
     .order-id { font-weight: 700; color: var(--brand); font-size: 13px; }
     .order-info { flex: 1; min-width: 150px; }
     .order-meta { font-size: 12px; color: var(--text-muted); }
-    .badge {
-      display: inline-block; padding: 3px 10px; border-radius: 30px; font-size: 11px; font-weight: 600;
-    }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 30px; font-size: 11px; font-weight: 600; }
     .badge-pending { background: #FFF3EB; color: var(--brand); }
     .badge-accepted { background: #E0F2FE; color: #0284C7; }
     .badge-ready { background: #DCFCE7; color: #16A34A; }
-
-    /* Bottom Nav */
-    .bottom-nav {
-      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-      width: 100%; max-width: 430px; background: rgba(255,255,255,0.96);
-      backdrop-filter: blur(14px); border-top: 1px solid var(--border);
-      display: flex; justify-content: space-around; padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px));
-      z-index: 99; height: 65px;
-    }
-    .nav-item {
-      display: flex; flex-direction: column; align-items: center; gap: 2px;
-      font-size: 10px; color: var(--text-muted); cursor: pointer; transition: 0.2s;
-    }
+    .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; background: rgba(255,255,255,0.96); backdrop-filter: blur(14px); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px)); z-index: 99; height: 65px; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
     .nav-item.active { color: var(--brand); font-weight: 600; }
     .nav-item i { font-size: 20px; }
-
-    /* Modal */
-    .modal-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200;
-      display: none; align-items: center; justify-content: center; padding: 16px;
-    }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: none; align-items: center; justify-content: center; padding: 16px; }
     .modal-overlay.open { display: flex; }
-    .modal {
-      background: white; border-radius: 24px; width: 100%; max-width: 360px; padding: 20px;
-      animation: fadeIn 0.3s ease;
-    }
+    .modal { background: white; border-radius: 24px; width: 100%; max-width: 360px; padding: 20px; animation: fadeIn 0.3s ease; }
     @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
     .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; text-align: center; }
     .modal-close { float: left; background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted); }
-
     .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
-    .toast {
-      position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
-      background: #1A1A1A; color: white; padding: 10px 24px; border-radius: 40px;
-      font-size: 14px; z-index: 300; opacity: 0; pointer-events: none; transition: 0.3s;
-    }
+    .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #1A1A1A; color: white; padding: 10px 24px; border-radius: 40px; font-size: 14px; z-index: 300; opacity: 0; pointer-events: none; transition: 0.3s; }
     .toast.show { opacity: 1; }
     .product-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
     .product-item:last-child { border-bottom: none; }
+    .error-box { background: #FFF3EB; border: 1px solid var(--brand); border-radius: 16px; padding: 20px; margin: 20px; text-align: center; }
   </style>
 </head>
 <body>
@@ -145,9 +79,7 @@
     </div>
   </div>
 
-  <div class="main-content" id="mainContent">
-    <!-- Dynamic content rendered here -->
-  </div>
+  <div class="main-content" id="mainContent"></div>
 
   <div class="bottom-nav">
     <div class="nav-item active" id="nav-home" onclick="navigate('dashboard')"><i>📊</i><span>الرئيسية</span></div>
@@ -171,9 +103,9 @@
     let currentPage = 'dashboard';
     let currentMarketProfile = null;
     let ordersData = [];
-    let currentOrderTab = 'active'; // active, completed
+    let currentOrderTab = 'active';
 
-    // Helper
+    // Helper functions
     function showToast(msg, error = false) {
       const t = document.getElementById('toast');
       t.textContent = msg; t.style.background = error ? '#F05252' : '#1A1A1A';
@@ -185,29 +117,58 @@
       document.getElementById('modal').classList.add('open');
     }
     function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+    // API Fetch (لا يعيد توجيه تلقائي)
     async function apiFetch(url, options = {}) {
       const res = await fetch(url, { ...options, credentials: 'include', headers: { ...(options.headers||{}), 'Content-Type': options.body instanceof FormData ? undefined : 'application/json' } });
-      if (res.status === 401 || res.status === 403) { window.location.href = '/login.html'; throw new Error('غير مصرح'); }
+      // فقط نعيد الاستجابة؛ التعامل مع 401/403 سيكون في مكان الاستدعاء
       return res;
+    }
+
+    // التحقق من الجلسة عند التحميل
+    async function checkSession() {
+      try {
+        const res = await fetch(API + '/market/orders', { credentials: 'include' });
+        if (res.status === 401 || res.status === 403) {
+          document.getElementById('mainContent').innerHTML = `
+            <div class="error-box">
+              <p>انتهت الجلسة أو ليس لديك صلاحية.</p>
+              <button class="btn" style="margin-top:16px" onclick="window.location.href='/login.html'">تسجيل الدخول</button>
+            </div>
+          `;
+          return false;
+        }
+        return true;
+      } catch(e) {
+        document.getElementById('mainContent').innerHTML = `
+          <div class="error-box">
+            <p>فشل الاتصال بالسيرفر.</p>
+            <button class="btn" style="margin-top:16px" onclick="location.reload()">إعادة المحاولة</button>
+          </div>
+        `;
+        return false;
+      }
     }
 
     // Load profile
     async function loadProfile() {
       try {
         const res = await apiFetch(API + '/market/profile');
+        if (!res.ok) throw new Error('Profile load failed');
         currentMarketProfile = await res.json();
         document.getElementById('headerName').textContent = currentMarketProfile.name || 'الماركت';
         if (currentMarketProfile.logo) {
           document.getElementById('headerLogo').src = currentMarketProfile.logo;
         }
-      } catch(e) { /* ignore */ }
+      } catch(e) { /* ignore - profile may be unavailable */ }
     }
 
     // Navigation
     function navigate(page) {
       currentPage = page;
       document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-      document.getElementById('nav-' + page).classList.add('active');
+      const navItem = document.getElementById('nav-' + page);
+      if (navItem) navItem.classList.add('active');
       renderPage(page);
     }
     function refreshPage() { renderPage(currentPage); }
@@ -224,7 +185,12 @@
 
     // Dashboard
     async function renderDashboard() {
-      const orders = await apiFetch(API + '/market/orders').then(r => r.json()).catch(() => []);
+      const res = await apiFetch(API + '/market/orders');
+      if (res.status === 401 || res.status === 403) {
+        document.getElementById('mainContent').innerHTML = '<div class="error-box"><p>انتهت الجلسة. يرجى تسجيل الدخول.</p></div>';
+        return;
+      }
+      const orders = await res.json().catch(() => []);
       const pending = orders.filter(o => o.status === 'PENDING').length;
       const accepted = orders.filter(o => ['ACCEPTED','INVOICE_ADDED'].includes(o.status)).length;
       const ready = orders.filter(o => o.status === 'READY').length;
@@ -281,6 +247,10 @@
       if (!newName) return showToast('الاسم مطلوب', true);
       const fd = new FormData(); fd.append('name', newName);
       const res = await apiFetch(API + '/market/profile', { method: 'PATCH', body: fd });
+      if (res.status === 401 || res.status === 403) {
+        showToast('انتهت الجلسة', true);
+        return;
+      }
       const data = await res.json();
       currentMarketProfile.name = data.name;
       document.getElementById('headerName').textContent = data.name;
@@ -291,6 +261,10 @@
       const file = input.files[0]; if (!file) return;
       const fd = new FormData(); fd.append('logo', file);
       const res = await apiFetch(API + '/market/profile', { method: 'PATCH', body: fd });
+      if (res.status === 401 || res.status === 403) {
+        showToast('انتهت الجلسة', true);
+        return;
+      }
       const data = await res.json();
       if (data.logo) {
         document.getElementById('headerLogo').src = data.logo + '?t=' + Date.now();
@@ -300,7 +274,7 @@
       }
     }
 
-    // Orders
+    // Orders (باقي الدوال كما هي بدون تغيير)
     async function renderOrders() {
       document.getElementById('mainContent').innerHTML = `
         <div style="display:flex; gap:10px; margin-bottom:16px;">
@@ -311,15 +285,17 @@
       `;
       loadOrderList();
     }
-    function switchOrderTab(tab) {
-      currentOrderTab = tab;
-      renderOrders();
-    }
+    function switchOrderTab(tab) { currentOrderTab = tab; renderOrders(); }
     async function loadOrderList() {
       const container = document.getElementById('ordersList');
       container.innerHTML = '<div style="text-align:center;padding:32px;color:#888;">⏳ جاري التحميل...</div>';
       try {
-        const orders = await apiFetch(API + '/market/orders').then(r => r.json());
+        const res = await apiFetch(API + '/market/orders');
+        if (res.status === 401 || res.status === 403) {
+          container.innerHTML = '<div class="error-box">انتهت الجلسة</div>';
+          return;
+        }
+        const orders = await res.json();
         ordersData = orders;
         const filtered = currentOrderTab === 'active' 
           ? orders.filter(o => !['DELIVERED','CANCELLED'].includes(o.status))
@@ -349,7 +325,8 @@
       return map[s] || s;
     }
     async function acceptOrder(id) {
-      await apiFetch(API + '/market/orders/' + id + '/accept', { method: 'PATCH' });
+      const res = await apiFetch(API + '/market/orders/' + id + '/accept', { method: 'PATCH' });
+      if (res.status === 401 || res.status === 403) { showToast('انتهت الجلسة', true); return; }
       showToast('تم القبول'); loadOrderList();
     }
     function showInvoiceModal(id) {
@@ -362,11 +339,13 @@
     async function setInvoice(id) {
       const amount = parseFloat(document.getElementById('invoiceAmount').value);
       if (isNaN(amount) || amount <= 0) return showToast('قيمة غير صحيحة', true);
-      await apiFetch(API + '/market/orders/' + id + '/invoice', { method: 'PATCH', body: JSON.stringify({ invoiceAmount: amount }) });
+      const res = await apiFetch(API + '/market/orders/' + id + '/invoice', { method: 'PATCH', body: JSON.stringify({ invoiceAmount: amount }) });
+      if (res.status === 401 || res.status === 403) { showToast('انتهت الجلسة', true); return; }
       showToast('تم تحديث الفاتورة'); closeModal(); loadOrderList();
     }
     async function markReady(id) {
-      await apiFetch(API + '/market/orders/' + id + '/ready', { method: 'PATCH' });
+      const res = await apiFetch(API + '/market/orders/' + id + '/ready', { method: 'PATCH' });
+      if (res.status === 401 || res.status === 403) { showToast('انتهت الجلسة', true); return; }
       showToast('تم التجهيز'); loadOrderList();
     }
     function openOrderDetails(id) {
@@ -444,24 +423,23 @@
       const order = ordersData.find(o => o.id === orderId);
       const itemsTotal = newItems.reduce((sum, p) => sum + (p.price * p.quantity), 0);
       const newTotal = itemsTotal + (order.deliveryFee || 0);
-      await apiFetch(API + '/market/orders/' + orderId + '/items', {
+      const res = await apiFetch(API + '/market/orders/' + orderId + '/items', {
         method: 'PATCH',
         body: JSON.stringify({ items: newItems, total: newTotal })
       });
+      if (res.status === 401 || res.status === 403) { showToast('انتهت الجلسة', true); return; }
       order.items = newItems;
       order.total = newTotal;
       showToast('تم تحديث الطلب');
       loadOrderList();
     }
 
-    // Init
+    // Initialization
     (async function() {
-      try {
-        await loadProfile();
-        navigate('dashboard');
-      } catch(e) {
-        window.location.href = '/login.html';
-      }
+      const ok = await checkSession();
+      if (!ok) return; // نعرض رسالة الخطأ ولا نكمل
+      await loadProfile();
+      navigate('dashboard');
     })();
 
     // Socket
