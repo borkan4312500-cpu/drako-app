@@ -38,6 +38,19 @@ const io = new Server(server);
 const DATA_DIR = process.env.DATA_DIR || __dirname;
 const DATA_FILE = path.join(DATA_DIR, 'data.json');
 const JWT_SECRET = process.env.JWT_SECRET || 'drako_secret_key_fallback';
+// تجديد الكوكي تلقائياً مع كل طلب محمي
+app.use((req, res, next) => {
+  const token = req.cookies?.token;
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      // نجدد الكوكي لـ 30 يوم من الآن
+      res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000 });
+      req.user = decoded; // نضيف المستخدم للـ request
+    } catch(e) { /* منتهي أو غير صالح */ }
+  }
+  next();
+});
 
 function readData() {
   if (!fs.existsSync(DATA_FILE)) {
