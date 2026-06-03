@@ -540,18 +540,30 @@ function showAddMarket(){
   openModal('إضافة سوق',`<div class="field"><label>اسم السوق</label><input id="m-name"></div><div class="field"><label>هاتف المالك</label><input id="m-phone"></div><div class="field"><label>كلمة المرور</label><input id="m-pass" type="password"></div><div class="field"><label>الشعار</label><input type="file" id="m-logo"></div>`,
   `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addMarket()">إضافة</button>`);
 }
-async function addMarket(){
+async function addMarket() {
   const n = document.getElementById('m-name').value.trim();
   const p = document.getElementById('m-phone').value.trim();
   const ps = document.getElementById('m-pass').value.trim();
-  if(!n||!p||!ps) return toast('أكمل الحقول','error');
-  const d = await apiFetch(API+'/admin/markets', {
-    method: 'POST',
-    body: JSON.stringify({ name: n, ownerPhone: p, ownerPassword: ps })
-  }).then(r => r.json());
-  if(d.error) toast(d.error, 'error');
+  if (!n || !p || !ps) return toast('أكمل الحقول', 'error');
+
+  const logoFile = document.getElementById('m-logo').files[0];
+  let body;
+  if (logoFile) {
+    const form = new FormData();
+    form.append('name', n);
+    form.append('ownerPhone', p);
+    form.append('ownerPassword', ps);
+    form.append('logo', logoFile);
+    body = form;
+  } else {
+    body = JSON.stringify({ name: n, ownerPhone: p, ownerPassword: ps });
+  }
+
+  const d = await apiFetch(API + '/admin/markets', { method: 'POST', body }).then(r => r.json());
+  if (d.error) toast(d.error, 'error');
   else { toast('تمت الإضافة'); closeModal(); loadMarkets(); }
 }
+
 async function editMarket(id) {
   const markets = await apiFetch(API+'/admin/markets').then(r=>r.json());
   const m = markets.find(m => m.id === id);
@@ -601,16 +613,27 @@ function showAddPharmacy(){
   openModal('إضافة صيدلية',`<div class="field"><label>اسم الصيدلية</label><input id="ph-name"></div><div class="field"><label>هاتف المالك</label><input id="ph-phone"></div><div class="field"><label>كلمة المرور</label><input id="ph-pass" type="password"></div><div class="field"><label>الشعار</label><input type="file" id="ph-logo"></div>`,
   `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addPharmacy()">إضافة</button>`);
 }
-async function addPharmacy(){
+async function addPharmacy() {
   const n = document.getElementById('ph-name').value.trim();
   const p = document.getElementById('ph-phone').value.trim();
   const ps = document.getElementById('ph-pass').value.trim();
-  if(!n||!p||!ps) return toast('أكمل الحقول','error');
-  const d = await apiFetch(API+'/admin/pharmacies', {
-    method: 'POST',
-    body: JSON.stringify({ name: n, ownerPhone: p, ownerPassword: ps })
-  }).then(r => r.json());
-  if(d.error) toast(d.error, 'error');
+  if (!n || !p || !ps) return toast('أكمل الحقول', 'error');
+
+  const logoFile = document.getElementById('ph-logo').files[0];
+  let body;
+  if (logoFile) {
+    const form = new FormData();
+    form.append('name', n);
+    form.append('ownerPhone', p);
+    form.append('ownerPassword', ps);
+    form.append('logo', logoFile);
+    body = form;
+  } else {
+    body = JSON.stringify({ name: n, ownerPhone: p, ownerPassword: ps });
+  }
+
+  const d = await apiFetch(API + '/admin/pharmacies', { method: 'POST', body }).then(r => r.json());
+  if (d.error) toast(d.error, 'error');
   else { toast('تمت الإضافة'); closeModal(); loadPharmacies(); }
 }
 
