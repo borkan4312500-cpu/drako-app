@@ -1,429 +1,496 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <title>دراكو - لوحة الماركت</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
-    body { background: #0D0F14; color: #F0F2F8; padding-bottom: 16px; }
-    .header { background: #161B24; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2A3348; position: sticky; top: 0; z-index: 100; }
-    .logo { font-size: 20px; font-weight: 800; background: linear-gradient(135deg, #FF6B00, #FF8C3A); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .header-actions { display: flex; gap: 10px; align-items: center; }
-    .market-logo { width: 38px; height: 38px; border-radius: 10px; object-fit: cover; background: #1E2535; }
-    .icon-btn { background: #1E2535; border: none; color: #8B95A8; width: 40px; height: 40px; border-radius: 12px; font-size: 18px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
-    .icon-btn:active { background: #FF6B00; color: white; }
-    .stats-row { display: flex; gap: 10px; padding: 12px 16px; overflow-x: auto; }
-    .stat-card { background: #161B24; border: 1px solid #2A3348; border-radius: 16px; padding: 12px; min-width: 100px; text-align: center; }
-    .stat-title { font-size: 11px; color: #8B95A8; margin-bottom: 4px; }
-    .stat-value { font-size: 24px; font-weight: 800; color: #FF6B00; }
-    .orders-container { padding: 8px 12px; display: flex; flex-direction: column; gap: 16px; }
-    .order-card { background: #161B24; border: 1px solid #2A3348; border-radius: 20px; overflow: hidden; }
-    .order-header { background: #1E2535; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
-    .order-id { font-weight: 700; color: #FF6B00; font-size: 13px; }
-    .order-status { background: rgba(255,107,0,0.15); color: #FF6B00; padding: 4px 10px; border-radius: 30px; font-size: 11px; }
-    .order-body { padding: 12px 16px; }
-    .customer-info { background: #1E2535; border-radius: 12px; padding: 10px; margin-bottom: 12px; }
-    .customer-name { font-weight: 700; margin-bottom: 4px; }
-    .customer-phone, .customer-address { font-size: 12px; color: #8B95A8; }
-    .products-title { font-size: 13px; font-weight: 700; margin: 10px 0 8px; }
-    .product-item { background: #1E2535; border-radius: 12px; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-    .product-info { flex: 1; }
-    .product-name { font-weight: 600; font-size: 14px; }
-    .product-details { font-size: 11px; color: #8B95A8; margin-top: 2px; }
-    .product-actions { display: flex; gap: 8px; }
-    .edit-product, .delete-product { background: none; border: none; font-size: 16px; padding: 6px; border-radius: 8px; cursor: pointer; }
-    .edit-product { color: #3B82F6; }
-    .delete-product { color: #F05252; }
-    .add-product-btn { background: #1E2535; border: 1px dashed #FF6B00; color: #FF6B00; width: 100%; padding: 10px; border-radius: 12px; margin: 10px 0; font-size: 13px; cursor: pointer; }
-    .invoice-section { display: flex; gap: 8px; margin: 12px 0; }
-    .invoice-input { flex: 1; background: #1E2535; border: 1px solid #2A3348; border-radius: 12px; padding: 10px; color: white; font-size: 14px; }
-    .btn { background: #FF6B00; border: none; padding: 10px 16px; border-radius: 30px; font-weight: 600; font-size: 13px; cursor: pointer; color: white; }
-    .btn-outline { background: transparent; border: 1px solid #FF6B00; color: #FF6B00; }
-    .order-footer { padding: 12px 16px; border-top: 1px solid #2A3348; display: flex; justify-content: space-between; align-items: center; }
-    .total-amount { font-size: 16px; font-weight: 700; }
-    .total-amount span { color: #FF6B00; }
-    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 200; padding: 16px; }
-    .modal.active { display: flex; }
-    .modal-content { background: #161B24; border: 1px solid #2A3348; border-radius: 24px; width: 100%; max-width: 380px; padding: 20px; }
-    .modal-header { display: flex; justify-content: space-between; margin-bottom: 16px; }
-    .modal-title { font-size: 18px; font-weight: 700; }
-    .close-modal { background: none; border: none; color: #8B95A8; font-size: 22px; cursor: pointer; }
-    .field { margin-bottom: 14px; }
-    .field label { display: block; font-size: 12px; margin-bottom: 6px; color: #8B95A8; }
-    .field input, .field textarea { width: 100%; background: #1E2535; border: 1px solid #2A3348; border-radius: 12px; padding: 10px; color: white; font-size: 14px; }
-    .logo-preview { width: 90px; height: 90px; border-radius: 20px; object-fit: cover; margin: 0 auto 12px; display: block; border: 2px solid #2A3348; }
-    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1E2535; color: white; padding: 10px 20px; border-radius: 40px; z-index: 300; transition: 0.3s; opacity: 0; pointer-events: none; font-size: 13px; }
-    .toast.show { opacity: 1; }
-    .empty-state { text-align: center; padding: 40px 20px; color: #8B95A8; }
-    .error-box { background: rgba(240,82,82,0.1); border: 1px solid #F05252; border-radius: 16px; padding: 20px; margin: 20px; text-align: center; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>دراكو — لوحة الماركت</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0D0F14; --surface:#161B24; --surface2:#1E2535; --surface3:#252D40;
+  --border:#2A3348; --orange:#FF6B00; --orange2:#FF8C3A;
+  --orange-glow:rgba(255,107,0,.18); --orange-dim:rgba(255,107,0,.08);
+  --text:#F0F2F8; --text2:#8B95A8; --text3:#55627A;
+  --green:#00D68F; --blue:#3B82F6; --red:#F05252; --yellow:#FBBF24;
+  --radius:14px; --radius-lg:20px;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo',sans-serif;}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px;}
+body{background:var(--bg);color:var(--text);display:flex;min-height:100vh;overflow:hidden;}
+
+.sidebar{ width:260px;flex-shrink:0;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;overflow-y:auto; }
+.sb-logo{padding:20px 18px 12px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);}
+.sb-logo-mark{width:42px;height:42px;border-radius:13px;flex-shrink:0;background:linear-gradient(135deg,var(--orange),var(--orange2));display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;box-shadow:0 4px 16px var(--orange-glow);}
+.sb-logo-text{display:flex;flex-direction:column;}
+.sb-logo-name{font-size:18px;font-weight:900;color:var(--text);}
+.sb-nav{flex:1;padding:12px 10px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;}
+.nav-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:11px;cursor:pointer;font-size:13.5px;font-weight:600;color:var(--text2);transition:all .18s;}
+.nav-item:hover{background:var(--surface2);color:var(--text);}
+.nav-item.active{background:var(--orange-dim);color:var(--orange);}
+.nav-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;background:var(--surface2);}
+.nav-item.active .nav-icon{background:var(--orange-dim);}
+.sb-footer{padding:12px 10px;border-top:1px solid var(--border);}
+.sb-user{display:flex;align-items:center;gap:10px;padding:10px;border-radius:var(--radius);background:var(--surface2);}
+.sb-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--orange),var(--orange2));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;}
+.sb-user-name{font-size:13px;font-weight:700;}
+.sb-user-role{font-size:11px;color:var(--text3);}
+.sb-logout{color:var(--text3);font-size:18px;cursor:pointer;text-decoration:none;}
+
+.main-wrap{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;}
+.topbar{height:64px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;flex-shrink:0;}
+.topbar-title{font-size:20px;font-weight:800;}
+.topbar-sub{font-size:12px;color:var(--text3);}
+.content{flex:1;overflow-y:auto;padding:24px;}
+
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;cursor:pointer;transition:all .2s;}
+.stat-card:hover{border-color:rgba(255,107,0,.3);transform:translateY(-2px);}
+.sc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;}
+.sc-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+.sc-value{font-size:28px;font-weight:900;}
+.sc-label{font-size:12px;color:var(--text3);}
+
+.section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:20px;overflow:hidden;}
+.sec-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);}
+.sec-title{font-size:15px;font-weight:800;}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+thead th{padding:10px 20px;text-align:right;font-size:11px;font-weight:700;color:var(--text3);background:var(--surface2);border-bottom:1px solid var(--border);}
+tbody td{padding:13px 20px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tbody tr:hover{background:var(--surface2);}
+
+.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;}
+.badge-green{background:rgba(0,214,143,.12);color:var(--green);}
+.badge-orange{background:var(--orange-dim);color:var(--orange);}
+.badge-red{background:rgba(240,82,82,.12);color:var(--red);}
+.badge-blue{background:rgba(59,130,246,.12);color:var(--blue);}
+
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;font-size:13px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;border:none;transition:all .18s;}
+.btn-primary{background:var(--orange);color:#fff;}
+.btn-primary:hover{background:var(--orange2);}
+.btn-ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--surface3);color:var(--text);}
+.btn-danger{background:rgba(240,82,82,.12);color:var(--red);border:1px solid rgba(240,82,82,.2);}
+.btn-success{background:rgba(0,214,143,.12);color:var(--green);border:1px solid rgba(0,214,143,.2);}
+.btn-sm{padding:5px 10px;font-size:12px;border-radius:8px;}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;display:none;align-items:center;justify-content:center;padding:16px;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:0;width:100%;max-width:500px;overflow:hidden;}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border);}
+.modal-title{font-size:16px;font-weight:800;}
+.modal-close{width:30px;height:30px;background:var(--surface2);border:none;border-radius:8px;cursor:pointer;color:var(--text3);font-size:18px;display:flex;align-items:center;justify-content:center;}
+.modal-body{padding:20px;max-height:60vh;overflow-y:auto;}
+.modal-foot{display:flex;gap:10px;padding:16px 20px;border-top:1px solid var(--border);}
+.modal-foot .btn{flex:1;height:42px;justify-content:center;}
+
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
+.field label{font-size:12px;font-weight:700;color:var(--text3);}
+.field input,.field select{background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 13px;font-size:13px;font-family:'Cairo';color:var(--text);outline:none;}
+
+.tab-bar{display:flex;gap:8px;margin-bottom:16px;}
+.tab-btn{padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text2);transition:all .2s;}
+.tab-btn.active{background:var(--orange);color:#fff;border-color:var(--orange);}
+
+.empty-state{text-align:center;padding:48px;color:var(--text3);}
+.empty-state .icon{font-size:40px;margin-bottom:12px;}
+
+.profile-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+.profile-image {
+  width: 100px;
+  height: 100px;
+  border-radius: 20px;
+  object-fit: cover;
+  border: 3px solid var(--orange);
+}
+.profile-info {
+  flex: 1;
+}
+.profile-name {
+  font-size: 24px;
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+
+.order-detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.product-item { background: var(--surface2); border-radius: 12px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+.product-info { flex: 1; }
+.product-name { font-weight: 600; }
+.product-details { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.product-actions { display: flex; gap: 8px; }
+.edit-product, .delete-product { background: none; border: none; font-size: 16px; padding: 6px; border-radius: 8px; cursor: pointer; }
+.edit-product { color: var(--blue); }
+.delete-product { color: var(--red); }
+.invoice-section { display: flex; gap: 8px; margin: 12px 0; }
+.invoice-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 10px; color: var(--text); font-size: 14px; }
+</style>
 </head>
 <body>
-<div class="header">
-  <div class="logo">دراكو - الماركت</div>
-  <div class="header-actions">
-    <img class="market-logo" id="marketLogo" src="" style="display:none">
-    <button class="icon-btn" onclick="openProfileModal()"><i class="fas fa-cog"></i></button>
-    <button class="icon-btn" onclick="refreshOrders()"><i class="fas fa-sync-alt"></i></button>
-    <button class="icon-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
+<div class="sidebar">
+  <div class="sb-logo"><div class="sb-logo-mark">D</div><div class="sb-logo-text"><div class="sb-logo-name">Drako</div><div class="sb-logo-sub">لوحة الماركت</div></div></div>
+  <div class="sb-nav">
+    <div class="nav-item active" id="nav-profile" onclick="navigate('profile')"><div class="nav-icon">🏠</div>الملف الشخصي</div>
+    <div class="nav-item" id="nav-dashboard" onclick="navigate('dashboard')"><div class="nav-icon">📊</div>لوحة التحكم</div>
+    <div class="nav-item" id="nav-orders" onclick="navigate('orders')"><div class="nav-icon">📦</div>الطلبات</div>
   </div>
-</div>
-<div class="stats-row" id="statsContainer"></div>
-<div class="orders-container" id="ordersContainer"></div>
-
-<!-- Profile Modal -->
-<div class="modal" id="profileModal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <div class="modal-title">تعديل الملف</div>
-      <button class="close-modal" onclick="closeProfileModal()">✕</button>
-    </div>
-    <img class="logo-preview" id="profileLogoPreview" src="" onerror="this.src='https://via.placeholder.com/90'">
-    <div class="field">
-      <label>اسم الماركت</label>
-      <input type="text" id="profileName">
-    </div>
-    <div class="field">
-      <label>الشعار</label>
-      <input type="file" id="profileLogo" accept="image/*" onchange="previewLogo()">
-    </div>
-    <button class="btn" onclick="saveProfile()" style="width:100%">حفظ التغييرات</button>
-  </div>
+  <div class="sb-footer"><div class="sb-user"><div class="sb-avatar">🛒</div><div><div class="sb-user-name" id="market-name-side">الماركت</div></div><a href="/logout" class="sb-logout">⏻</a></div></div>
 </div>
 
-<!-- Product Modal -->
-<div class="modal" id="productModal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <div class="modal-title" id="modalTitle">تعديل المنتج</div>
-      <button class="close-modal" onclick="closeProductModal()">✕</button>
-    </div>
-    <div class="field">
-      <label>اسم المنتج</label>
-      <input type="text" id="productName" placeholder="مثال: حليب">
-    </div>
-    <div class="field">
-      <label>سعر الوحدة (ج)</label>
-      <input type="number" id="productPrice" placeholder="0">
-    </div>
-    <div class="field">
-      <label>الكمية</label>
-      <input type="number" id="productQuantity" min="1" value="1">
-    </div>
-    <div class="field">
-      <label>ملاحظات (اختياري)</label>
-      <textarea id="productNotes" rows="2" placeholder="مثل: طازج"></textarea>
-    </div>
-    <button class="btn" onclick="saveProductChanges()" style="width:100%">حفظ</button>
-  </div>
+<div class="main-wrap">
+  <div class="topbar"><div><div class="topbar-title" id="topbar-title">الملف الشخصي</div><div class="topbar-sub">مرحباً بك</div></div></div>
+  <div class="content" id="content"></div>
 </div>
 
-<div class="toast" id="toast">تم الحفظ</div>
-<div class="error-box" id="errorBox" style="display: none;">
-  <i class="fas fa-exclamation-triangle"></i>
-  <div id="errorMessage"></div>
-</div>
+<div class="modal-overlay" id="modal"><div class="modal"><div class="modal-head"><div class="modal-title" id="modal-title"></div><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body" id="modal-body"></div><div class="modal-foot" id="modal-foot"></div></div></div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-  const API = '/api';
-  let currentMarketProfile = null;
-  let ordersData = [];
-  let currentOrderId = null;
-  let currentProductIndex = null;
+const API = '/api';
+let currentPage = 'profile';
+let currentMarketProfile = null;
+let ordersData = [];
+let currentOrderTab = 'active'; // active, completed
 
-  function showToast(msg, isError = false) {
-    const toast = document.getElementById('toast');
-    toast.textContent = msg;
-    toast.style.background = isError ? '#F05252' : '#1E2535';
-    toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 2500);
+// ========== Helper Functions ==========
+function toast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1E2535;color:#fff;padding:12px 20px;border-radius:12px;z-index:9999;font-weight:600;';
+  t.textContent = (type === 'success' ? '✅ ' : '❌ ') + msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+function openModal(title, bodyHTML, footHTML) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = bodyHTML;
+  document.getElementById('modal-foot').innerHTML = footHTML || '';
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+async function apiFetch(url, options = {}) {
+  const res = await fetch(url, { ...options, credentials: 'include', headers: { ...(options.headers||{}), ...(typeof options.body === 'string' ? {'Content-Type':'application/json'} : {}) } });
+  if (res.status === 401 || res.status === 403) {
+    window.location.href = '/login.html';
+    throw new Error('غير مصرح');
   }
+  return res;
+}
 
-  function showErrorAndRedirect(msg) {
-    document.getElementById('errorMessage').innerText = msg;
-    document.getElementById('errorBox').style.display = 'block';
-    setTimeout(() => { window.location.href = '/login.html'; }, 3000);
+const STATUS_AR = { PENDING: 'جديد', ACCEPTED: 'قيد التحضير', INVOICE_ADDED: 'تمت الفاتورة', READY: 'جاهز', DRIVER_ASSIGNED: 'مع طيار', ON_THE_WAY: 'في الطريق', DELIVERED: 'تم التوصيل', CANCELLED: 'ملغي' };
+const STATUS_CL = { PENDING: 'badge-orange', ACCEPTED: 'badge-blue', INVOICE_ADDED: 'badge-blue', READY: 'badge-green', DRIVER_ASSIGNED: 'badge-orange', ON_THE_WAY: 'badge-orange', DELIVERED: 'badge-green', CANCELLED: 'badge-red' };
+function statusBadge(s) { return `<span class="badge ${STATUS_CL[s]||'badge-gray'}">${STATUS_AR[s]||s}</span>`; }
+
+// ========== Navigation ==========
+function navigate(page) {
+  currentPage = page;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('nav-' + page).classList.add('active');
+  const titles = { profile: 'الملف الشخصي', dashboard: 'لوحة التحكم', orders: 'الطلبات' };
+  document.getElementById('topbar-title').textContent = titles[page] || page;
+  renderPage(page);
+}
+async function renderPage(page) {
+  const c = document.getElementById('content');
+  c.innerHTML = '<div style="text-align:center;padding:48px;color:var(--text3)">⏳ جاري التحميل...</div>';
+  try {
+    if (page === 'profile') await renderProfile();
+    else if (page === 'dashboard') await loadDashboard();
+    else if (page === 'orders') await loadOrdersView();
+  } catch (e) { toast('خطأ في التحميل', 'error'); console.error(e); }
+}
+
+// ========== Profile / تحميل بيانات الماركت ==========
+async function loadMarketProfile() {
+  try {
+    const res = await apiFetch(API + '/market/profile');
+    currentMarketProfile = await res.json();
+    document.getElementById('market-name-side').innerText = currentMarketProfile.name || 'الماركت';
+    return currentMarketProfile;
+  } catch(e) {
+    console.error(e);
+    toast('فشل تحميل بيانات الماركت', 'error');
+    throw e;
   }
-
-  async function apiFetch(url, options = {}) {
-    const res = await fetch(url, { ...options, credentials: 'include', headers: { ...(options.headers||{}), 'Content-Type': options.body instanceof FormData ? undefined : 'application/json' } });
-    if (!res.ok) {
-      if (res.status === 403 || res.status === 401) {
-        showErrorAndRedirect('ليس لديك صلاحية. جاري إعادة التوجيه...');
-        throw new Error('Auth');
-      }
-      const err = await res.json();
-      throw new Error(err.error || 'Request failed');
-    }
-    return res.json();
-  }
-
-  async function loadProfile() {
-    try {
-      currentMarketProfile = await apiFetch(API + '/market/profile');
-      if (currentMarketProfile.logo) {
-        document.getElementById('marketLogo').src = currentMarketProfile.logo;
-        document.getElementById('marketLogo').style.display = 'block';
-      }
-    } catch(e) {
-      // إذا فشل، ربما المسار غير موجود بعد - لا شيء
-    }
-  }
-
-  function openProfileModal() {
-    if (!currentMarketProfile) return;
-    document.getElementById('profileName').value = currentMarketProfile.name || '';
-    document.getElementById('profileLogoPreview').src = currentMarketProfile.logo || '';
-    document.getElementById('profileLogo').value = '';
-    document.getElementById('profileModal').classList.add('active');
-  }
-
-  function closeProfileModal() {
-    document.getElementById('profileModal').classList.remove('active');
-  }
-
-  function previewLogo() {
-    const file = document.getElementById('profileLogo').files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = e => { document.getElementById('profileLogoPreview').src = e.target.result; };
-      reader.readAsDataURL(file);
-    }
-  }
-
-  async function saveProfile() {
-    const name = document.getElementById('profileName').value.trim();
-    const logoFile = document.getElementById('profileLogo').files[0];
-    if (!name) return showToast('اسم الماركت مطلوب', true);
-    const form = new FormData();
-    form.append('name', name);
-    if (logoFile) form.append('logo', logoFile);
-    try {
-      const data = await apiFetch(API + '/market/profile', { method: 'PATCH', body: form });
-      currentMarketProfile.name = data.name;
+}
+async function renderProfile() {
+  const profile = await loadMarketProfile();
+  const logo = profile.logo || '';
+  const html = `
+    <div class="profile-card">
+      <img src="${logo || 'https://placehold.co/100x100/FF6B00/white?text=🛒'}" class="profile-image" id="profileLogo">
+      <div class="profile-info">
+        <div class="profile-name" id="profileName">${profile.name || 'الماركت'}</div>
+        <div>${profile.ownerName ? 'المالك: ' + profile.ownerName : ''}</div>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="openEditProfile()">✏️ تعديل</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('logoFile').click()">🖼️ تغيير الشعار</button>
+        <input type="file" id="logoFile" accept="image/*" style="display:none" onchange="uploadLogo(this)">
+      </div>
+    </div>
+  `;
+  document.getElementById('content').innerHTML = html;
+}
+function openEditProfile() {
+  const name = document.getElementById('profileName')?.innerText || currentMarketProfile?.name || '';
+  openModal('تعديل الملف الشخصي', `
+    <div class="field"><label>اسم الماركت</label><input id="editName" value="${name.replace(/"/g,'&quot;')}"></div>
+  `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveProfileEdit()">حفظ</button>`);
+}
+async function saveProfileEdit() {
+  const newName = document.getElementById('editName').value.trim();
+  if (!newName) return toast('الاسم مطلوب', 'error');
+  try {
+    const fd = new FormData();
+    fd.append('name', newName);
+    const res = await apiFetch(API + '/market/profile', { method: 'PATCH', body: fd });
+    const data = await res.json();
+    currentMarketProfile.name = data.name;
+    document.getElementById('profileName').innerText = data.name;
+    document.getElementById('market-name-side').innerText = data.name;
+    toast('تم تحديث الاسم');
+    closeModal();
+  } catch(e) { toast('فشل التحديث', 'error'); }
+}
+async function uploadLogo(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const fd = new FormData(); fd.append('logo', file);
+  try {
+    const res = await apiFetch(API + '/market/profile', { method: 'PATCH', body: fd });
+    const data = await res.json();
+    if (data.logo) {
+      const logoUrl = data.logo + '?t=' + Date.now();
+      document.getElementById('profileLogo').src = logoUrl;
       currentMarketProfile.logo = data.logo;
-      document.getElementById('marketLogo').src = data.logo || '';
-      document.getElementById('marketLogo').style.display = data.logo ? 'block' : 'none';
-      closeProfileModal();
-      showToast('تم تحديث الملف');
-    } catch(e) {
-      showToast(e.message || 'فشل التحديث', true);
+      toast('تم رفع الشعار');
     }
-  }
+  } catch(e) { toast('فشل الرفع', 'error'); }
+}
 
-  async function loadOrders() {
-    try {
-      ordersData = await apiFetch(API + '/market/orders');
-      renderStats(ordersData);
-      renderOrders(ordersData);
-    } catch(e) {
-      console.error(e);
-      showToast('فشل تحميل الطلبات', true);
-    }
-  }
+// ========== Dashboard ==========
+async function loadDashboard() {
+  if (!currentMarketProfile) await loadMarketProfile();
+  const orders = await apiFetch(API + '/market/orders').then(r => r.json()).catch(() => []);
+  const pending = orders.filter(o => o.status === 'PENDING').length;
+  const accepted = orders.filter(o => ['ACCEPTED','INVOICE_ADDED'].includes(o.status)).length;
+  const ready = orders.filter(o => o.status === 'READY').length;
+  document.getElementById('content').innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card" onclick="navigate('orders');setOrderTab('active')"><div class="sc-top"><div><div class="sc-value">${pending}</div><div class="sc-label">جديد</div></div></div></div>
+      <div class="stat-card" onclick="navigate('orders');setOrderTab('active')"><div class="sc-top"><div><div class="sc-value">${accepted}</div><div class="sc-label">تحضير</div></div></div></div>
+      <div class="stat-card" onclick="navigate('orders');setOrderTab('active')"><div class="sc-top"><div><div class="sc-value">${ready}</div><div class="sc-label">جاهز</div></div></div></div>
+      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${orders.length}</div><div class="sc-label">إجمالي الطلبات</div></div></div></div>
+    </div>
+  `;
+}
+function setOrderTab(tab) { currentOrderTab = tab; }
 
-  function renderStats(orders) {
-    const pending = orders.filter(o => o.status === 'PENDING').length;
-    const accepted = orders.filter(o => ['ACCEPTED', 'INVOICE_ADDED'].includes(o.status)).length;
-    const ready = orders.filter(o => o.status === 'READY').length;
-    document.getElementById('statsContainer').innerHTML = `
-      <div class="stat-card"><div class="stat-title">جديد</div><div class="stat-value">${pending}</div></div>
-      <div class="stat-card"><div class="stat-title">تحضير</div><div class="stat-value">${accepted}</div></div>
-      <div class="stat-card"><div class="stat-title">جاهز</div><div class="stat-value">${ready}</div></div>
-      <div class="stat-card"><div class="stat-title">إجمالي</div><div class="stat-value">${orders.length}</div></div>
-    `;
-  }
-
-  function renderOrders(orders) {
-    const container = document.getElementById('ordersContainer');
-    if (!orders.length) {
-      container.innerHTML = '<div class="empty-state"><i class="fas fa-box-open"></i><div>لا توجد طلبات حالياً</div></div>';
+// ========== Orders View ==========
+async function loadOrdersView() {
+  document.getElementById('content').innerHTML = `
+    <div class="tab-bar">
+      <div class="tab-btn ${currentOrderTab==='active'?'active':''}" onclick="switchOrderTab('active')">📥 نشطة</div>
+      <div class="tab-btn ${currentOrderTab==='completed'?'active':''}" onclick="switchOrderTab('completed')">✅ مكتملة</div>
+    </div>
+    <div id="orders-list"></div>
+  `;
+  await loadOrderList();
+}
+function switchOrderTab(tab) {
+  currentOrderTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  event?.target?.classList.add('active');
+  loadOrderList();
+}
+async function loadOrderList() {
+  const container = document.getElementById('orders-list');
+  container.innerHTML = '<div style="text-align:center;padding:32px">⏳ جاري التحميل...</div>';
+  try {
+    const orders = await apiFetch(API + '/market/orders').then(r => r.json());
+    ordersData = orders;
+    const filtered = currentOrderTab === 'active' 
+      ? orders.filter(o => !['DELIVERED','CANCELLED'].includes(o.status))
+      : orders.filter(o => ['DELIVERED','CANCELLED'].includes(o.status));
+    if (!filtered.length) {
+      container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><div>لا توجد طلبات</div></div>`;
       return;
     }
-    container.innerHTML = orders.map(order => `
-      <div class="order-card">
-        <div class="order-header">
-          <div class="order-id">طلب #${order.id.slice(-8)}</div>
-          <div class="order-status">${getStatusText(order.status)}</div>
-        </div>
-        <div class="order-body">
-          <div class="customer-info">
-            <div class="customer-name">${escapeHtml(order.customerName)}</div>
-            <div class="customer-phone">📞 ${order.customerPhone}</div>
-            <div class="customer-address">📍 ${order.address || '—'}</div>
-          </div>
-          <div class="products-title">المنتجات المطلوبة</div>
-          <div id="products-list-${order.id}">
-            ${renderProducts(order.items, order.id)}
-          </div>
-          <button class="add-product-btn" onclick="addProductToOrder('${order.id}')">+ إضافة منتج جديد</button>
-          ${(order.status === 'PENDING' || order.status === 'ACCEPTED') ? `
-            <div class="invoice-section">
-              <input type="number" id="invoice-${order.id}" placeholder="قيمة الفاتورة الفعلية (ج)" class="invoice-input">
-              <button class="btn" onclick="setInvoice('${order.id}')">تحديد الفاتورة</button>
-            </div>
-          ` : ''}
-          ${order.invoiceAmount ? `<div class="invoice-section">💰 قيمة الفاتورة: ${order.invoiceAmount} ج</div>` : ''}
-        </div>
-        <div class="order-footer">
-          <div class="total-amount">الإجمالي: <span>${order.total} ج</span></div>
-          <div>
-            ${order.status === 'PENDING' ? `<button class="btn btn-outline" onclick="acceptOrder('${order.id}')">قبول</button>` : ''}
-            ${order.status === 'ACCEPTED' || order.status === 'INVOICE_ADDED' ? `<button class="btn" onclick="markReady('${order.id}')">تجهيز</button>` : ''}
-            ${order.status === 'READY' ? '<span style="color:#2ECC71">جاهز للتوصيل</span>' : ''}
-          </div>
-        </div>
+    let html = `<div class="section"><div class="sec-head"><div class="sec-title">📦 ${filtered.length} طلب</div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>العميل</th><th>الهاتف</th><th>العنوان</th><th>المنتجات</th><th>الإجمالي</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>`;
+    filtered.forEach(o => {
+      const itemsStr = (o.items||[]).map(i => `<strong>${i.name}</strong> ×${i.quantity||1}`).join('<br>') || '—';
+      const actions = getOrderActions(o);
+      html += `<tr>
+        <td style="color:var(--orange)">#${(o.id||'').slice(-6)}</td>
+        <td>${o.customerName||'—'}</td>
+        <td>${o.customerPhone||'—'}</td>
+        <td style="max-width:120px">${o.address||'—'}</td>
+        <td style="max-width:150px;white-space:normal">${itemsStr}</td>
+        <td>${o.total||0} ج</td>
+        <td>${statusBadge(o.status)}</td>
+        <td>${actions}</td>
+      </tr>`;
+    });
+    html += `</tbody></table></div></div>`;
+    container.innerHTML = html;
+  } catch(e) { console.error(e); }
+}
+function getOrderActions(o) {
+  let actions = '';
+  if (o.status === 'PENDING') actions += `<button class="btn btn-success btn-sm" onclick="acceptOrder('${o.id}')">قبول</button> `;
+  if (['ACCEPTED','INVOICE_ADDED'].includes(o.status)) actions += `<button class="btn btn-primary btn-sm" onclick="showInvoiceModal('${o.id}')">فاتورة</button> <button class="btn btn-success btn-sm" onclick="markReady('${o.id}')">تجهيز</button> `;
+  actions += `<button class="btn btn-ghost btn-sm" onclick="openOrderDetails('${o.id}')">📋 تفاصيل</button>`;
+  return actions;
+}
+
+// ========== Order Actions ==========
+async function acceptOrder(id) {
+  await apiFetch(API + '/market/orders/' + id + '/accept', { method: 'PATCH' });
+  toast('تم قبول الطلب');
+  loadOrderList();
+}
+function showInvoiceModal(orderId) {
+  const order = ordersData.find(o => o.id === orderId);
+  if (!order) return;
+  openModal('إضافة فاتورة', `
+    <div class="field"><label>قيمة الفاتورة (ج)</label><input type="number" id="invoiceAmount" placeholder="مبلغ الفاتورة" value="${order.invoiceAmount||''}"></div>
+  `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="setInvoice('${orderId}')">حفظ</button>`);
+}
+async function setInvoice(orderId) {
+  const amount = parseFloat(document.getElementById('invoiceAmount').value);
+  if (isNaN(amount) || amount <= 0) return toast('قيمة غير صحيحة', 'error');
+  await apiFetch(API + '/market/orders/' + orderId + '/invoice', { method: 'PATCH', body: JSON.stringify({ invoiceAmount: amount }) });
+  toast('تم تحديث الفاتورة');
+  closeModal();
+  loadOrderList();
+}
+async function markReady(orderId) {
+  await apiFetch(API + '/market/orders/' + orderId + '/ready', { method: 'PATCH' });
+  toast('تم تجهيز الطلب');
+  loadOrderList();
+}
+
+// ========== Order Details (مع إدارة المنتجات) ==========
+function openOrderDetails(orderId) {
+  const order = ordersData.find(o => o.id === orderId);
+  if (!order) return;
+  let productsHtml = (order.items||[]).map((item, idx) => `
+    <div class="product-item">
+      <div class="product-info">
+        <div class="product-name">${item.name}</div>
+        <div class="product-details">${item.quantity} × ${item.price} ج ${item.notes ? '📝 '+item.notes : ''}</div>
       </div>
-    `).join('');
-  }
-
-  function renderProducts(items, orderId) {
-    if (!items || !items.length) return '<div style="color:#8B95A8; padding: 8px 0;">لا توجد منتجات</div>';
-    return items.map((item, idx) => `
-      <div class="product-item">
-        <div class="product-info">
-          <div class="product-name">${escapeHtml(item.name)}</div>
-          <div class="product-details">${item.quantity} × ${item.price} ج ${item.notes ? '| 📝 '+escapeHtml(item.notes) : ''}</div>
-        </div>
-        <div class="product-actions">
-          <button class="edit-product" onclick="editProduct('${orderId}', ${idx})"><i class="fas fa-edit"></i></button>
-          <button class="delete-product" onclick="deleteProduct('${orderId}', ${idx})"><i class="fas fa-trash-alt"></i></button>
-        </div>
+      <div class="product-actions">
+        <button class="edit-product" onclick="editProductItem('${orderId}', ${idx})">✏️</button>
+        <button class="delete-product" onclick="deleteProductItem('${orderId}', ${idx})">🗑️</button>
       </div>
-    `).join('');
+    </div>
+  `).join('');
+  const total = order.total || 0;
+  openModal(`تفاصيل الطلب #${orderId.slice(-6)}`, `
+    <div class="order-detail-row"><span>العميل</span><strong>${order.customerName}</strong></div>
+    <div class="order-detail-row"><span>الهاتف</span><strong>${order.customerPhone}</strong></div>
+    <div class="order-detail-row"><span>العنوان</span><strong>${order.address||'—'}</strong></div>
+    <div class="order-detail-row"><span>الحالة</span><strong>${STATUS_AR[order.status]}</strong></div>
+    ${order.invoiceAmount ? `<div class="order-detail-row"><span>💰 الفاتورة</span><strong>${order.invoiceAmount} ج</strong></div>` : ''}
+    <div style="margin:16px 0"><strong>المنتجات:</strong></div>
+    <div id="order-detail-products">${productsHtml}</div>
+    <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="addProductToOrder('${orderId}')">+ إضافة منتج</button>
+    <div class="order-detail-row" style="margin-top:12px"><span>الإجمالي</span><strong>${total} ج</strong></div>
+  `, '<button class="btn btn-primary" onclick="closeModal()">إغلاق</button>');
+}
+function editProductItem(orderId, idx) {
+  const order = ordersData.find(o => o.id === orderId);
+  if (!order) return;
+  const product = order.items[idx];
+  if (!product) return;
+  openModal('تعديل منتج', `
+    <div class="field"><label>الاسم</label><input id="editPName" value="${product.name}"></div>
+    <div class="field"><label>السعر (ج)</label><input type="number" id="editPPrice" value="${product.price}"></div>
+    <div class="field"><label>الكمية</label><input type="number" id="editPQty" value="${product.quantity}"></div>
+    <div class="field"><label>ملاحظات</label><input id="editPNotes" value="${product.notes||''}"></div>
+  `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveProductEdit('${orderId}',${idx})">حفظ</button>`);
+}
+async function saveProductEdit(orderId, idx) {
+  const name = document.getElementById('editPName').value.trim();
+  const price = parseFloat(document.getElementById('editPPrice').value);
+  const quantity = parseInt(document.getElementById('editPQty').value);
+  const notes = document.getElementById('editPNotes').value;
+  if (!name || isNaN(price) || isNaN(quantity) || quantity < 1) return toast('بيانات غير صحيحة', 'error');
+  const order = ordersData.find(o => o.id === orderId);
+  if (!order) return;
+  const newItems = [...order.items];
+  newItems[idx] = { ...newItems[idx], name, price, quantity, notes };
+  await updateOrderItems(orderId, newItems);
+  closeModal();
+}
+async function deleteProductItem(orderId, idx) {
+  if (!confirm('حذف المنتج؟')) return;
+  const order = ordersData.find(o => o.id === orderId);
+  if (!order) return;
+  const newItems = order.items.filter((_, i) => i !== idx);
+  await updateOrderItems(orderId, newItems);
+}
+function addProductToOrder(orderId) {
+  openModal('إضافة منتج', `
+    <div class="field"><label>الاسم</label><input id="addPName"></div>
+    <div class="field"><label>السعر (ج)</label><input type="number" id="addPPrice" value="0"></div>
+    <div class="field"><label>الكمية</label><input type="number" id="addPQty" value="1"></div>
+    <div class="field"><label>ملاحظات</label><input id="addPNotes"></div>
+  `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveNewProduct('${orderId}')">إضافة</button>`);
+}
+async function saveNewProduct(orderId) {
+  const name = document.getElementById('addPName').value.trim();
+  const price = parseFloat(document.getElementById('addPPrice').value);
+  const quantity = parseInt(document.getElementById('addPQty').value);
+  const notes = document.getElementById('addPNotes').value;
+  if (!name || isNaN(price) || isNaN(quantity) || quantity < 1) return toast('بيانات غير صحيحة', 'error');
+  const order = ordersData.find(o => o.id === orderId);
+  if (!order) return;
+  const newItems = [...order.items, { name, price, quantity, notes }];
+  await updateOrderItems(orderId, newItems);
+  closeModal();
+}
+async function updateOrderItems(orderId, newItems) {
+  const order = ordersData.find(o => o.id === orderId);
+  const itemsTotal = newItems.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+  const newTotal = itemsTotal + (order.deliveryFee || 0);
+  await apiFetch(API + '/market/orders/' + orderId + '/items', {
+    method: 'PATCH',
+    body: JSON.stringify({ items: newItems, total: newTotal })
+  });
+  order.items = newItems;
+  order.total = newTotal;
+  toast('تم تحديث الطلب');
+  if (currentPage === 'orders') loadOrderList();
+}
+
+// ========== Socket ==========
+const socket = io();
+socket.on('orderStatusUpdate', () => { if (currentPage === 'orders') loadOrderList(); });
+socket.on('newSpecialOrder', () => { toast('طلب جديد وصل!'); if (currentPage === 'orders') loadOrderList(); });
+
+// ========== Init ==========
+(async function init() {
+  try {
+    await loadMarketProfile();
+    navigate('profile');
+  } catch(e) {
+    window.location.href = '/login.html';
   }
-
-  function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]);
-  }
-
-  function editProduct(orderId, idx) {
-    const order = ordersData.find(o => o.id === orderId);
-    if (!order) return;
-    const product = order.items[idx];
-    if (!product) return;
-    currentOrderId = orderId;
-    currentProductIndex = idx;
-    document.getElementById('modalTitle').innerText = 'تعديل المنتج';
-    document.getElementById('productName').value = product.name;
-    document.getElementById('productPrice').value = product.price;
-    document.getElementById('productQuantity').value = product.quantity;
-    document.getElementById('productNotes').value = product.notes || '';
-    document.getElementById('productModal').classList.add('active');
-  }
-
-  function deleteProduct(orderId, idx) {
-    if (confirm('هل تريد حذف هذا المنتج من الطلب؟')) {
-      updateOrderProducts(orderId, items => items.filter((_, i) => i !== idx));
-    }
-  }
-
-  function addProductToOrder(orderId) {
-    currentOrderId = orderId;
-    currentProductIndex = -1;
-    document.getElementById('modalTitle').innerText = 'إضافة منتج جديد';
-    document.getElementById('productName').value = '';
-    document.getElementById('productPrice').value = '';
-    document.getElementById('productQuantity').value = 1;
-    document.getElementById('productNotes').value = '';
-    document.getElementById('productModal').classList.add('active');
-  }
-
-  async function saveProductChanges() {
-    const name = document.getElementById('productName').value.trim();
-    const price = parseFloat(document.getElementById('productPrice').value);
-    const quantity = parseInt(document.getElementById('productQuantity').value);
-    const notes = document.getElementById('productNotes').value.trim();
-
-    if (!name || isNaN(price) || price <= 0 || isNaN(quantity) || quantity < 1) {
-      showToast('البيانات غير صحيحة', true);
-      return;
-    }
-    const newProduct = { name, price, quantity, notes };
-    if (currentProductIndex === -1) {
-      await updateOrderProducts(currentOrderId, items => [...items, newProduct]);
-    } else {
-      await updateOrderProducts(currentOrderId, items => items.map((item, i) => i === currentProductIndex ? newProduct : item));
-    }
-    closeProductModal();
-  }
-
-  async function updateOrderProducts(orderId, updateFn) {
-    try {
-      const order = ordersData.find(o => o.id === orderId);
-      if (!order) throw new Error('Order not found');
-      const newItems = updateFn([...order.items]);
-      const itemsTotal = newItems.reduce((sum, p) => sum + (p.price * p.quantity), 0);
-      const newTotal = itemsTotal + (order.deliveryFee || 0);
-      await apiFetch(API + '/market/orders/' + orderId + '/items', {
-        method: 'PATCH',
-        body: JSON.stringify({ items: newItems, total: newTotal })
-      });
-      order.items = newItems;
-      order.total = newTotal;
-      // تحديث جزئي للواجهة
-      const productsListEl = document.getElementById(`products-list-${orderId}`);
-      if (productsListEl) productsListEl.innerHTML = renderProducts(newItems, orderId);
-      showToast('تم تحديث الطلب');
-    } catch(e) {
-      showToast(e.message || 'فشل التحديث', true);
-    }
-  }
-
-  async function acceptOrder(orderId) {
-    try {
-      await apiFetch(API + '/market/orders/' + orderId + '/accept', { method: 'PATCH' });
-      showToast('تم قبول الطلب');
-      loadOrders();
-    } catch(e) { showToast(e.message, true); }
-  }
-
-  async function setInvoice(orderId) {
-    const amount = parseFloat(document.getElementById(`invoice-${orderId}`).value);
-    if (isNaN(amount) || amount <= 0) return showToast('أدخل قيمة صحيحة', true);
-    try {
-      await apiFetch(API + '/market/orders/' + orderId + '/invoice', { method: 'PATCH', body: JSON.stringify({ invoiceAmount: amount }) });
-      showToast('تم تحديث الفاتورة');
-      loadOrders();
-    } catch(e) { showToast(e.message, true); }
-  }
-
-  async function markReady(orderId) {
-    try {
-      await apiFetch(API + '/market/orders/' + orderId + '/ready', { method: 'PATCH' });
-      showToast('تم تجهيز الطلب');
-      loadOrders();
-    } catch(e) { showToast(e.message, true); }
-  }
-
-  function getStatusText(status) {
-    const map = { PENDING: 'جديد', ACCEPTED: 'قيد التحضير', INVOICE_ADDED: 'تمت الفاتورة', READY: 'جاهز', DELIVERED: 'تم التوصيل', CANCELLED: 'ملغي' };
-    return map[status] || status;
-  }
-
-  function closeProductModal() { document.getElementById('productModal').classList.remove('active'); }
-  function refreshOrders() { loadOrders(); }
-  function logout() { window.location.href = '/logout'; }
-
-  // Socket updates
-  const socket = io();
-  socket.on('orderStatusUpdate', () => loadOrders());
-  socket.on('newSpecialOrder', () => { loadOrders(); showToast('طلب جديد وصل!'); });
-
-  // Init
-  (async function() {
-    try {
-      await loadProfile();
-      await loadOrders();
-    } catch(e) {
-      // سيفشل فقط إذا فشل المصادقة وتم توجيهه بالفعل
-    }
-  })();
+})();
 </script>
 </body>
 </html>
