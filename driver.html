@@ -446,6 +446,7 @@ function buildAvailableCard(o) {
       <div class="oc-row"><div class="icon">👤</div><div><div class="val">${o.customerName || '—'}</div><div class="lbl">العميل</div></div></div>
       <div class="oc-row"><div class="icon">🌍</div><div><div class="val">${o.regionName || '—'}</div><div class="lbl">المنطقة</div></div></div>
       <div class="oc-row"><div class="icon">📍</div><div><div class="val">${o.address || o.customerAddress || '—'}</div><div class="lbl">العنوان</div></div></div>
+     ${o.invoiceAmount ? `<div>💰 الفاتورة: ${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div>` : ''}
       <div class="oc-items-box">${renderItemsList(o.items)}</div>
     </div>
     <div class="oc-footer">
