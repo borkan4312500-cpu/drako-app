@@ -73,40 +73,48 @@ tbody tr:hover{background:var(--surface2);}
 .btn-danger{background:rgba(240,82,82,.12);color:var(--red);border:1px solid rgba(240,82,82,.2);}
 .btn-success{background:rgba(0,214,143,.12);color:var(--green);border:1px solid rgba(0,214,143,.2);}
 .btn-sm{padding:5px 10px;font-size:12px;border-radius:8px;}
+
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;display:none;align-items:center;justify-content:center;padding:16px;}
 .modal-overlay.open{display:flex;}
 .modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:0;width:100%;max-width:600px;max-height:85vh;overflow-y:auto;}
 .modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border);}
 .modal-title{font-size:16px;font-weight:800;}
-.modal-close{width:30px;height:30px;background:var(--surface2);border:none;border-radius:8px;cursor:pointer;color:var(--text3);font-size:18px;}
+.modal-close{width:30px;height:30px;background:var(--surface2);border:none;border-radius:8px;cursor:pointer;color:var(--text3);font-size:18px;display:flex;align-items:center;justify-content:center;}
 .modal-body{padding:20px;max-height:60vh;overflow-y:auto;}
 .modal-foot{display:flex;gap:10px;padding:16px 20px;border-top:1px solid var(--border);}
 .modal-foot .btn{flex:1;height:42px;justify-content:center;}
+
 .field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
 .field label{font-size:12px;font-weight:700;color:var(--text3);}
 .field input,.field select,.field textarea{background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 13px;font-size:13px;color:var(--text);outline:none;}
+
 .filter-bar{display:flex;gap:8px;margin-bottom:16px;align-items:center;}
 .filter-bar input[type="date"]{flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text);outline:none;}
+
 .empty-state{text-align:center;padding:48px;color:var(--text3);}
 .empty-state .icon{font-size:40px;margin-bottom:12px;}
+
 .btn-add-row{background:var(--surface2);border:1px dashed var(--border);color:var(--text2);padding:5px 10px;border-radius:8px;cursor:pointer;font-size:12px;margin-top:4px;}
 .group-box{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;}
 .option-row{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
 .option-row input{flex:1;}
-.tab-bar{display:flex;gap:8px;margin-bottom:16px;}
+
+.tab-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
 .tab-btn{padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text2);transition:all .2s;}
 .tab-btn.active{background:var(--orange);color:#fff;border-color:var(--orange);}
+
 .templates-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:8px;background:var(--surface2);border-radius:12px;}
 .btn-template{background:var(--surface3);border:1px solid var(--border);padding:6px 12px;border-radius:20px;font-size:12px;cursor:pointer;}
 .btn-template:hover{background:var(--orange);color:#0C0E13;}
 .product-type-selector{display:flex;gap:12px;margin-bottom:20px;}
 .type-option{flex:1;text-align:center;padding:10px;border-radius:12px;background:var(--surface2);cursor:pointer;border:2px solid transparent;}
 .type-option.selected{border-color:var(--orange);background:var(--orange-dim);}
+
 .profile-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;display:flex;flex-wrap:wrap;align-items:center;gap:24px;margin-bottom:20px;}
 .profile-image{width:100px;height:100px;border-radius:20px;object-fit:cover;border:3px solid var(--orange);}
 .profile-info{flex:1;}
 .profile-name{font-size:24px;font-weight:900;margin-bottom:8px;}
-.profile-bio{color:var(--text2);margin-bottom:12px;}
+.profile-bio{color:var(--text2);margin-bottom:12px;line-height:1.5;}
 .profile-rating{display:flex;gap:16px;color:var(--text3);font-size:13px;}
 .rating-stars{color:var(--yellow);}
 </style>
@@ -290,7 +298,6 @@ function openEditProfile() {
 async function saveProfileEdit() {
   const newName = document.getElementById('editName').value;
   const newBio = document.getElementById('editBio').value;
-  // يمكن إرسالها للسيرفر إذا كان يدعم تحديث الاسم والسيرة
   document.getElementById('profileName').innerText = newName;
   document.getElementById('profileBio').innerText = newBio;
   toast('تم تحديث الملف الشخصي');
@@ -332,7 +339,7 @@ async function loadDashboard() {
     </div>`;
 }
 
-// ========== الطلبات (كاملة كما في الأصل) ==========
+// ========== الطلبات (كاملة) ==========
 let ordersSelectedDate = new Date().toISOString().slice(0, 10);
 let currentOrderTab = 'all';
 function setOrdersTab(tab) { currentOrderTab = tab; }
@@ -376,7 +383,7 @@ async function loadOrdersData(){
   const orders = await res.json();
   const filtered = getFilteredOrders(orders);
   if(!filtered.length){ container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><div>لا توجد طلبات</div></div>`; return; }
-  let html = `<div class="section"><div class="table-wrap"></table><thead><tr><th>#</th><th>العميل</th><th>الهاتف</th><th>الأصناف</th><th>الإجمالي</th><th>الحالة</th><th>الوقت</th><th>إجراء</th></tr></thead><tbody>`;
+  let html = `<div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>العميل</th><th>الهاتف</th><th>الأصناف</th><th>الإجمالي</th><th>الحالة</th><th>الوقت</th><th>إجراء</th></tr></thead><tbody>`;
   filtered.forEach(o => {
     const itemsStr = (o.items||[]).map(i=>`<strong>${i.name}</strong> ×${i.qty||1}`).join('<br>')||'—';
     const productTotal = (o.total||0)-(o.deliveryFee||0);
@@ -385,7 +392,7 @@ async function loadOrdersData(){
       const rem = calculateRemainingTime(o.preparingAt);
       if(rem && !rem.isOver) statusHTML += `<br><span style="color:var(--orange);font-size:11px">⏱ ${String(rem.minutes).padStart(2,'0')}:${String(rem.seconds).padStart(2,'0')}</span>`;
     }
-    html += `<tr><td style="color:var(--orange);font-weight:800">#${(o.id||'').slice(-6)}</td><td>${o.customerName||'—'}</td><td><a href="tel:${o.customerPhone}" style="color:var(--orange);text-decoration:none">${o.customerPhone||'—'}</a></td><td>${itemsStr}</td><td style="color:var(--orange)">${productTotal} ج</td><td>${statusHTML}</td><td>${new Date(o.createdAt).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})}</td><td>${getOrderActions(o)}</td></tr>`;
+    html += `<tr><td style="color:var(--orange);font-weight:800">#${(o.id||'').slice(-6)}</td><td>${o.customerName||'—'}</td><td><a href="tel:${o.customerPhone}" style="color:var(--orange);text-decoration:none">${o.customerPhone||'—'}</a></td><td style="max-width:200px;white-space:normal">${itemsStr}</td><td style="color:var(--orange)">${productTotal} ج</td><td>${statusHTML}</td><td>${new Date(o.createdAt).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})}</td><td>${getOrderActions(o)}</td></tr>`;
   });
   html += `</tbody></table></div></div>`;
   container.innerHTML = html;
@@ -405,31 +412,55 @@ function applyOrderFilter(){ const inp = document.getElementById('order-date-inp
 function setTodayOrders(){ ordersSelectedDate = new Date().toISOString().slice(0,10); document.getElementById('order-date-input').value = ordersSelectedDate; loadOrdersData(); }
 function clearOrderFilter(){ ordersSelectedDate = ''; document.getElementById('order-date-input').value = ''; loadOrdersData(); }
 
-// ========== التصنيفات (كاملة) ==========
+// ========== التصنيفات (كما كانت من قبل) ==========
 async function loadCategories() {
   const res = await apiFetch(API + '/restaurant/categories');
   const cats = await res.json();
   categoriesList = cats;
-  const html = `<div style="display:flex;justify-content:space-between;margin-bottom:16px"><h2>التصنيفات</h2><button class="btn btn-primary" onclick="showAddCategory()">+ إضافة</button></div><div class="section"><div class="table-wrap"><tr><thead><tr><th>#</th><th>الاسم</th><th></th></tr></thead><tbody>${cats.map((c,i)=>`<tr><td>${i+1}</td><td style="font-weight:600;cursor:pointer" onclick="editCategory('${c.id}','${c.name}')">${c.name}</td><td><button class="btn btn-danger btn-sm" onclick="deleteCategory('${c.id}')">حذف</button></td></tr>`).join('')}</tbody></table></div></div>`;
+  const html = `
+    <div style="display:flex;justify-content:space-between;margin-bottom:16px">
+      <h2>🏷️ التصنيفات</h2>
+      <button class="btn btn-primary" onclick="showAddCategory()">+ إضافة</button>
+    </div>
+    <div class="section">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>#</th><th>الاسم</th><th>إجراءات</th></tr>
+          </thead>
+          <tbody>
+            ${cats.map((c,i) => `
+              <tr>
+                <td>${i+1}</td>
+                <td style="font-weight:600;cursor:pointer" onclick="editCategory('${c.id}','${c.name}')">${c.name}</td>
+                <td><button class="btn btn-danger btn-sm" onclick="deleteCategory('${c.id}')">🗑️</button></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
   document.getElementById('content').innerHTML = html;
 }
-function editCategory(id,currentName){
+function editCategory(id, currentName) {
   const newName = prompt('الاسم الجديد:', currentName);
-  if(!newName || newName===currentName) return;
-  apiFetch(API+'/restaurant/categories/'+id,{method:'PATCH',body:JSON.stringify({name:newName})}).then(()=>{ toast('تم التعديل'); loadCategories(); });
+  if (!newName || newName === currentName) return;
+  apiFetch(API + '/restaurant/categories/' + id, { method: 'PATCH', body: JSON.stringify({ name: newName }) })
+    .then(() => { toast('تم التعديل'); loadCategories(); });
 }
-function showAddCategory(){
-  openModal('إضافة تصنيف',`<div class="field"><label>اسم التصنيف</label><input id="catName"></div>`,`<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addCategory()">إضافة</button>`);
+function showAddCategory() {
+  openModal('إضافة تصنيف', `<div class="field"><label>اسم التصنيف</label><input id="cat-name" placeholder="مثال: برجر"></div>`, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addCategory()">إضافة</button>`);
 }
-async function addCategory(){
-  const name = document.getElementById('catName').value.trim();
-  if(!name) return toast('أدخل اسماً','error');
-  await apiFetch(API+'/restaurant/categories',{method:'POST',body:JSON.stringify({name})});
+async function addCategory() {
+  const name = document.getElementById('cat-name').value.trim();
+  if (!name) return toast('أدخل اسماً', 'error');
+  await apiFetch(API + '/restaurant/categories', { method: 'POST', body: JSON.stringify({ name }) });
   closeModal(); loadCategories(); toast('تمت الإضافة');
 }
-async function deleteCategory(id){
-  if(!confirm('حذف التصنيف؟')) return;
-  await apiFetch(API+'/restaurant/categories/'+id,{method:'DELETE'});
+async function deleteCategory(id) {
+  if (!confirm('حذف التصنيف؟')) return;
+  await apiFetch(API + '/restaurant/categories/' + id, { method: 'DELETE' });
   loadCategories(); toast('تم الحذف');
 }
 
@@ -439,10 +470,10 @@ async function loadProducts() {
   const prodRes = await apiFetch(API + '/restaurant/products');
   const products = await prodRes.json();
   productsList = products;
-  let html = `<div style="display:flex;justify-content:space-between;margin-bottom:16px"><h2>المنتجات</h2><button class="btn btn-primary" onclick="showAddProduct()">+ إضافة منتج</button></div><div class="section"><div class="table-wrap"><table><thead><tr><th>الصورة</th><th>الاسم</th><th>المجموعات</th><th>التصنيف</th><th>متاح</th><th></th></tr></thead><tbody>`;
+  let html = `<div style="display:flex;justify-content:space-between;margin-bottom:16px"><h2>📋 المنتجات</h2><button class="btn btn-primary" onclick="showAddProduct()">+ إضافة منتج</button></div><div class="section"><div class="table-wrap"><table><thead><tr><th>الصورة</th><th>الاسم</th><th>المجموعات</th><th>التصنيف</th><th>متاح</th><th></th></tr></thead><tbody>`;
   products.forEach(p => {
     const groupsStr = (p.groups || []).map(g => `<div style="font-size:11px">${g.name}: ${g.options?.map(o=>`${o.value}(${o.price}ج)`).join(', ')||''}</div>`).join('');
-    html += `<tr><td>${p.image?`<img src="${p.image}" style="width:42px;height:42px;border-radius:8px">`:'—'}</td><td style="font-weight:600">${p.name}</td><td>${groupsStr||'—'}</td><td>${p.category||'—'}</td><td><span class="badge ${p.isAvailable?'badge-green':'badge-red'}">${p.isAvailable?'متاح':'غير متاح'}</span></td><td><button class="btn btn-ghost btn-sm" onclick="editProduct('${p.id}')">تعديل</button> <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">حذف</button></td></tr>`;
+    html += `<tr><td>${p.image?`<img src="${p.image}" style="width:42px;height:42px;border-radius:8px">`:'—'}</td><td style="font-weight:600">${p.name}</td><td>${groupsStr||'—'}</td><td>${p.category||'—'}</td><td><span class="badge ${p.isAvailable?'badge-green':'badge-red'}">${p.isAvailable?'متاح':'غير متاح'}</span></td><td><button class="btn btn-ghost btn-sm" onclick="editProduct('${p.id}')">✏️</button> <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">🗑️</button></td></tr>`;
   });
   html += `</tbody></table></div></div>`;
   document.getElementById('content').innerHTML = html;
@@ -478,9 +509,7 @@ function showAddProduct() {
     <div class="field" style="margin-top:16px;"><label>صورة المنتج (من جهازك)</label><input type="file" id="prodImageFile" accept="image/*"></div>
     <div class="field"><label>أو رابط صورة (اختياري)</label><input id="prodImageUrl" placeholder="https://..."></div>
   `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveProduct()">حفظ</button>`);
-  // إضافة مجموعة فارغة افتراضية
   addGroupRow();
-  // تبديل حقول السعر
   document.querySelectorAll('.type-option').forEach(opt => {
     opt.onclick = () => {
       document.querySelectorAll('.type-option').forEach(o=>o.classList.remove('selected'));
@@ -620,7 +649,7 @@ async function deleteProduct(id) {
   loadProducts(); toast('تم الحذف');
 }
 
-// ========== ربط الدوال العامة ==========
+// ربط الدوال العامة
 window.navigate = navigate;
 window.setOrdersTab = setOrdersTab;
 window.switchOrderTab = switchOrderTab;
