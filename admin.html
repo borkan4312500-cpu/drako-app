@@ -168,47 +168,77 @@ tbody tr:hover{background:var(--surface2);}
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-// ========== AUTH CHECK ==========
 async function checkAuth() {
   try {
     const res = await fetch('/api/admin/stats', { credentials: 'include' });
-    if (res.status === 401) window.location.href = '/login.html';
-  } catch(e) { window.location.href = '/login.html'; }
+    if (res.status === 401) {
+      window.location.href = '/login.html';
+    }
+  } catch(e) {
+    window.location.href = '/login.html';
+  }
 }
 checkAuth();
 
 // ========== SOUND ENGINE ==========
 function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
-  const sampleRate = 44100; const numSamples = Math.floor(sampleRate * duration);
+  const sampleRate = 44100;
+  const numSamples = Math.floor(sampleRate * duration);
   const buffer = new Float32Array(numSamples);
   for (let i = 0; i < numSamples; i++) {
-    const t = i / sampleRate; let sample = 0;
+    const t = i / sampleRate;
+    let sample = 0;
     if (type === 'sine') sample = Math.sin(2 * Math.PI * frequency * t);
     else if (type === 'square') sample = Math.sign(Math.sin(2 * Math.PI * frequency * t));
-    else if (type === 'triangle') { const p = (frequency * t) % 1; sample = 4 * Math.abs(p - 0.5) - 1; }
+    else if (type === 'triangle') {
+      const p = (frequency * t) % 1;
+      sample = 4 * Math.abs(p - 0.5) - 1;
+    }
     buffer[i] = sample * volume;
   }
-  const dataLength = buffer.length * 2; const bufferArray = new ArrayBuffer(44 + dataLength);
+  const dataLength = buffer.length * 2;
+  const bufferArray = new ArrayBuffer(44 + dataLength);
   const view = new DataView(bufferArray);
   function writeString(offset, string) { for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i)); }
-  writeString(0, 'RIFF'); view.setUint32(4, 36 + dataLength, true); writeString(8, 'WAVE');
-  writeString(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
-  view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true);
-  writeString(36, 'data'); view.setUint32(40, dataLength, true);
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + dataLength, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, dataLength, true);
   let offset = 44;
-  for (let i = 0; i < buffer.length; i++) { const s = Math.max(-1, Math.min(1, buffer[i])); view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true); offset += 2; }
-  const blob = new Blob([bufferArray], { type: 'audio/wav' }); return URL.createObjectURL(blob);
+  for (let i = 0; i < buffer.length; i++) {
+    const s = Math.max(-1, Math.min(1, buffer[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    offset += 2;
+  }
+  const blob = new Blob([bufferArray], { type: 'audio/wav' });
+  return URL.createObjectURL(blob);
 }
+
 const soundInstances = {};
-function createSound(name, ...tones) { soundInstances[name] = tones.map(t => new Howl({ src: [t], format: ['wav'], volume: 0.5 })); }
-function playSound(name) { if (soundInstances[name]) soundInstances[name].forEach(h => h.play()); }
+function createSound(name, ...tones) {
+  soundInstances[name] = tones.map(t => new Howl({ src: [t], format: ['wav'], volume: 0.5 }));
+}
+function playSound(name) {
+  if (soundInstances[name]) {
+    soundInstances[name].forEach(h => h.play());
+  }
+}
 
 createSound('adminNewOrder', generateToneWAV(800, 0.15, 'square'), generateToneWAV(1000, 0.15, 'square'));
 createSound('orderCancelled', generateToneWAV(400, 0.3, 'triangle'));
 createSound('driverArrived', generateToneWAV(600, 0.1, 'sine'), generateToneWAV(800, 0.1, 'sine'));
 createSound('orderAccepted', generateToneWAV(600, 0.2, 'sine'));
 
-// ========== GLOBALS ==========
+// ========== MAIN APP ==========
 const API='/api';
 let currentPage='dashboard';
 let allOrdersCache=[], allRestaurantsCache=[], allDriversCache=[];
@@ -287,7 +317,7 @@ async function loadDashboard(){
     ${orders.slice(-6).reverse().map(o=>`<div style="display:flex;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border);cursor:pointer" onclick="viewOrder('${o.id}')"><div><div style="color:var(--orange);font-weight:700">#${(o.id||'').slice(-6)}</div><div style="font-size:12px;color:var(--text2)">${o.customerName||'—'} • ${o.regionName || o.address||'—'}</div></div><div>${statusBadge(o.status)}</div></div>`).join('')}</div>`;
 }
 
-// ========== ORDERS (مع التبويبات) ==========
+// ========== ORDERS ==========
 async function loadOrders(){
   const orders=await apiFetch(API+'/orders').then(r=>r.json()).catch(()=>[]);
   allOrdersCache=orders;
@@ -491,8 +521,336 @@ async function addPharmacy(){
   if(d.error) toast(d.error,'error'); else { toast('تمت الإضافة'); closeModal(); loadPharmacies(); }
 }
 
-// (باقي الدوال بدون تغيير: drivers, products, categories, regions, customers, reports, settings, testOrder, approve/reject/edit...)
-// ... [تم الاحتفاظ بكل الدوال الأصلية كما هي بدون أي تعديل] ...
+// ========== DRIVERS ==========
+async function loadDrivers(){
+  const res=await apiFetch(API+'/admin/drivers').then(r=>r.json()).catch(()=>[]);
+  allDriversCache=res;
+  document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">👨‍✈️ الطيارين</div><div class="page-sub">${res.length} طيار</div></div><button class="btn btn-primary" onclick="showAddDriver()">+ إضافة</button></div>
+    <div class="section"><div class="table-wrap"><table><thead><tr><th>الاسم</th><th>الهاتف</th><th>الأرباح</th><th>طلبات نشطة</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>
+    ${res.length?res.map(d=>`<tr>
+      <td style="font-weight:700">${d.name||'—'}</td>
+      <td style="font-size:12px;color:var(--text3)">${d.phone||'—'}</td>
+      <td style="color:var(--orange)">${d.earnings||0} ج</td>
+      <td>${d.activeOrdersCount||0}</td>
+      <td><span class="badge ${d.isAvailable?'badge-green':'badge-gray'}">${d.isAvailable?'متاح':'مشغول'}</span></td>
+      <td><div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-sm ${d.isAvailable?'btn-danger':'btn-success'}" onclick="toggleDriver('${d.id}')">${d.isAvailable?'إيقاف':'تشغيل'}</button>
+        <button class="btn btn-sm ${d.isActive?'btn-danger':'btn-ghost'}" onclick="blockDriver('${d.id}')">${d.isActive?'حظر':'تفعيل'}</button>
+        <button class="btn btn-sm btn-ghost" onclick="viewDriverDetails('${d.id}')">📋 تفاصيل</button>
+      </div></td>
+    </tr>`).join(''):`<tr><td colspan="6"><div class="empty-state"><div class="icon">👨‍✈️</div><div class="msg">لا يوجد طيارين</div></div></td></tr>`}
+    </tbody></table></div></div>`;
+}
+async function toggleDriver(id){ await apiFetch(API+'/admin/drivers/'+id+'/toggle',{method:'PATCH'}); loadDrivers(); }
+async function blockDriver(id){ await apiFetch(API+'/admin/drivers/'+id+'/block',{method:'PATCH'}); loadDrivers(); }
+function showAddDriver(){
+  openModal('إضافة طيار',`<div class="field"><label>الاسم</label><input id="d-name"></div><div class="field"><label>الهاتف</label><input id="d-phone"></div><div class="field"><label>كلمة المرور</label><input id="d-pass" type="password"></div>`,
+  `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addDriver()">إضافة</button>`);
+}
+async function addDriver(){
+  const n=document.getElementById('d-name').value,p=document.getElementById('d-phone').value,ps=document.getElementById('d-pass').value;
+  if(!n||!p||!ps) return toast('أكمل الحقول','error');
+  const d=await apiFetch(API+'/admin/drivers',{method:'POST',body:JSON.stringify({name:n,phone:p,password:ps})}).then(r=>r.json());
+  if(d.error) toast(d.error,'error'); else { toast('تمت الإضافة'); closeModal(); loadDrivers(); }
+}
+async function viewDriverDetails(id) {
+  try {
+    const res = await apiFetch(API + '/admin/drivers/' + id + '/details');
+    const d = await res.json();
+    if (d.error) return toast(d.error, 'error');
+    openModal(`تفاصيل الطيار: ${d.name}`,
+      `<div style="display:flex;flex-direction:column;gap:12px;font-size:14px">
+        <div><strong>الهاتف:</strong> ${d.phone}</div>
+        <div><strong>الحالة:</strong> ${d.isAvailable ? '🟢 متاح' : '🔴 مشغول'}</div>
+        <div><strong>إجمالي الأرباح:</strong> <span style="color:var(--orange)">${d.earnings} ج</span></div>
+        <div><strong>طلبات اليوم:</strong> ${d.todayOrdersCount} (إيرادات: <span style="color:var(--orange)">${d.todayRevenue} ج</span>)</div>
+        <div style="background:var(--surface2);padding:10px;border-radius:8px;max-height:200px;overflow-y:auto">
+          <strong>آخر طلبات اليوم:</strong>
+          ${d.todayOrders.length ? d.todayOrders.map(o => `
+            <div style="font-size:12px;margin-top:6px;color:var(--text2);border-bottom:1px solid var(--border);padding-bottom:4px">
+              #${(o.id||'').slice(-6)} - ${o.customerName||'—'}<br>
+              📍 ${o.address||'—'}<br>
+              💰 ${o.total||0} ج - ${o.restaurantName||'—'}<br>
+              🕐 ${new Date(o.createdAt).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})}
+            </div>`).join('') : '<div style="font-size:12px;color:var(--text3)">لا توجد طلبات اليوم</div>'}
+        </div>
+      </div>`, '');
+  } catch { toast('فشل تحميل التفاصيل', 'error'); }
+}
+
+// ========== PRODUCTS ==========
+async function loadProducts(){
+  const res=await apiFetch(API+'/admin/products').then(r=>r.json()).catch(()=>[]);
+  document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">📋 المنتجات</div><div class="page-sub">${res.length} منتج</div></div><button class="btn btn-primary" onclick="showAddProduct()">+ إضافة</button></div>
+    <div class="section"><div class="table-wrap"><table><thead><tr><th>الصورة</th><th>الاسم</th><th>المطعم</th><th>السعر</th><th>إجراءات</th></tr></thead><tbody>
+    ${res.length?res.map(p=>`<tr><td>${p.image?`<img src="${p.image}" style="width:40px;height:40px;border-radius:8px;object-fit:cover">`:'—'}</td><td style="font-weight:600">${p.name||''}</td><td style="color:var(--text2)">${p.restaurantName||'—'}</td><td style="color:var(--orange);font-weight:700">${p.price||0} ج</td><td><button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">🗑️</button></td></tr>`).join(''):`<tr><td colspan="5"><div class="empty-state"><div class="icon">📋</div><div class="msg">لا توجد منتجات</div></div></td></tr>`}
+    </tbody></table></div></div>`;
+}
+function showAddProduct(){
+  openModal('إضافة منتج',`<div class="field"><label>الاسم</label><input id="prod-name"></div><div class="field"><label>الوصف</label><input id="prod-desc"></div><div class="field"><label>السعر</label><input id="prod-price" type="number"></div><div class="field"><label>التصنيف</label><input id="prod-cat"></div><div class="field"><label>معرف المطعم</label><input id="prod-rest"></div><div class="field"><label>صورة</label><input type="file" id="prod-img"></div>`,
+  `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addProduct()">إضافة</button>`);
+}
+async function addProduct(){
+  const f=new FormData();
+  f.append('name',document.getElementById('prod-name').value);
+  f.append('description',document.getElementById('prod-desc').value);
+  f.append('price',document.getElementById('prod-price').value);
+  f.append('category',document.getElementById('prod-cat').value);
+  f.append('restaurantId',document.getElementById('prod-rest').value);
+  const img=document.getElementById('prod-img').files[0];
+  if(img) f.append('image',img);
+  const d=await apiFetch(API+'/admin/products',{method:'POST',body:f}).then(r=>r.json());
+  if(d.error) toast(d.error,'error'); else { toast('تمت الإضافة'); closeModal(); loadProducts(); }
+}
+async function deleteProduct(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/products/'+id,{method:'DELETE'}); loadProducts(); } }
+
+// ========== CATEGORIES ==========
+async function loadCategories(){
+  const res=await apiFetch(API+'/admin/categories').then(r=>r.json()).catch(()=>[]);
+  document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">🏷️ التصنيفات</div></div><button class="btn btn-primary" onclick="showAddCategory()">+ إضافة</button></div>
+    <div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>إجراءات</th></tr></thead><tbody>
+    ${res.length?res.map((c,i)=>`<tr><td>${i+1}</td><td style="font-weight:600">${c.name||''}</td><td><button class="btn btn-danger btn-sm" onclick="deleteCategory('${c.id}')">🗑️</button></td></tr>`).join(''):`<tr><td colspan="3"><div class="empty-state"><div class="icon">🏷️</div><div class="msg">لا توجد تصنيفات</div></div></td></tr>`}
+    </tbody></table></div></div>`;
+}
+function showAddCategory(){
+  openModal('إضافة تصنيف',`<div class="field"><label>الاسم</label><input id="cat-name"></div>`,`<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addCategory()">إضافة</button>`);
+}
+async function addCategory(){
+  const n=document.getElementById('cat-name').value;
+  if(!n) return toast('أدخل اسماً','error');
+  await apiFetch(API+'/admin/categories',{method:'POST',body:JSON.stringify({name:n})});
+  toast('تمت الإضافة'); closeModal(); loadCategories();
+}
+async function deleteCategory(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/categories/'+id,{method:'DELETE'}); loadCategories(); } }
+
+// ========== REGIONS ==========
+async function loadRegions(){
+  const res=await apiFetch(API+'/admin/regions').then(r=>r.json()).catch(()=>[]);
+  document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">🌍 مناطق التوصيل</div></div><button class="btn btn-primary" onclick="showAddRegion()">+ إضافة</button></div>
+    <div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>الرسوم</th><th>إجراءات</th></tr></thead><tbody>
+    ${res.length?res.map((r,i)=>`<tr><td>${i+1}</td><td style="font-weight:600">${r.name||''}</td><td style="color:var(--orange);font-weight:700">${r.fee||0} ج</td><td><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="editRegion('${r.id}','${r.name}',${r.fee})">✏️</button><button class="btn btn-danger btn-sm" onclick="deleteRegion('${r.id}')">🗑️</button></div></td></tr>`).join(''):`<tr><td colspan="4"><div class="empty-state"><div class="icon">🌍</div><div class="msg">لا توجد مناطق</div></div></td></tr>`}
+    </tbody></table></div></div>`;
+}
+function showAddRegion(){
+  openModal('إضافة منطقة',`<div class="field"><label>الاسم</label><input id="reg-name"></div><div class="field"><label>الرسوم</label><input id="reg-fee" type="number"></div>`,`<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addRegion()">إضافة</button>`);
+}
+async function addRegion(){
+  const n=document.getElementById('reg-name').value,f=Number(document.getElementById('reg-fee').value);
+  if(!n||!f) return toast('أكمل الحقول','error');
+  await apiFetch(API+'/admin/regions',{method:'POST',body:JSON.stringify({name:n,fee:f})});
+  toast('تمت الإضافة'); closeModal(); loadRegions();
+}
+function editRegion(id,name,fee){
+  openModal('تعديل',`<div class="field"><label>الاسم</label><input id="reg-name-e" value="${name}"></div><div class="field"><label>الرسوم</label><input id="reg-fee-e" type="number" value="${fee}"></div>`,`<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="updateRegion('${id}')">حفظ</button>`);
+}
+async function updateRegion(id){
+  const n=document.getElementById('reg-name-e').value,f=Number(document.getElementById('reg-fee-e').value);
+  await apiFetch(API+'/admin/regions/'+id,{method:'PATCH',body:JSON.stringify({name:n,fee:f})});
+  toast('تم التعديل'); closeModal(); loadRegions();
+}
+async function deleteRegion(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/regions/'+id,{method:'DELETE'}); loadRegions(); } }
+
+// ========== CUSTOMERS ==========
+async function loadCustomers() {
+  const c = document.getElementById('content');
+  c.innerHTML = `
+    <div class="page-header"><div><div class="page-title">👥 العملاء</div></div>
+      <input type="text" id="cust-search" placeholder="ابحث عن عميل..." style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px;font-size:13px;font-family:'Cairo';color:var(--text);outline:none;width:200px" oninput="renderCustomersTable()">
+    </div>
+    <div id="customers-table"></div>
+  `;
+  await renderCustomersTable();
+}
+
+async function renderCustomersTable() {
+  const container = document.getElementById('customers-table');
+  if (!container) return;
+  container.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3)">⏳ جاري التحميل...</div>';
+
+  const search = document.getElementById('cust-search')?.value || '';
+  let url = API + '/admin/customers';
+  if (search) url += '?search=' + encodeURIComponent(search);
+  
+  const res = await apiFetch(url);
+  const customers = await res.json();
+  
+  if (!customers.length) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">👥</div><div class="msg">لا يوجد عملاء مسجلين</div></div>`;
+    return;
+  }
+  
+  container.innerHTML = `
+    <div class="section"><div class="table-wrap"><table><thead><tr>
+      <th>الاسم</th><th>الهاتف</th><th>المنطقة</th><th>رسوم التوصيل</th>
+      <th>العنوان</th><th>عدد الطلبات</th><th>آخر طلب</th><th>إجراءات</th>
+    </tr></thead><tbody>
+    ${customers.map(c => {
+      const lastDate = c.lastOrderDate ? new Date(c.lastOrderDate).toLocaleDateString('ar-EG') : '—';
+      return `<tr>
+        <td style="font-weight:600">${c.name}</td>
+        <td>${c.phone}</td>
+        <td>${c.regionName}</td>
+        <td style="color:var(--orange);font-weight:700">${c.regionFee} ج</td>
+        <td>${c.address}</td>
+        <td>${c.totalOrders}</td>
+        <td>${lastDate}</td>
+        <td><button class="btn btn-ghost btn-sm" onclick="editCustomer('${c.id}')">✏️ تعديل</button></td>
+      </tr>`;
+    }).join('')}
+    </tbody></table></div></div>`;
+}
+
+async function editCustomer(id) {
+  const res = await apiFetch(API + '/admin/customers/' + id);
+  const customer = await res.json();
+  if (customer.error) return toast(customer.error, 'error');
+
+  const regionsRes = await apiFetch(API + '/admin/regions');
+  const regions = await regionsRes.json();
+  const regionOptions = regions.map(r => 
+    `<option value="${r.id}" ${r.id === customer.regionId ? 'selected' : ''}>${r.name} (${r.fee} ج)</option>`
+  ).join('');
+
+  openModal('تعديل بيانات العميل', `
+    <div class="field"><label>الاسم</label><input id="cust-name" value="${customer.name}"></div>
+    <div class="field"><label>رقم الهاتف</label><input id="cust-phone" value="${customer.phone}"></div>
+    <div class="field"><label>المنطقة</label><select id="cust-region">${regionOptions}</select></div>
+    <div class="field"><label>العنوان التفصيلي</label><input id="cust-address" value="${customer.address}"></div>
+  `, `
+    <button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>
+    <button class="btn btn-primary" onclick="saveCustomerEdit('${id}')">حفظ</button>
+  `);
+}
+
+async function saveCustomerEdit(id) {
+  const name = document.getElementById('cust-name').value.trim();
+  const phone = document.getElementById('cust-phone').value.trim();
+  const regionId = document.getElementById('cust-region').value;
+  const address = document.getElementById('cust-address').value.trim();
+
+  if (!name || !phone || !address) return alert('أكمل جميع الحقول');
+
+  const res = await apiFetch(API + '/admin/customers/' + id, {
+    method: 'PATCH',
+    body: JSON.stringify({ name, phone, regionId, address })
+  });
+  const data = await res.json();
+  if (data.error) { alert(data.error); return; }
+  toast('تم تعديل بيانات العميل');
+  closeModal();
+  loadCustomers();
+}
+
+// ========== REPORTS ==========
+async function loadReports(){
+  const data=await apiFetch(API+'/admin/reports/full').then(r=>r.json()).catch(()=>null);
+  document.getElementById('content').innerHTML=`
+    <div class="page-header"><div><div class="page-title">📊 التقارير الشاملة</div></div></div>
+    <div class="tab-bar" id="report-tabs"><div class="tab-btn active" onclick="switchReportTab('daily')">اليوم</div><div class="tab-btn" onclick="switchReportTab('weekly')">الأسبوع</div><div class="tab-btn" onclick="switchReportTab('monthly')">الشهر</div><div class="tab-btn" onclick="switchReportTab('total')">الإجمالي</div></div><div id="report-content"></div>`;
+  window._reportData=data; switchReportTab('daily');
+}
+
+function switchReportTab(tab){
+  document.querySelectorAll('#report-tabs .tab-btn').forEach(b=>b.classList.remove('active'));
+  event?.target?.classList.add('active');
+  const d=window._reportData;
+  if(!d){ document.getElementById('report-content').innerHTML='<div class="empty-state"><div class="icon">📊</div><div class="msg">لا توجد بيانات كافية للتقارير</div></div>'; return; }
+  const periods={daily:'اليوم',weekly:'الأسبوع',monthly:'الشهر',total:'الإجمالي'};
+  const stats=d[tab]||d.daily||{productRevenue:0,deliveryRevenue:0,count:0};
+  const restKey=tab==='total'?'all':(tab==='weekly'?'week':(tab==='monthly'?'month':'today'));
+  const restaurants=d.restaurants?.[restKey]||[];
+  const drivers=d.drivers?.[restKey]||[];
+  document.getElementById('report-content').innerHTML=`
+    <div class="stats-grid" style="margin-bottom:20px;grid-template-columns:repeat(3,1fr)">
+      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${(stats.productRevenue||0).toLocaleString()} ج</div><div class="sc-label">دخل المنتجات ${periods[tab]}</div></div></div></div>
+      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${(stats.deliveryRevenue||0).toLocaleString()} ج</div><div class="sc-label">رسوم التوصيل ${periods[tab]}</div></div></div></div>
+      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${stats.count||0}</div><div class="sc-label">طلبات ${periods[tab]}</div></div></div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div class="section"><div class="sec-head"><div class="sec-title">🍽️ دخل المطاعم (المنتجات)</div></div><div class="table-wrap"><table><thead><tr><th>المطعم</th><th>دخل المنتجات</th><th>نسبة المنصة</th><th>صافي الدخل</th><th>الطلبات</th></tr></thead><tbody>${restaurants.length?restaurants.map(r=>`<tr><td>${r.name||'—'}</td><td style="color:var(--orange)">${(r.productRevenue||0).toLocaleString()} ج</td><td style="color:var(--red)">${(r.platformFee||0).toLocaleString()} ج</td><td style="color:var(--green)">${(r.netRevenue||0).toLocaleString()} ج</td><td>${r.count||0}</td></tr>`).join(''):`<tr><td colspan="5"><div class="empty-state"><div class="msg">لا توجد بيانات</div></div></td></tr>`}</tbody></table></div></div>
+      <div class="section"><div class="sec-head"><div class="sec-title">👨‍✈️ عمولات الطيارين (التوصيل)</div></div><div class="table-wrap"><table><thead><tr><th>الطيار</th><th>العمولات</th><th>الطلبات</th></tr></thead><tbody>${drivers.length?drivers.map(d=>`<tr><td>${d.name||'—'}</td><td style="color:var(--orange)">${(d.revenue||0).toLocaleString()} ج</td><td>${d.count||0}</td></tr>`).join(''):`<tr><td colspan="3"><div class="empty-state"><div class="msg">لا توجد بيانات</div></div></td></tr>`}</tbody></table></div></div>
+    </div>`;
+}
+
+// ========== SETTINGS ==========
+function loadSettings(){
+  document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">⚙️ الإعدادات</div></div></div><div class="section" style="padding:20px"><p>الإصدار: Drako v2.0</p><a href="/logout" class="btn btn-danger" style="margin-top:16px">⏻ تسجيل الخروج</a></div>`;
+}
+
+// ========== TEST ORDER ==========
+async function testOrder(){
+  const restId=prompt('معرف المطعم (من صفحة المطاعم):');
+  if(!restId) return;
+  const d=await apiFetch(API+'/admin/test-order',{method:'POST',body:JSON.stringify({restaurantId:restId})}).then(r=>r.json());
+  if(d.success){ toast('تم إنشاء طلب تجريبي'); navigate('orders'); }
+  else toast(d.error||'فشل','error');
+}
+
+// دوال الموافقة والرفض والتعديل
+async function approveOrder(id) {
+  await apiFetch(API + '/admin/orders/' + id + '/approve', { method: 'PATCH' });
+  toast('تمت الموافقة على الطلب');
+  loadOrders();
+}
+
+async function rejectOrder(id) {
+  const reason = prompt('سبب الرفض:');
+  if (!reason) return;
+  await apiFetch(API + '/admin/orders/' + id + '/reject', { method: 'PATCH', body: JSON.stringify({ reason }) });
+  toast('تم رفض الطلب');
+  loadOrders();
+}
+
+async function editOrder(id) {
+  const o = allOrdersCache.find(o => o.id === id);
+  if (!o) return;
+  openModal('تعديل الطلب #' + id.slice(-6), `
+    <div class="field"><label>الأصناف (JSON)</label><textarea id="edit-items" style="height:100px">${JSON.stringify(o.items, null, 2)}</textarea></div>
+    <div class="field"><label>الإجمالي</label><input id="edit-total" type="number" value="${o.total}"></div>
+    <div class="field"><label>ملاحظات الأدمن</label><input id="edit-notes" value="${o.adminNotes || ''}"></div>
+  `, `
+    <button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>
+    <button class="btn btn-primary" onclick="saveOrderEdit('${id}')">حفظ</button>
+  `);
+}
+
+async function saveOrderEdit(id) {
+  try {
+    const items = JSON.parse(document.getElementById('edit-items').value);
+    const total = Number(document.getElementById('edit-total').value);
+    const adminNotes = document.getElementById('edit-notes').value;
+    await apiFetch(API + '/admin/orders/' + id, {
+      method: 'PATCH',
+      body: JSON.stringify({ items, total, adminNotes })
+    });
+    toast('تم تعديل الطلب');
+    closeModal();
+    loadOrders();
+  } catch (e) {
+    alert('صيغة JSON غير صحيحة');
+  }
+}
+
+navigate('dashboard');
+
+// Socket.IO listeners
+const socket = io();
+socket.on('newOrder', (data) => {
+  playSound('adminNewOrder');
+  toast('طلب جديد من ' + data.customerName, 'success');
+  document.getElementById('pending-badge').textContent = 
+    (parseInt(document.getElementById('pending-badge').textContent) || 0) + 1;
+});
+
+socket.on('orderCancelled', (data) => {
+  playSound('orderCancelled');
+  toast('تم إلغاء طلب #' + (data.orderId || '').slice(-6), 'error');
+});
+
+socket.on('driverArrived', (data) => {
+  playSound('driverArrived');
+  toast('الطيار ' + (data.driverName || '') + ' وصل لاستلام الطلب', 'info');
+});
 </script>
 </body>
 </html>
