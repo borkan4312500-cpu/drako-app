@@ -456,6 +456,11 @@
         showToast('فشل', true);
       }
     }
+    setInterval(async () => {
+  try {
+    await fetch(API + '/market/orders', { credentials: 'include' });
+  } catch(e) {}
+}, 10 * 60 * 1000);
 
     // التشغيل
     (async function() {
