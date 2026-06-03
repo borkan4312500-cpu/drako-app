@@ -586,20 +586,46 @@ async function deleteCategory(id) {
 }
 
 // ========== PRODUCTS (تصميم جديد وكروت) ==========
+// متغير لتخزين التصنيف المختار حالياً
+let currentCategoryFilter = 'all';
+
 async function loadProducts() {
   await loadCategoriesOptions();
   const prodRes = await apiFetch(API + '/restaurant/products');
   const products = await prodRes.json();
-  let html = `
+  
+  // جلب التصنيفات مرة أخرى (أو استخدام categoriesList المتاحة)
+  const catsRes = await apiFetch(API + '/restaurant/categories');
+  const categories = await catsRes.json();
+  
+  // بناء شريط التصفية
+  let filterBar = `
+    <div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:8px; margin-bottom:20px; border-bottom:1px solid var(--border);">
+      <button class="btn ${currentCategoryFilter === 'all' ? 'btn-primary' : 'btn-ghost'}" onclick="setCategoryFilter('all')">الكل</button>
+  `;
+  categories.forEach(cat => {
+    filterBar += `<button class="btn ${currentCategoryFilter === cat.id ? 'btn-primary' : 'btn-ghost'}" onclick="setCategoryFilter('${cat.id}')">${cat.name}</button>`;
+  });
+  filterBar += `</div>`;
+  
+  // تصفية المنتجات حسب التصنيف المختار
+  let filteredProducts = products;
+  if (currentCategoryFilter !== 'all') {
+    filteredProducts = products.filter(p => p.category === currentCategoryFilter);
+  }
+  
+  let productsHtml = `
     <div style="display:flex;justify-content:space-between;margin-bottom:24px">
       <h2>📋 المنتجات</h2>
       <button class="btn btn-primary" onclick="showAddProduct()">+ إضافة منتج</button>
     </div>
+    ${filterBar}
     <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:20px">
   `;
-  products.forEach(p => {
+  
+  filteredProducts.forEach(p => {
     const groupsStr = (p.groups || []).map(g => `<div style="font-size:11px;color:#aaa">${g.name}: ${g.options?.map(o=>`${o.value}(${o.price}ج)`).join(', ')}</div>`).join('');
-    html += `
+    productsHtml += `
       <div style="background:var(--surface2);border-radius:16px;border:1px solid var(--border);overflow:hidden;transition:0.2s">
         <div style="height:140px;background:#2a2a2a;display:flex;align-items:center;justify-content:center">
           ${p.image ? `<img src="${p.image}" style="width:100%;height:100%;object-fit:cover">` : '<span style="color:var(--text3)">📷 لا توجد صورة</span>'}
@@ -617,9 +643,15 @@ async function loadProducts() {
       </div>
     `;
   });
-  html += `</div>`;
-  if(!products.length) html = `<div class="empty-state"><div class="icon">📋</div><div class="msg">لا توجد منتجات، أضف منتجك الأول</div></div>`;
-  document.getElementById('content').innerHTML = html;
+  productsHtml += `</div>`;
+  if(filteredProducts.length === 0) productsHtml = `<div class="empty-state"><div class="icon">📋</div><div class="msg">لا توجد منتجات في هذا التصنيف</div></div>`;
+  document.getElementById('content').innerHTML = productsHtml;
+}
+
+// دالة تغيير التصنيف المختار
+function setCategoryFilter(catId) {
+  currentCategoryFilter = catId;
+  loadProducts(); // إعادة تحميل المنتجات مع التصفية الجديدة
 }
 function showAddProduct() {
   const catOptions = window._catOptions;
