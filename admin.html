@@ -541,20 +541,17 @@ function showAddMarket(){
   `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addMarket()">إضافة</button>`);
 }
 async function addMarket(){
-  const n=document.getElementById('m-name').value.trim();
-  const p=document.getElementById('m-phone').value.trim();
-  const ps=document.getElementById('m-pass').value.trim();
+  const n = document.getElementById('m-name').value.trim();
+  const p = document.getElementById('m-phone').value.trim();
+  const ps = document.getElementById('m-pass').value.trim();
   if(!n||!p||!ps) return toast('أكمل الحقول','error');
-  const form = new FormData();
-  form.append('name', n);
-  form.append('ownerPhone', p);
-  form.append('ownerPassword', ps);
-  const logoFile = document.getElementById('m-logo').files[0];
-  if(logoFile) form.append('logo', logoFile);
-  const d=await apiFetch(API+'/admin/markets',{method:'POST',body:form}).then(r=>r.json());
-  if(d.error) toast(d.error,'error'); else { toast('تمت الإضافة'); closeModal(); loadMarkets(); }
+  const d = await apiFetch(API+'/admin/markets', {
+    method: 'POST',
+    body: JSON.stringify({ name: n, ownerPhone: p, ownerPassword: ps })
+  }).then(r => r.json());
+  if(d.error) toast(d.error, 'error');
+  else { toast('تمت الإضافة'); closeModal(); loadMarkets(); }
 }
-
 async function editMarket(id) {
   const markets = await apiFetch(API+'/admin/markets').then(r=>r.json());
   const m = markets.find(m => m.id === id);
@@ -605,18 +602,16 @@ function showAddPharmacy(){
   `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addPharmacy()">إضافة</button>`);
 }
 async function addPharmacy(){
-  const n=document.getElementById('ph-name').value.trim();
-  const p=document.getElementById('ph-phone').value.trim();
-  const ps=document.getElementById('ph-pass').value.trim();
+  const n = document.getElementById('ph-name').value.trim();
+  const p = document.getElementById('ph-phone').value.trim();
+  const ps = document.getElementById('ph-pass').value.trim();
   if(!n||!p||!ps) return toast('أكمل الحقول','error');
-  const form = new FormData();
-  form.append('name', n);
-  form.append('ownerPhone', p);
-  form.append('ownerPassword', ps);
-  const logoFile = document.getElementById('ph-logo').files[0];
-  if(logoFile) form.append('logo', logoFile);
-  const d=await apiFetch(API+'/admin/pharmacies',{method:'POST',body:form}).then(r=>r.json());
-  if(d.error) toast(d.error,'error'); else { toast('تمت الإضافة'); closeModal(); loadPharmacies(); }
+  const d = await apiFetch(API+'/admin/pharmacies', {
+    method: 'POST',
+    body: JSON.stringify({ name: n, ownerPhone: p, ownerPassword: ps })
+  }).then(r => r.json());
+  if(d.error) toast(d.error, 'error');
+  else { toast('تمت الإضافة'); closeModal(); loadPharmacies(); }
 }
 
 async function editPharmacy(id) {
