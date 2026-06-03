@@ -1275,6 +1275,91 @@ setInterval(() => {
   }
 }, 60000);
 
+// ---------- تعديل وحذف المطاعم (لأول مرة) ----------
+app.patch('/api/admin/restaurants/:id', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const restaurant = data.restaurants.find(r => r.id === req.params.id);
+  if (!restaurant) return res.status(404).json({ error: 'غير موجود' });
+  const { name, ownerPhone } = req.body;
+  if (name) restaurant.name = name;
+  if (ownerPhone) {
+    // تغيير رقم هاتف المالك في جدول users أيضاً
+    const user = data.users.find(u => u.id === restaurant.userId);
+    if (user) user.phone = ownerPhone;
+  }
+  writeData(data);
+  res.json({ success: true });
+});
+
+app.delete('/api/admin/restaurants/:id', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const idx = data.restaurants.findIndex(r => r.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'غير موجود' });
+  const restaurant = data.restaurants[idx];
+  // حذف المستخدم المالك
+  const userIndex = data.users.findIndex(u => u.id === restaurant.userId);
+  if (userIndex !== -1) data.users.splice(userIndex, 1);
+  data.restaurants.splice(idx, 1);
+  writeData(data);
+  res.json({ success: true });
+});
+
+// ---------- تعديل وحذف الأسواق ----------
+app.patch('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const market = data.markets.find(m => m.id === req.params.id);
+  if (!market) return res.status(404).json({ error: 'غير موجود' });
+  const { name, ownerPhone } = req.body;
+  if (name) market.name = name;
+  if (ownerPhone) {
+    const user = data.users.find(u => u.id === market.userId);
+    if (user) user.phone = ownerPhone;
+  }
+  writeData(data);
+  res.json({ success: true });
+});
+// DELETE /api/admin/markets/:id موجود مسبقاً
+
+// ---------- تعديل وحذف الصيدليات ----------
+app.patch('/api/admin/pharmacies/:id', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const pharmacy = data.pharmacies.find(p => p.id === req.params.id);
+  if (!pharmacy) return res.status(404).json({ error: 'غير موجود' });
+  const { name, ownerPhone } = req.body;
+  if (name) pharmacy.name = name;
+  if (ownerPhone) {
+    const user = data.users.find(u => u.id === pharmacy.userId);
+    if (user) user.phone = ownerPhone;
+  }
+  writeData(data);
+  res.json({ success: true });
+});
+// DELETE /api/admin/pharmacies/:id موجود مسبقاً
+
+// ---------- تعديل وحذف الطيارين ----------
+app.patch('/api/admin/drivers/:id', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const user = data.users.find(u => u.id === req.params.id && u.role === 'DRIVER');
+  if (!user) return res.status(404).json({ error: 'غير موجود' });
+  const { name, phone, password } = req.body;
+  if (name) user.name = name;
+  if (phone) user.phone = phone;
+  if (password) user.password = bcrypt.hashSync(password, 10);
+  writeData(data);
+  res.json({ success: true });
+});
+
+app.delete('/api/admin/drivers/:id', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const userIndex = data.users.findIndex(u => u.id === req.params.id && u.role === 'DRIVER');
+  if (userIndex === -1) return res.status(404).json({ error: 'غير موجود' });
+  // حذف ملف الطيار
+  const driverIndex = data.drivers.findIndex(d => d.userId === req.params.id);
+  if (driverIndex !== -1) data.drivers.splice(driverIndex, 1);
+  data.users.splice(userIndex, 1);
+  writeData(data);
+  res.json({ success: true });
+});
 io.on('connection', (socket) => {
   console.log('عميل متصل:', socket.id);
 });
