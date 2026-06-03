@@ -1,764 +1,653 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
-    <title>سفرة – طعامك بأفضل سعر</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Cairo', sans-serif;
-        }
-
-        body {
-            background: #f8f9fc;
-            direction: rtl;
-            padding-bottom: 85px;
-        }
-
-        /* شريط علوي */
-        .app-header {
-            background: white;
-            padding: 16px 20px;
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .logo {
-            font-size: 22px;
-            font-weight: 800;
-            background: linear-gradient(135deg, #FF6B00, #FF9F4A);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-
-        .cart-icon {
-            position: relative;
-            background: #FF6B0010;
-            width: 44px;
-            height: 44px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 30px;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .cart-icon i {
-            font-size: 22px;
-            color: #FF6B00;
-        }
-
-        .cart-badge {
-            position: absolute;
-            top: -6px;
-            right: -6px;
-            background: #FF6B00;
-            color: white;
-            font-size: 11px;
-            font-weight: bold;
-            width: 20px;
-            height: 20px;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* حاوية المحتوى الرئيسي */
-        .container {
-            padding: 16px;
-            max-width: 700px;
-            margin: 0 auto;
-        }
-
-        /* بطاقة المطعم */
-        .restaurant-card {
-            background: white;
-            border-radius: 28px;
-            padding: 16px;
-            margin-bottom: 20px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 1px solid rgba(0, 0, 0, 0.03);
-        }
-
-        .restaurant-card img {
-            width: 65px;
-            height: 65px;
-            border-radius: 20px;
-            object-fit: cover;
-            background: #f0f0f0;
-        }
-
-        .restaurant-info h3 {
-            font-size: 18px;
-            font-weight: 800;
-        }
-
-        .restaurant-info p {
-            color: #6c7a91;
-            font-size: 13px;
-        }
-
-        /* شبكة المنتجات */
-        .products-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 16px;
-            margin-top: 12px;
-        }
-
-        .product-card {
-            background: white;
-            border-radius: 24px;
-            overflow: hidden;
-            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.04);
-            transition: transform 0.2s, box-shadow 0.2s;
-            border: 1px solid #edf2f7;
-        }
-
-        .product-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.08);
-        }
-
-        .product-img {
-            width: 100%;
-            height: 160px;
-            object-fit: cover;
-            background: #f7f7f7;
-        }
-
-        .product-details {
-            padding: 14px;
-        }
-
-        .product-title {
-            font-weight: 800;
-            font-size: 17px;
-            margin-bottom: 5px;
-        }
-
-        .product-desc {
-            font-size: 12px;
-            color: #6c7a91;
-            margin-bottom: 10px;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-
-        .product-price-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 8px;
-        }
-
-        .price {
-            color: #FF6B00;
-            font-weight: 800;
-            font-size: 18px;
-        }
-
-        .add-btn {
-            background: #FF6B00;
-            border: none;
-            color: white;
-            width: 38px;
-            height: 38px;
-            border-radius: 40px;
-            font-size: 18px;
-            cursor: pointer;
-            transition: 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .add-btn i {
-            pointer-events: none;
-        }
-
-        /* السلة الجانبية (للجوال) */
-        .cart-sidebar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            border-radius: 28px 28px 0 0;
-            box-shadow: 0 -5px 25px rgba(0, 0, 0, 0.15);
-            transform: translateY(100%);
-            transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
-            z-index: 1000;
-            max-height: 80vh;
-            overflow-y: auto;
-            padding: 20px;
-        }
-
-        .cart-sidebar.open {
-            transform: translateY(0);
-        }
-
-        .cart-header {
-            display: flex;
-            justify-content: space-between;
-            font-weight: 800;
-            margin-bottom: 16px;
-            font-size: 18px;
-        }
-
-        .cart-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #edf2f7;
-            padding: 12px 0;
-        }
-
-        .cart-item-info {
-            flex: 1;
-        }
-
-        .cart-item-title {
-            font-weight: 600;
-        }
-
-        .cart-item-price {
-            color: #FF6B00;
-            font-size: 13px;
-        }
-
-        .cart-qty {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .cart-qty button {
-            background: #f0f2f5;
-            border: none;
-            width: 28px;
-            height: 28px;
-            border-radius: 20px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-
-        .checkout-btn {
-            background: #FF6B00;
-            color: white;
-            width: 100%;
-            padding: 14px;
-            border: none;
-            border-radius: 60px;
-            font-weight: 800;
-            margin-top: 20px;
-            font-size: 16px;
-        }
-
-        .region-selector {
-            margin: 15px 0;
-        }
-
-        /* مودال الخيارات */
-        .modal-mask {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(4px);
-            z-index: 2000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            visibility: hidden;
-            opacity: 0;
-            transition: 0.2s;
-        }
-
-        .modal-mask.active {
-            visibility: visible;
-            opacity: 1;
-        }
-
-        .options-modal {
-            background: white;
-            width: 90%;
-            max-width: 400px;
-            border-radius: 32px;
-            padding: 20px;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .option-group {
-            margin-bottom: 20px;
-        }
-
-        .option-group strong {
-            display: block;
-            margin-bottom: 8px;
-        }
-
-        .radio-option, .checkbox-option {
-            margin: 6px 0;
-        }
-
-        .close-modal {
-            background: #eee;
-            border: none;
-            padding: 10px;
-            border-radius: 40px;
-            width: 100%;
-            margin-top: 15px;
-        }
-
-        .empty-cart {
-            text-align: center;
-            color: #8a99b4;
-            padding: 30px;
-        }
-
-        .back-btn {
-            background: none;
-            border: none;
-            font-size: 16px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            margin-bottom: 15px;
-            cursor: pointer;
-            color: #FF6B00;
-        }
-
-        footer {
-            text-align: center;
-            padding: 16px;
-            font-size: 12px;
-            color: #aaa;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <title>دراكو - لوحة الماركت</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    /* جميع التنسيقات كما هي (لم تتغير) */
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
+    body {
+      background: #0D0F14;
+      color: #F0F2F8;
+      padding-bottom: 16px;
+    }
+    .header {
+      background: #161B24;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #2A3348;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo {
+      font-size: 20px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #FF6B00, #FF8C3A);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .icon-btn {
+      background: #1E2535;
+      border: none;
+      color: #8B95A8;
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      font-size: 18px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .icon-btn:active {
+      background: #FF6B00;
+      color: white;
+    }
+    .stats-row {
+      display: flex;
+      gap: 10px;
+      padding: 12px 16px;
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
+    .stat-card {
+      background: #161B24;
+      border: 1px solid #2A3348;
+      border-radius: 16px;
+      padding: 12px;
+      min-width: 100px;
+      text-align: center;
+    }
+    .stat-title {
+      font-size: 11px;
+      color: #8B95A8;
+      margin-bottom: 4px;
+    }
+    .stat-value {
+      font-size: 24px;
+      font-weight: 800;
+      color: #FF6B00;
+    }
+    .orders-container {
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .order-card {
+      background: #161B24;
+      border: 1px solid #2A3348;
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    .order-header {
+      background: #1E2535;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .order-id {
+      font-weight: 700;
+      color: #FF6B00;
+      font-size: 13px;
+    }
+    .order-status {
+      background: rgba(255,107,0,0.15);
+      color: #FF6B00;
+      padding: 4px 10px;
+      border-radius: 30px;
+      font-size: 11px;
+    }
+    .order-body {
+      padding: 12px 16px;
+    }
+    .customer-info {
+      background: #1E2535;
+      border-radius: 12px;
+      padding: 10px;
+      margin-bottom: 12px;
+    }
+    .customer-name {
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .customer-phone, .customer-address {
+      font-size: 12px;
+      color: #8B95A8;
+    }
+    .products-title {
+      font-size: 13px;
+      font-weight: 700;
+      margin: 10px 0 8px;
+    }
+    .product-item {
+      background: #1E2535;
+      border-radius: 12px;
+      padding: 10px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .product-info {
+      flex: 1;
+    }
+    .product-name {
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .product-details {
+      font-size: 11px;
+      color: #8B95A8;
+      margin-top: 2px;
+    }
+    .product-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .edit-product, .delete-product {
+      background: none;
+      border: none;
+      font-size: 16px;
+      padding: 6px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .edit-product { color: #3B82F6; }
+    .delete-product { color: #F05252; }
+    .add-product-btn {
+      background: #1E2535;
+      border: 1px dashed #FF6B00;
+      color: #FF6B00;
+      width: 100%;
+      padding: 10px;
+      border-radius: 12px;
+      margin: 10px 0;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .invoice-section {
+      display: flex;
+      gap: 8px;
+      margin: 12px 0;
+    }
+    .invoice-input {
+      flex: 1;
+      background: #1E2535;
+      border: 1px solid #2A3348;
+      border-radius: 12px;
+      padding: 10px;
+      color: white;
+      font-size: 14px;
+    }
+    .btn {
+      background: #FF6B00;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 30px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      color: white;
+    }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid #FF6B00;
+      color: #FF6B00;
+    }
+    .order-footer {
+      padding: 12px 16px;
+      border-top: 1px solid #2A3348;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .total-amount {
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .total-amount span {
+      color: #FF6B00;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 16px;
+    }
+    .modal.active {
+      display: flex;
+    }
+    .modal-content {
+      background: #161B24;
+      border: 1px solid #2A3348;
+      border-radius: 24px;
+      width: 100%;
+      max-width: 380px;
+      padding: 20px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .close-modal {
+      background: none;
+      border: none;
+      color: #8B95A8;
+      font-size: 22px;
+      cursor: pointer;
+    }
+    .field {
+      margin-bottom: 14px;
+    }
+    .field label {
+      display: block;
+      font-size: 12px;
+      margin-bottom: 6px;
+      color: #8B95A8;
+    }
+    .field input, .field textarea {
+      width: 100%;
+      background: #1E2535;
+      border: 1px solid #2A3348;
+      border-radius: 12px;
+      padding: 10px;
+      color: white;
+      font-size: 14px;
+    }
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1E2535;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 40px;
+      z-index: 300;
+      transition: 0.3s;
+      opacity: 0;
+      pointer-events: none;
+      font-size: 13px;
+    }
+    .toast.show {
+      opacity: 1;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #8B95A8;
+    }
+    .error-box {
+      background: rgba(240,82,82,0.1);
+      border: 1px solid #F05252;
+      border-radius: 16px;
+      padding: 20px;
+      margin: 20px;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
+<div class="header">
+  <div class="logo">دراكو - الماركت</div>
+  <div class="header-actions">
+    <button class="icon-btn" onclick="refreshOrders()"><i class="fas fa-sync-alt"></i></button>
+    <button class="icon-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
+  </div>
+</div>
+<div class="stats-row" id="statsContainer"></div>
+<div class="orders-container" id="ordersContainer"></div>
+<div class="error-box" id="errorBox" style="display: none;">
+  <i class="fas fa-exclamation-triangle"></i>
+  <div id="errorMessage"></div>
+</div>
 
-<div class="app-header">
-    <div class="logo">🍽️ سفرة</div>
-    <div class="cart-icon" onclick="toggleCart()">
-        <i class="fas fa-shopping-bag"></i>
-        <span class="cart-badge" id="cartCount">0</span>
+<div class="modal" id="productModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">تعديل المنتج</div>
+      <button class="close-modal" onclick="closeProductModal()">✕</button>
     </div>
-</div>
-
-<div class="container" id="appContent">
-    <!-- المحتوى ديناميكي -->
-    <div style="text-align: center; padding: 40px;">⏳ جاري التحميل...</div>
-</div>
-
-<!-- السلة الجانبية -->
-<div class="cart-sidebar" id="cartSidebar">
-    <div class="cart-header">
-        <span>🛒 سلة الطلبات</span>
-        <i class="fas fa-times" onclick="toggleCart()" style="cursor:pointer"></i>
+    <div class="field">
+      <label>اسم المنتج</label>
+      <input type="text" id="productName" placeholder="مثال: حليب">
     </div>
-    <div id="cartItemsList"></div>
-    <div id="cartTotalPrice"></div>
-    <div class="region-selector" id="regionSelector"></div>
-    <div id="addressField"></div>
-    <button class="checkout-btn" id="checkoutBtn">إتمام الطلب 💳</button>
+    <div class="field">
+      <label>سعر الوحدة (ج)</label>
+      <input type="number" id="productPrice" placeholder="0">
+    </div>
+    <div class="field">
+      <label>الكمية</label>
+      <input type="number" id="productQuantity" min="1" value="1">
+    </div>
+    <div class="field">
+      <label>ملاحظات (اختياري)</label>
+      <textarea id="productNotes" rows="2" placeholder="مثل: طازج"></textarea>
+    </div>
+    <button class="btn" onclick="saveProductChanges()" style="width:100%">حفظ</button>
+  </div>
 </div>
 
-<!-- مودال اختيارات المنتج -->
-<div class="modal-mask" id="productModal">
-    <div class="options-modal" id="modalContent"></div>
-</div>
+<div class="toast" id="toast">تم الحفظ</div>
 
+<script src="/socket.io/socket.io.js"></script>
 <script>
-    // ------------------- API & GLOBALS -------------------
-    let restaurants = [];
-    let currentRestaurant = null;
-    let currentMenu = [];
-    let cart = [];
-    let regions = [];
+  // ========== Global ==========
+  const API = '/api';
+  let currentUser = null;
 
-    // Helper fetch
-    async function fetchAPI(url) {
-        const res = await fetch(url);
-        return res.json();
+  // Helper to show/hide error and redirect
+  function showErrorAndRedirect(msg) {
+    const errorBox = document.getElementById('errorBox');
+    const errorMsg = document.getElementById('errorMessage');
+    errorMsg.innerText = msg;
+    errorBox.style.display = 'block';
+    document.getElementById('ordersContainer').innerHTML = '';
+    document.getElementById('statsContainer').innerHTML = '';
+    setTimeout(() => {
+      window.location.href = '/login.html';
+    }, 3000);
+  }
+
+  // Check authentication and role
+  async function checkAuth() {
+    try {
+      const res = await fetch(API + '/market/orders', { credentials: 'include' });
+      if (res.status === 403) {
+        showErrorAndRedirect('ليس لديك صلاحية الوصول لهذه الصفحة. تأكد من أن حسابك من نوع ماركت.');
+        return false;
+      }
+      if (res.status === 401) {
+        showErrorAndRedirect('انتهت الجلسة أو لم يتم تسجيل الدخول. جاري إعادة التوجيه...');
+        return false;
+      }
+      return true;
+    } catch(e) {
+      showErrorAndRedirect('فشل الاتصال بالسيرفر');
+      return false;
     }
+  }
 
-    // تحميل المطاعم
-    async function loadRestaurants() {
-        restaurants = await fetchAPI('/api/restaurants');
-        renderRestaurantList();
+  let currentOrderId = null;
+  let currentProductIndex = null;
+  let ordersData = [];
+
+  function showToast(msg, isError = false) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.style.background = isError ? '#F05252' : '#1E2535';
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2500);
+  }
+
+  async function apiFetch(url, options = {}) {
+    const res = await fetch(url, { ...options, credentials: 'include', headers: { ...(options.headers||{}), 'Content-Type': options.body instanceof FormData ? undefined : 'application/json' } });
+    if (!res.ok) {
+      if (res.status === 403) {
+        showErrorAndRedirect('غير مصرح بالوصول، سيتم إعادة التوجيه');
+        throw new Error('Forbidden');
+      }
+      throw new Error(await res.text());
     }
+    return res.json();
+  }
 
-    function renderRestaurantList() {
-        const container = document.getElementById('appContent');
-        if (!restaurants.length) {
-            container.innerHTML = '<div class="empty-state">لا توجد مطاعم مفتوحة حالياً</div>';
-            return;
-        }
-        let html = `<h2 style="margin-bottom: 10px;">✨ المطاعم المفتوحة</h2>`;
-        restaurants.forEach(r => {
-            html += `
-                <div class="restaurant-card" onclick="selectRestaurant('${r.id}')">
-                    <img src="${r.logo}" onerror="this.src='https://placehold.co/70x70/FF6B00/white?text=🍔'">
-                    <div class="restaurant-info">
-                        <h3>${r.name}</h3>
-                        <p>اطلب الآن واستمتع بأشهى الأطباق 🍕</p>
-                    </div>
-                </div>
-            `;
-        });
-        container.innerHTML = html;
+  async function loadOrders() {
+    try {
+      const orders = await apiFetch(API + '/market/orders');
+      ordersData = orders;
+      renderStats(orders);
+      renderOrders(orders);
+    } catch(e) {
+      console.error(e);
+      showToast('فشل تحميل الطلبات', true);
     }
+  }
 
-    // اختيار مطعم
-    async function selectRestaurant(id) {
-        currentRestaurant = restaurants.find(r => r.id === id);
-        currentMenu = await fetchAPI(`/api/restaurants/${id}/menu`);
-        renderMenu();
+  function renderStats(orders) {
+    const pending = orders.filter(o => o.status === 'PENDING').length;
+    const accepted = orders.filter(o => o.status === 'ACCEPTED').length;
+    const ready = orders.filter(o => o.status === 'READY').length;
+    document.getElementById('statsContainer').innerHTML = `
+      <div class="stat-card"><div class="stat-title">جديد</div><div class="stat-value">${pending}</div></div>
+      <div class="stat-card"><div class="stat-title">تحضير</div><div class="stat-value">${accepted}</div></div>
+      <div class="stat-card"><div class="stat-title">جاهز</div><div class="stat-value">${ready}</div></div>
+      <div class="stat-card"><div class="stat-title">إجمالي</div><div class="stat-value">${orders.length}</div></div>
+    `;
+  }
+
+  function renderOrders(orders) {
+    const container = document.getElementById('ordersContainer');
+    if (!orders.length) {
+      container.innerHTML = '<div class="empty-state"><i class="fas fa-box-open"></i><div>لا توجد طلبات حالياً</div></div>';
+      return;
     }
+    container.innerHTML = orders.map(order => `
+      <div class="order-card" data-order-id="${order.id}">
+        <div class="order-header">
+          <div class="order-id">طلب #${order.id.slice(-8)}</div>
+          <div class="order-status">${getStatusText(order.status)}</div>
+        </div>
+        <div class="order-body">
+          <div class="customer-info">
+            <div class="customer-name">${escapeHtml(order.customerName)}</div>
+            <div class="customer-phone">📞 ${order.customerPhone}</div>
+            <div class="customer-address">📍 ${order.address || '—'}</div>
+          </div>
+          <div class="products-title">المنتجات المطلوبة</div>
+          <div id="products-list-${order.id}">
+            ${renderProducts(order.items, order.id)}
+          </div>
+          <button class="add-product-btn" onclick="addProductToOrder('${order.id}')">+ إضافة منتج جديد</button>
+          ${(order.status === 'PENDING' || order.status === 'ACCEPTED') ? `
+            <div class="invoice-section">
+              <input type="number" id="invoice-${order.id}" placeholder="قيمة الفاتورة الفعلية (ج)" class="invoice-input">
+              <button class="btn" onclick="setInvoice('${order.id}')">تحديد الفاتورة</button>
+            </div>
+          ` : ''}
+          ${order.invoiceAmount ? `<div class="invoice-section">💰 قيمة الفاتورة: ${order.invoiceAmount} ج</div>` : ''}
+        </div>
+        <div class="order-footer">
+          <div class="total-amount">الإجمالي: <span>${order.total} ج</span></div>
+          <div>
+            ${order.status === 'PENDING' ? `<button class="btn btn-outline" onclick="acceptOrder('${order.id}')">قبول</button>` : ''}
+            ${order.status === 'ACCEPTED' ? `<button class="btn" onclick="markReady('${order.id}')">تجهيز</button>` : ''}
+            ${order.status === 'READY' ? '<span style="color:#2ECC71">جاهز للتوصيل</span>' : ''}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
 
-    function renderMenu() {
-        const container = document.getElementById('appContent');
-        let html = `<button class="back-btn" onclick="backToRestaurants()"><i class="fas fa-arrow-right"></i> جميع المطاعم</button>
-                    <h2>${currentRestaurant.name}</h2>
-                    <div class="products-grid">`;
-        currentMenu.forEach(product => {
-            let priceDisplay = product.type === 'single' ? `${product.basePrice} ج` : (product.basePrice ? `يبدأ من ${product.basePrice} ج` : 'متعدد');
-            html += `
-                <div class="product-card">
-                    <img class="product-img" src="${product.image || 'https://placehold.co/300x160/FF6B00/white?text=🍽️'}" onerror="this.src='https://placehold.co/300x160/FF6B00/white?text=🍽️'">
-                    <div class="product-details">
-                        <div class="product-title">${product.name}</div>
-                        <div class="product-desc">${product.description || ''}</div>
-                        <div class="product-price-row">
-                            <span class="price">${priceDisplay}</span>
-                            <button class="add-btn" onclick="openProductOptions('${product.id}')"><i class="fas fa-plus"></i></button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-        html += `</div>`;
-        container.innerHTML = html;
+  function renderProducts(items, orderId) {
+    if (!items || !items.length) return '<div style="color:#8B95A8">لا توجد منتجات</div>';
+    return items.map((item, idx) => `
+      <div class="product-item">
+        <div class="product-info">
+          <div class="product-name">${escapeHtml(item.name)}</div>
+          <div class="product-details">${item.quantity} × ${item.price} ج | ${item.notes ? '📝 '+escapeHtml(item.notes) : ''}</div>
+        </div>
+        <div class="product-actions">
+          <button class="edit-product" onclick="editProduct('${orderId}', ${idx})"><i class="fas fa-edit"></i></button>
+          <button class="delete-product" onclick="deleteProduct('${orderId}', ${idx})"><i class="fas fa-trash-alt"></i></button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
+  }
+
+  function editProduct(orderId, idx) {
+    const order = ordersData.find(o => o.id === orderId);
+    if (!order) return;
+    const product = order.items[idx];
+    if (!product) return;
+    currentOrderId = orderId;
+    currentProductIndex = idx;
+    document.getElementById('modalTitle').innerText = 'تعديل المنتج';
+    document.getElementById('productName').value = product.name;
+    document.getElementById('productPrice').value = product.price;
+    document.getElementById('productQuantity').value = product.quantity;
+    document.getElementById('productNotes').value = product.notes || '';
+    document.getElementById('productModal').classList.add('active');
+  }
+
+  function deleteProduct(orderId, idx) {
+    if (confirm('هل تريد حذف هذا المنتج من الطلب؟')) {
+      updateOrderProducts(orderId, (items) => {
+        items.splice(idx, 1);
+        return items;
+      });
     }
+  }
 
-    function backToRestaurants() {
-        currentRestaurant = null;
-        currentMenu = [];
-        renderRestaurantList();
+  function addProductToOrder(orderId) {
+    currentOrderId = orderId;
+    currentProductIndex = -1;
+    document.getElementById('modalTitle').innerText = 'إضافة منتج جديد';
+    document.getElementById('productName').value = '';
+    document.getElementById('productPrice').value = '';
+    document.getElementById('productQuantity').value = 1;
+    document.getElementById('productNotes').value = '';
+    document.getElementById('productModal').classList.add('active');
+  }
+
+  async function saveProductChanges() {
+    const name = document.getElementById('productName').value.trim();
+    const price = parseFloat(document.getElementById('productPrice').value);
+    const quantity = parseInt(document.getElementById('productQuantity').value);
+    const notes = document.getElementById('productNotes').value;
+
+    if (!name || isNaN(price) || price <= 0 || isNaN(quantity) || quantity < 1) {
+      showToast('البيانات غير صحيحة', true);
+      return;
     }
-
-    // فتح مودال اختيارات المنتج (للأصناف ذات المجموعات)
-    let selectedProductForCart = null;
-    async function openProductOptions(productId) {
-        const product = currentMenu.find(p => p.id === productId);
-        if (!product) return;
-        selectedProductForCart = product;
-
-        let groupsHtml = '';
-        if (product.groups && product.groups.length) {
-            for (let g of product.groups) {
-                groupsHtml += `<div class="option-group"><strong>${g.name} ${g.required ? '(إجباري)' : '(اختياري)'}</strong>`;
-                if (g.type === 'single') {
-                    g.options.forEach(opt => {
-                        groupsHtml += `<div class="radio-option"><label><input type="radio" name="group_${g.name.replace(/\s/g, '_')}" value="${opt.value}" data-price="${opt.price}" ${g.required && g.options[0].value === opt.value ? 'checked' : ''}> ${opt.value} (+${opt.price} ج)</label></div>`;
-                    });
-                } else {
-                    g.options.forEach(opt => {
-                        groupsHtml += `<div class="checkbox-option"><label><input type="checkbox" name="group_${g.name.replace(/\s/g, '_')}" value="${opt.value}" data-price="${opt.price}"> ${opt.value} (+${opt.price} ج)</label></div>`;
-                    });
-                }
-                groupsHtml += `</div>`;
-            }
-        } else {
-            groupsHtml = `<p style="color:#888;">لا توجد إضافات اختيارية</p>`;
-        }
-
-        const modalHtml = `
-            <h3>${product.name}</h3>
-            <p style="margin: 8px 0;">${product.description || ''}</p>
-            ${groupsHtml}
-            <div class="option-group"><label>📝 ملاحظاتك</label><input type="text" id="itemNotes" placeholder="مثال: بدون بصل" style="width:100%; padding:8px; border-radius:12px; border:1px solid #ddd;"></div>
-            <div class="option-group"><label>🔢 الكمية</label><input type="number" id="itemQty" value="1" min="1" style="width:100%; padding:8px; border-radius:12px; border:1px solid #ddd;"></div>
-            <button class="checkout-btn" id="confirmAddToCartBtn" style="margin-top: 10px;">➕ أضف للسلة</button>
-            <button class="close-modal" onclick="closeProductModal()">إلغاء</button>
-        `;
-
-        const modalDiv = document.getElementById('productModal');
-        document.getElementById('modalContent').innerHTML = modalHtml;
-        modalDiv.classList.add('active');
-        document.getElementById('confirmAddToCartBtn').onclick = () => confirmAddToCart(product.id);
+    const newProduct = { productId: null, name, price, quantity, notes };
+    if (currentProductIndex === -1) {
+      await updateOrderProducts(currentOrderId, (items) => [...items, newProduct]);
+    } else {
+      await updateOrderProducts(currentOrderId, (items) => {
+        items[currentProductIndex] = newProduct;
+        return items;
+      });
     }
+    closeProductModal();
+  }
 
-    function closeProductModal() {
-        document.getElementById('productModal').classList.remove('active');
-        selectedProductForCart = null;
+  async function updateOrderProducts(orderId, updateFn) {
+    try {
+      const order = ordersData.find(o => o.id === orderId);
+      if (!order) throw new Error('Order not found');
+      const newItems = updateFn([...order.items]);
+      const newTotal = newItems.reduce((sum, p) => sum + (p.price * p.quantity), 0) + (order.deliveryFee || 0);
+      await apiFetch(API + '/market/orders/' + orderId + '/items', {
+        method: 'PATCH',
+        body: JSON.stringify({ items: newItems, total: newTotal })
+      });
+      order.items = newItems;
+      order.total = newTotal;
+      refreshOrderUI(orderId);
+      showToast('تم تحديث الطلب');
+    } catch(e) {
+      showToast('فشل التحديث', true);
+      console.error(e);
     }
+  }
 
-    function confirmAddToCart(productId) {
-        const product = selectedProductForCart;
-        if (!product) return;
-        const qty = parseInt(document.getElementById('itemQty')?.value) || 1;
-        const notes = document.getElementById('itemNotes')?.value || '';
-
-        let selectedOptions = [];
-        if (product.groups) {
-            for (let g of product.groups) {
-                const groupName = g.name.replace(/\s/g, '_');
-                if (g.type === 'single') {
-                    const selectedRadio = document.querySelector(`input[name="group_${groupName}"]:checked`);
-                    if (selectedRadio) {
-                        selectedOptions.push({
-                            name: g.name,
-                            value: selectedRadio.value,
-                            price: parseFloat(selectedRadio.dataset.price) || 0
-                        });
-                    }
-                } else {
-                    const checkboxes = document.querySelectorAll(`input[name="group_${groupName}"]:checked`);
-                    checkboxes.forEach(cb => {
-                        selectedOptions.push({
-                            name: g.name,
-                            value: cb.value,
-                            price: parseFloat(cb.dataset.price) || 0
-                        });
-                    });
-                }
-            }
-        }
-
-        let unitPrice = product.type === 'single' ? (product.basePrice || 0) : 0;
-        if (product.type === 'multi' && selectedOptions.length) {
-            unitPrice = selectedOptions.reduce((sum, opt) => sum + opt.price, 0);
-        } else if (product.type === 'single' && selectedOptions.length) {
-            unitPrice = product.basePrice + selectedOptions.reduce((sum, opt) => sum + opt.price, 0);
-        }
-
-        cart.push({
-            id: product.id,
-            name: product.name,
-            price: unitPrice,
-            qty: qty,
-            notes: notes,
-            selectedOptions: selectedOptions
-        });
-        closeProductModal();
-        updateCartUI();
-        updateCartBadge();
-        toast('تمت الإضافة', 'success');
+  function refreshOrderUI(orderId) {
+    const order = ordersData.find(o => o.id === orderId);
+    if (!order) return;
+    const container = document.getElementById(`products-list-${orderId}`);
+    if (container) container.innerHTML = renderProducts(order.items, orderId);
+    const orderCard = document.querySelector(`.order-card[data-order-id="${orderId}"]`);
+    if (orderCard) {
+      const totalSpan = orderCard.querySelector('.total-amount span');
+      if (totalSpan) totalSpan.innerText = order.total + ' ج';
     }
+  }
 
-    function updateCartUI() {
-        const cartContainer = document.getElementById('cartItemsList');
-        const totalSpan = document.getElementById('cartTotalPrice');
-        let total = 0;
-        if (!cart.length) {
-            cartContainer.innerHTML = '<div class="empty-cart">🛍️ سلة فارغة<br>أضف أطباقك المفضلة</div>';
-            totalSpan.innerHTML = '';
-            document.getElementById('regionSelector').innerHTML = '';
-            document.getElementById('addressField').innerHTML = '';
-            return;
-        }
-        let itemsHtml = '';
-        cart.forEach((item, idx) => {
-            const itemTotal = item.price * item.qty;
-            total += itemTotal;
-            itemsHtml += `
-                <div class="cart-item">
-                    <div class="cart-item-info">
-                        <div class="cart-item-title">${item.name}</div>
-                        <div class="cart-item-price">${item.price} ج × ${item.qty}</div>
-                        ${item.selectedOptions.length ? `<small style="color:#6c7a91;">${item.selectedOptions.map(o=>o.value).join(', ')}</small>` : ''}
-                        ${item.notes ? `<div><small>📝 ${item.notes}</small></div>` : ''}
-                    </div>
-                    <div class="cart-qty">
-                        <button onclick="updateCartQty(${idx}, -1)">-</button>
-                        <span>${item.qty}</span>
-                        <button onclick="updateCartQty(${idx}, 1)">+</button>
-                        <button onclick="removeCartItem(${idx})" style="background:transparent; color:#f05252;"><i class="fas fa-trash-alt"></i></button>
-                    </div>
-                </div>
-            `;
-        });
-        cartContainer.innerHTML = itemsHtml;
-        totalSpan.innerHTML = `<div style="font-weight:800; margin:12px 0;">المجموع: ${total} ج</div>`;
+  async function acceptOrder(orderId) {
+    await apiFetch(API + '/market/orders/' + orderId + '/accept', { method: 'PATCH' });
+    showToast('تم قبول الطلب');
+    loadOrders();
+  }
 
-        // مناطق التوصيل
-        if (regions.length) {
-            let regionHtml = `<label style="font-weight:600;">📍 منطقة التوصيل</label><select id="deliveryRegionSelect" style="width:100%; padding:10px; border-radius:16px; margin-top:5px;">`;
-            regions.forEach(r => {
-                regionHtml += `<option value="${r.id}" data-fee="${r.fee}">${r.name} (رسوم التوصيل: ${r.fee} ج)</option>`;
-            });
-            regionHtml += `</select>`;
-            document.getElementById('regionSelector').innerHTML = regionHtml;
-            document.getElementById('addressField').innerHTML = `<div style="margin-top:10px;"><label>🏠 عنوان التوصيل التفصيلي</label><input type="text" id="deliveryAddress" placeholder="الشارع، المبنى، رقم الشقة" style="width:100%; padding:10px; border-radius:16px; border:1px solid #ddd;"></div>`;
-            const feeSelect = document.getElementById('deliveryRegionSelect');
-            if (feeSelect) feeSelect.onchange = () => updateTotalWithDelivery();
-            updateTotalWithDelivery();
-        } else {
-            loadRegions().then(() => updateCartUI());
-        }
+  async function setInvoice(orderId) {
+    const invoiceAmount = parseFloat(document.getElementById(`invoice-${orderId}`).value);
+    if (isNaN(invoiceAmount) || invoiceAmount <= 0) {
+      showToast('أدخل قيمة الفاتورة الصحيحة', true);
+      return;
     }
+    await apiFetch(API + '/market/orders/' + orderId + '/invoice', { method: 'PATCH', body: JSON.stringify({ invoiceAmount }) });
+    showToast('تم تحديث الفاتورة');
+    loadOrders();
+  }
 
-    function updateTotalWithDelivery() {
-        let totalProducts = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
-        const select = document.getElementById('deliveryRegionSelect');
-        let fee = 0;
-        if (select) {
-            const selectedOpt = select.options[select.selectedIndex];
-            fee = parseFloat(selectedOpt?.dataset.fee) || 0;
-        }
-        const finalTotal = totalProducts + fee;
-        const totalDiv = document.getElementById('cartTotalPrice');
-        if (totalDiv) {
-            totalDiv.innerHTML = `<div style="font-weight:800; margin:12px 0;">المجموع: ${totalProducts} ج<br>+ التوصيل: ${fee} ج<br>💵 الإجمالي: ${finalTotal} ج</div>`;
-        }
+  async function markReady(orderId) {
+    await apiFetch(API + '/market/orders/' + orderId + '/ready', { method: 'PATCH' });
+    showToast('تم تجهيز الطلب');
+    loadOrders();
+  }
+
+  function getStatusText(status) {
+    const map = { PENDING: 'جديد', ACCEPTED: 'قيد التحضير', READY: 'جاهز', DELIVERED: 'تم التوصيل', CANCELLED: 'ملغي' };
+    return map[status] || status;
+  }
+
+  function closeProductModal() {
+    document.getElementById('productModal').classList.remove('active');
+  }
+
+  function refreshOrders() {
+    loadOrders();
+  }
+
+  function logout() {
+    localStorage.removeItem('drako_user');
+    window.location.href = '/login.html';
+  }
+
+  // Socket updates
+  const socket = io();
+  socket.on('orderStatusUpdate', (data) => {
+    if (data.orderId) loadOrders();
+  });
+  socket.on('newSpecialOrder', () => loadOrders());
+
+  // Initialization
+  (async function init() {
+    const ok = await checkAuth();
+    if (ok) {
+      loadOrders();
     }
-
-    function updateCartQty(index, delta) {
-        const newQty = cart[index].qty + delta;
-        if (newQty < 1) {
-            cart.splice(index, 1);
-        } else {
-            cart[index].qty = newQty;
-        }
-        updateCartUI();
-        updateCartBadge();
-    }
-
-    function removeCartItem(index) {
-        cart.splice(index, 1);
-        updateCartUI();
-        updateCartBadge();
-    }
-
-    function updateCartBadge() {
-        const totalQty = cart.reduce((sum, i) => sum + i.qty, 0);
-        document.getElementById('cartCount').innerText = totalQty;
-    }
-
-    function toggleCart() {
-        document.getElementById('cartSidebar').classList.toggle('open');
-        if (document.getElementById('cartSidebar').classList.contains('open')) {
-            updateCartUI();
-        }
-    }
-
-    // إرسال الطلب
-    async function submitOrder() {
-        if (!currentRestaurant) {
-            toast('اختر مطعماً أولاً', 'error');
-            return;
-        }
-        const regionSelect = document.getElementById('deliveryRegionSelect');
-        const regionId = regionSelect?.value;
-        const region = regions.find(r => r.id === regionId);
-        const deliveryFee = region ? region.fee : 0;
-        const address = document.getElementById('deliveryAddress')?.value;
-        if (!address) {
-            toast('يرجى إدخال عنوان التوصيل', 'error');
-            return;
-        }
-        if (!cart.length) {
-            toast('السلة فارغة', 'error');
-            return;
-        }
-
-        let items = cart.map(i => ({
-            name: i.name,
-            qty: i.qty,
-            price: i.price,
-            notes: i.notes,
-            selectedOptions: i.selectedOptions
-        }));
-        let totalProducts = items.reduce((sum, i) => sum + (i.price * i.qty), 0);
-        let finalTotal = totalProducts + deliveryFee;
-
-        const orderPayload = {
-            restaurantId: currentRestaurant.id,
-            items: items,
-            total: finalTotal,
-            customerName: 'عميل',
-            customerPhone: '05XXXXXXXX',
-            address: address,
-            regionName: region?.name || '',
-            paymentMethod: 'CASH',
-            deliveryFee: deliveryFee
-        };
-
-        try {
-            const res = await fetch('/api/orders', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(orderPayload)
-            });
-            if (res.ok) {
-                toast('✅ تم إرسال الطلب بنجاح!', 'success');
-                cart = [];
-                updateCartUI();
-                updateCartBadge();
-                toggleCart();
-            } else {
-                toast('حدث خطأ أثناء إرسال الطلب', 'error');
-            }
-        } catch (error) {
-            toast('فشل الاتصال بالخادم', 'error');
-        }
-    }
-
-    // تحميل المناطق
-    async function loadRegions() {
-        regions = await fetchAPI('/api/regions');
-    }
-
-    function toast(msg, type = 'success') {
-        const t = document.createElement('div');
-        t.innerText = (type === 'success' ? '✅ ' : '❌ ') + msg;
-        t.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1E293B;color:#FF6B00;padding:10px 20px;border-radius:40px;z-index:9999;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,0.2);';
-        document.body.appendChild(t);
-        setTimeout(() => t.remove(), 2800);
-    }
-
-    // ربط زر إتمام الطلب
-    document.getElementById('checkoutBtn').addEventListener('click', submitOrder);
-
-    // تحميل البيانات الأولية
-    (async function init() {
-        await loadRegions();
-        await loadRestaurants();
-    })();
-
-    // تعريف الدوال العامة للـ onclick
-    window.selectRestaurant = selectRestaurant;
-    window.backToRestaurants = backToRestaurants;
-    window.openProductOptions = openProductOptions;
-    window.closeProductModal = closeProductModal;
-    window.updateCartQty = updateCartQty;
-    window.removeCartItem = removeCartItem;
-    window.toggleCart = toggleCart;
-    window.confirmAddToCart = confirmAddToCart;
+  })();
 </script>
 </body>
 </html>
