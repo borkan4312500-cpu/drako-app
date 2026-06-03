@@ -504,7 +504,7 @@ async function loadOrdersData(){
   const orders = await res.json();
   const filtered = getFilteredOrders(orders);
   if(!filtered.length){ container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><div>لا توجد طلبات</div></div>`; return; }
-  let html = `<div class="section"><div class="sec-head"><div class="sec-title">📦 ${filtered.length} طلب</div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>العميل</th><th>الهاتف</th><th>الأصناف</th><th>الإجمالي</th><th>الحالة</th><th>الوقت</th><th>إجراء</th></td></thead><tbody>`;
+  let html = `<div class="section"><div class="sec-head"><div class="sec-title">📦 ${filtered.length} طلب</div></div><div class="table-wrap"><tr><thead><tr><th>#</th><th>العميل</th><th>الهاتف</th><th>الأصناف</th><th>الإجمالي</th><th>الحالة</th><th>الوقت</th><th>إجراء</th></tr></thead><tbody>`;
   filtered.forEach(o => {
     const itemsStr = (o.items||[]).map(i=>`<strong>${i.name}</strong> ×${i.quantity||1}`).join('<br>')||'—';
     const productTotal = (o.total||0)-(o.deliveryFee||0);
@@ -521,7 +521,7 @@ async function loadOrdersData(){
       <td>${statusHTML}</td>
       <td>${new Date(o.createdAt).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})}</td>
       <td>${getOrderActions(o)}</td>
-    <tr>`;
+    </tr>`;
   });
   html += `</tbody></table></div></div>`;
   container.innerHTML = html;
@@ -585,8 +585,7 @@ async function deleteCategory(id) {
   loadCategories(); toast('تم الحذف');
 }
 
-// ========== PRODUCTS (تصميم جديد وكروت) ==========
-// متغير لتخزين التصنيف المختار حالياً
+// ========== PRODUCTS (تصميم جديد وكروت مع تصفية حسب التصنيف) ==========
 let currentCategoryFilter = 'all';
 
 async function loadProducts() {
@@ -594,11 +593,9 @@ async function loadProducts() {
   const prodRes = await apiFetch(API + '/restaurant/products');
   const products = await prodRes.json();
   
-  // جلب التصنيفات مرة أخرى (أو استخدام categoriesList المتاحة)
   const catsRes = await apiFetch(API + '/restaurant/categories');
   const categories = await catsRes.json();
   
-  // بناء شريط التصفية
   let filterBar = `
     <div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:8px; margin-bottom:20px; border-bottom:1px solid var(--border);">
       <button class="btn ${currentCategoryFilter === 'all' ? 'btn-primary' : 'btn-ghost'}" onclick="setCategoryFilter('all')">الكل</button>
@@ -608,7 +605,6 @@ async function loadProducts() {
   });
   filterBar += `</div>`;
   
-  // تصفية المنتجات حسب التصنيف المختار
   let filteredProducts = products;
   if (currentCategoryFilter !== 'all') {
     filteredProducts = products.filter(p => p.category === currentCategoryFilter);
@@ -648,10 +644,9 @@ async function loadProducts() {
   document.getElementById('content').innerHTML = productsHtml;
 }
 
-// دالة تغيير التصنيف المختار
 function setCategoryFilter(catId) {
   currentCategoryFilter = catId;
-  loadProducts(); // إعادة تحميل المنتجات مع التصفية الجديدة
+  loadProducts();
 }
 function showAddProduct() {
   const catOptions = window._catOptions;
