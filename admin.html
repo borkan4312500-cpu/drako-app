@@ -173,10 +173,55 @@ async function checkAuth() {
 }
 checkAuth();
 
-function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) { /* ... same as before ... */ return URL.createObjectURL(new Blob()); }
+function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
+  const sampleRate = 44100;
+  const numSamples = Math.floor(sampleRate * duration);
+  const buffer = new Float32Array(numSamples);
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / sampleRate;
+    let sample = 0;
+    if (type === 'sine') sample = Math.sin(2 * Math.PI * frequency * t);
+    else if (type === 'square') sample = Math.sign(Math.sin(2 * Math.PI * frequency * t));
+    else if (type === 'triangle') {
+      const p = (frequency * t) % 1;
+      sample = 4 * Math.abs(p - 0.5) - 1;
+    }
+    buffer[i] = sample * volume;
+  }
+  const dataLength = buffer.length * 2;
+  const bufferArray = new ArrayBuffer(44 + dataLength);
+  const view = new DataView(bufferArray);
+  function writeString(offset, string) { for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i)); }
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + dataLength, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, dataLength, true);
+  let offset = 44;
+  for (let i = 0; i < buffer.length; i++) {
+    const s = Math.max(-1, Math.min(1, buffer[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    offset += 2;
+  }
+  return URL.createObjectURL(new Blob([bufferArray], { type: 'audio/wav' }));
+}
+
 const soundInstances = {};
-function createSound(name, ...tones) { soundInstances[name] = tones.map(t => new Howl({ src: [t], format: ['wav'], volume: 0.5 })); }
-function playSound(name) { if (soundInstances[name]) soundInstances[name].forEach(h => h.play()); }
+function createSound(name, ...tones) {
+  soundInstances[name] = tones.map(t => new Howl({ src: [t], format: ['wav'], volume: 0.5 }));
+}
+function playSound(name) {
+  if (soundInstances[name]) soundInstances[name].forEach(h => h.play());
+}
+
 createSound('adminNewOrder', generateToneWAV(800,0.15,'square'), generateToneWAV(1000,0.15,'square'));
 createSound('orderCancelled', generateToneWAV(400,0.3,'triangle'));
 createSound('driverArrived', generateToneWAV(600,0.1,'sine'), generateToneWAV(800,0.1,'sine'));
@@ -269,7 +314,7 @@ async function loadDashboard() {
     ${orders.slice(-6).reverse().map(o => `<div style="display:flex;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border);cursor:pointer" onclick="viewOrder('${o.id}')"><div><div style="color:var(--orange);font-weight:700">#${(o.id || '').slice(-6)}</div><div style="font-size:12px;color:var(--text2)">${o.customerName || '—'} • ${o.regionName || o.address || '—'}</div></div><div>${statusBadge(o.status)}</div></div>`).join('')}</div>`;
 }
 
-// ========== Orders (similar to before but improved) ==========
+// ========== Orders ==========
 async function loadOrders() {
   const orders = await apiFetch(API + '/orders').then(r => r.json()).catch(() => []);
   allOrdersCache = orders;
@@ -283,7 +328,7 @@ async function loadOrders() {
       <div class="tab-btn" onclick="switchOrderTab('in-progress')">⏳ قيد التنفيذ</div>
       <div class="tab-btn" onclick="switchOrderTab('completed')">✅ مكتملة</div>
     </div>
-    <div class="section"><div class="table-wrap"><table><thead><tr><th>رقم</th><th>العميل</th><th>المنطقة</th><th>العنوان</th><th>المطعم</th><th>الأصناف</th><th>المبلغ</th><th>الحالة</th><th>الطيار</th><th>الوقت</th><th>إجراء</th></tr></thead><tbody id="orders-tbody">${renderOrderRows(window._orders)}</tbody></tr></div></div>`;
+    <div class="section"><div class="table-wrap"><table><thead><tr><th>رقم</th><th>العميل</th><th>المنطقة</th><th>العنوان</th><th>المطعم</th><th>الأصناف</th><th>المبلغ</th><th>الحالة</th><th>الطيار</th><th>الوقت</th><th>إجراء</th></tr></thead><tbody id="orders-tbody">${renderOrderRows(window._orders)}</tbody></table></div></div>`;
   window._currentOrderTab = 'new';
   applyCurrentTabFilter();
 }
@@ -304,7 +349,7 @@ function applyCurrentTabFilter() {
   document.getElementById('orders-tbody').innerHTML = renderOrderRows(filtered);
 }
 function renderOrderRows(list) {
-  if (!list.length) return `<td><td colspan="11"><div class="empty-state"><div class="icon">📭</div><div class="msg">لا توجد طلبات</div></div></td></tr>`;
+  if (!list.length) return `<tr><td colspan="11"><div class="empty-state"><div class="icon">📭</div><div class="msg">لا توجد طلبات</div></div></table></table>`;
   return list.map(o => {
     const actions = getOrderActions(o);
     const itemsDetail = (o.items || []).length === 0 ? '—' : o.items.map(i => `<div><strong>${i.name || ''}</strong> × ${i.quantity || 1} (${i.price || 0} ج)</div>${i.selectedOptions?.length ? `<div style="color:var(--text3); font-size:11px;">${i.selectedOptions.map(opt => opt.value).join('، ')}</div>` : ''}${i.notes ? `<div style="color:var(--text3); font-size:10px;">📝 ${i.notes}</div>` : ''}`).join('<div style="margin:4px 0; border-top:1px dotted var(--border);"></div>');
@@ -335,7 +380,17 @@ function getOrderActions(o) {
 function viewOrder(id) {
   const o = allOrdersCache.find(o => o.id === id);
   if (!o) return;
-  openModal(`تفاصيل #${id.slice(-6)}`, `<div style="display:flex;flex-direction:column;gap:10px">${Object.entries(o).map(([k,v]) => `<div><strong>${k}:</strong> ${typeof v === 'object' ? JSON.stringify(v) : v}</div>`).join('')}</div>`, '');
+  let itemsHtml = (o.items || []).map(i => `<div><strong>${i.name}</strong> × ${i.quantity} = ${i.price*i.quantity} ج</div>${i.selectedOptions?.length ? `<div class="text2">${i.selectedOptions.map(opt=>opt.value).join(', ')}</div>` : ''}${i.notes ? `<div class="text3">📝 ${i.notes}</div>` : ''}`).join('');
+  openModal(`تفاصيل الطلب #${id.slice(-6)}`, `
+    <div><strong>العميل:</strong> ${o.customerName} (${o.customerPhone})</div>
+    <div><strong>العنوان:</strong> ${o.address}</div>
+    <div><strong>المطعم:</strong> ${o.restaurantName}</div>
+    <div><strong>المنتجات:</strong> ${itemsHtml || '—'}</div>
+    <div><strong>الإجمالي:</strong> ${o.total} ج</div>
+    <div><strong>الحالة:</strong> ${STATUS_AR[o.status]}</div>
+    <div><strong>الطيار:</strong> ${o.driverName || '—'}</div>
+    <div><strong>وقت الطلب:</strong> ${new Date(o.createdAt).toLocaleString('ar-EG')}</div>
+  `, '');
 }
 async function approveOrder(id) { await apiFetch(API + '/admin/orders/' + id + '/approve', { method: 'PATCH' }); toast('تمت الموافقة'); loadOrders(); }
 async function rejectOrder(id) { const reason = prompt('سبب الرفض:'); if (!reason) return; await apiFetch(API + '/admin/orders/' + id + '/reject', { method: 'PATCH', body: JSON.stringify({ reason }) }); toast('تم الرفض'); loadOrders(); }
@@ -360,26 +415,26 @@ async function loadDispatch() {
   const ready = orders.filter(o => o.status === 'READY' && !o.driverId);
   const avail = drivers.filter(d => d.isAvailable);
   document.getElementById('content').innerHTML = `<div class="page-header"><div><div class="page-title">🛵 توزيع الطلبات</div><div class="page-sub">${ready.length} طلب جاهز</div></div></div>
-    <div class="section"><div class="table-wrap"><table><thead><tr><th>الطلب</th><th>العميل</th><th>المطعم</th><th>المنطقة</th><th>تعيين طيار</th></tr></thead><tbody>
+    <div class="section"><div class="table-wrap"></table><thead><tr><th>الطلب</th><th>العميل</th><th>المطعم</th><th>المنطقة</th><th>تعيين طيار</th></tr></thead><tbody>
     ${ready.map(o => `<tr><td style="color:var(--orange)">#${(o.id || '').slice(-6)}</td><td>${o.customerName || ''}</td><td>${o.restaurantName || ''}</td><td>${o.regionName || o.address || ''}</td><td><select onchange="assignDriver('${o.id}', this.value)" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px;color:var(--text)"><option value="">اختر طيار</option>${avail.map(d => `<option value="${d.id}">${d.name || ''}</option>`).join('')}</select></td></tr>`).join('')}
     </tbody></table></div></div>`;
 }
 async function assignDriver(orderId, driverId) { if (!driverId) return; await apiFetch(API + '/admin/orders/' + orderId + '/assign-driver', { method: 'PATCH', body: JSON.stringify({ driverId }) }); toast('تم تعيين الطيار'); loadDispatch(); }
 
-// ========== Restaurants (with product view) ==========
+// ========== Restaurants ==========
 async function loadRestaurants() {
   const res = await apiFetch(API + '/admin/restaurants').then(r => r.json()).catch(() => []);
   allRestaurantsCache = res;
   document.getElementById('content').innerHTML = `<div class="page-header"><div><div class="page-title">🍽️ المطاعم</div><div class="page-sub">${res.length} مطعم</div></div><button class="btn btn-primary" onclick="showAddRestaurant()">+ إضافة</button></div>
     <div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>المالك</th><th>الهاتف</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>
-    ${res.length ? res.map((r, i) => `<tr><td>${i + 1}</td><td style="font-weight:700">${r.name || '—'}</td><td>${r.ownerName || '—'}</td><td style="font-size:12px;color:var(--text3)">${r.ownerPhone || '—'}</td><td><span class="badge ${r.isOpen ? 'badge-green' : 'badge-red'}">${r.isOpen ? 'مفتوح' : 'مغلق'}</span></td><td><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm ${r.isOpen ? 'btn-danger' : 'btn-success'}" onclick="toggleRestaurant('${r.id}')">${r.isOpen ? 'إغلاق' : 'فتح'}</button><button class="btn btn-sm btn-ghost" onclick="showRestaurantProducts('${r.id}')">📋 المنتجات</button></div></td></tr>`).join('') : `<tr><td colspan="6"><div class="empty-state"><div class="icon">🍽️</div><div class="msg">لا توجد مطاعم</div></div><td></tr>`}
+    ${res.length ? res.map((r, i) => `<tr><td>${i+1}</td><td style="font-weight:700">${r.name}</td><td>${r.ownerName || '—'}</td><td style="color:var(--text3)">${r.ownerPhone || '—'}</td><td><span class="badge ${r.isOpen ? 'badge-green' : 'badge-red'}">${r.isOpen ? 'مفتوح' : 'مغلق'}</span></td><td><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm ${r.isOpen ? 'btn-danger' : 'btn-success'}" onclick="toggleRestaurant('${r.id}')">${r.isOpen ? 'إغلاق' : 'فتح'}</button><button class="btn btn-sm btn-ghost" onclick="showRestaurantProducts('${r.id}')">📋 المنتجات</button></div></td></tr>`).join('') : `<tr><td colspan="6"><div class="empty-state"><div class="icon">🍽️</div><div class="msg">لا توجد مطاعم</div></div></td></tr>`}
     </tbody></table></div></div>`;
 }
 async function toggleRestaurant(id) { await apiFetch(API + '/admin/restaurants/' + id + '/toggle', { method: 'PATCH' }); loadRestaurants(); }
 function showAddRestaurant() { openModal('إضافة مطعم', `<div class="field"><label>اسم المطعم</label><input id="r-name"></div><div class="field"><label>هاتف المالك</label><input id="r-phone"></div><div class="field"><label>كلمة المرور</label><input id="r-pass" type="password"></div>`, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addRestaurant()">إضافة</button>`); }
 async function addRestaurant() {
-  const name = document.getElementById('r-name').value;
-  const phone = document.getElementById('r-phone').value;
+  const name = document.getElementById('r-name').value.trim();
+  const phone = document.getElementById('r-phone').value.trim();
   const pass = document.getElementById('r-pass').value;
   if (!name || !phone || !pass) return toast('أكمل الحقول', 'error');
   const res = await apiFetch(API + '/admin/restaurants', { method: 'POST', body: JSON.stringify({ name, ownerPhone: phone, ownerPassword: pass }) });
@@ -391,14 +446,14 @@ async function showRestaurantProducts(restId) {
   const products = await apiFetch(API + '/admin/products').then(r => r.json());
   const restProducts = products.filter(p => p.restaurantId === restId);
   const restaurant = allRestaurantsCache.find(r => r.id === restId);
-  openModal(`منتجات مطعم ${restaurant?.name || restId}`, `<div class="table-wrap"><tr><thead><tr><th>الاسم</th><th>السعر</th><th>التصنيف</th><th>الصورة</th></thead><tbody>${restProducts.map(p => `<tr><td>${p.name}</td><td>${p.price} ج</td><td>${p.category || 'عام'}</td><td>${p.image ? `<img src="${p.image}" width="40" style="border-radius:6px;">` : '—'}</td></tr>`).join('')}</tbody></table></div>`, '');
+  openModal(`منتجات مطعم ${restaurant?.name || restId}`, `<div class="table-wrap"><table><thead><tr><th>الاسم</th><th>السعر</th><th>التصنيف</th><th>الصورة</th></tr></thead><tbody>${restProducts.map(p => `<tr><td>${p.name}</td><td>${p.price} ج</td><td>${p.category || 'عام'}</td><td>${p.image ? `<img src="${p.image}" width="40" style="border-radius:6px;">` : '—'}</td></tr>`).join('')}</tbody></table></div>`, '');
 }
 
 // ========== Markets (fixed) ==========
 async function loadMarkets() {
   const res = await apiFetch(API + '/admin/markets').then(r => r.json()).catch(() => []);
   document.getElementById('content').innerHTML = `<div class="page-header"><div><div class="page-title">🛒 الأسواق</div><div class="page-sub">${res.length} سوق</div></div><button class="btn btn-primary" onclick="showAddMarket()">+ إضافة</button></div>
-    <div class="section"><div class="table-wrap"><tr><thead><tr><th>#</th><th>الاسم</th><th>الشعار</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>
+    <div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>الشعار</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>
     ${res.length ? res.map((r, i) => `<tr><td>${i+1}</td><td style="font-weight:700">${r.name}</td><td>${r.logo ? `<img src="${r.logo}" style="width:40px;height:40px;border-radius:8px;object-fit:cover">` : '—'}</td><td><span class="badge ${r.isOpen ? 'badge-green' : 'badge-red'}">${r.isOpen ? 'مفتوح' : 'مغلق'}</span></td><td><button class="btn btn-sm ${r.isOpen ? 'btn-danger' : 'btn-success'}" onclick="toggleMarket('${r.id}')">${r.isOpen ? 'إغلاق' : 'فتح'}</button><button class="btn btn-sm btn-danger" onclick="deleteMarket('${r.id}')">🗑️</button></td></tr>`).join('') : `<tr><td colspan="5"><div class="empty-state"><div class="icon">🛒</div><div class="msg">لا توجد أسواق</div></div></td></tr>`}
     </tbody></table></div></div>`;
 }
@@ -411,19 +466,24 @@ function showAddMarket() {
   `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addMarket()">إضافة</button>`);
 }
 async function addMarket() {
-  const name = document.getElementById('m-name').value;
-  const phone = document.getElementById('m-phone').value;
+  const name = document.getElementById('m-name').value.trim();
+  const phone = document.getElementById('m-phone').value.trim();
   const pass = document.getElementById('m-pass').value;
-  const logoFile = document.getElementById('m-logo').files[0];
-  if (!name || !phone || !pass) return toast('أكمل جميع الحقول', 'error');
+  if (!name || !phone || !pass) {
+    toast('يرجى ملء جميع الحقول (الاسم، الهاتف، كلمة المرور)', 'error');
+    return;
+  }
   const fd = new FormData();
   fd.append('name', name);
   fd.append('ownerPhone', phone);
   fd.append('ownerPassword', pass);
+  const logoFile = document.getElementById('m-logo').files[0];
   if (logoFile) fd.append('logo', logoFile);
-  const res = await apiFetch(API + '/admin/markets', { method: 'POST', body: fd });
-  if (res.ok) { toast('تمت الإضافة'); closeModal(); loadMarkets(); }
-  else { const err = await res.json(); toast(err.error || 'فشل الإضافة', 'error'); }
+  try {
+    const res = await apiFetch(API + '/admin/markets', { method: 'POST', body: fd });
+    if (res.ok) { toast('تمت الإضافة'); closeModal(); loadMarkets(); }
+    else { const err = await res.json(); toast(err.error || 'فشل الإضافة', 'error'); }
+  } catch(e) { toast('خطأ في الاتصال', 'error'); }
 }
 async function toggleMarket(id) { await apiFetch(API + '/admin/markets/' + id + '/toggle', { method: 'PATCH' }); loadMarkets(); }
 async function deleteMarket(id) { if (confirm('حذف هذا السوق؟')) { await apiFetch(API + '/admin/markets/' + id, { method: 'DELETE' }); loadMarkets(); } }
@@ -445,24 +505,29 @@ function showAddPharmacy() {
   `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addPharmacy()">إضافة</button>`);
 }
 async function addPharmacy() {
-  const name = document.getElementById('p-name').value;
-  const phone = document.getElementById('p-phone').value;
+  const name = document.getElementById('p-name').value.trim();
+  const phone = document.getElementById('p-phone').value.trim();
   const pass = document.getElementById('p-pass').value;
-  const logoFile = document.getElementById('p-logo').files[0];
-  if (!name || !phone || !pass) return toast('أكمل جميع الحقول', 'error');
+  if (!name || !phone || !pass) {
+    toast('يرجى ملء جميع الحقول (الاسم، الهاتف، كلمة المرور)', 'error');
+    return;
+  }
   const fd = new FormData();
   fd.append('name', name);
   fd.append('ownerPhone', phone);
   fd.append('ownerPassword', pass);
+  const logoFile = document.getElementById('p-logo').files[0];
   if (logoFile) fd.append('logo', logoFile);
-  const res = await apiFetch(API + '/admin/pharmacies', { method: 'POST', body: fd });
-  if (res.ok) { toast('تمت الإضافة'); closeModal(); loadPharmacies(); }
-  else { const err = await res.json(); toast(err.error || 'فشل الإضافة', 'error'); }
+  try {
+    const res = await apiFetch(API + '/admin/pharmacies', { method: 'POST', body: fd });
+    if (res.ok) { toast('تمت الإضافة'); closeModal(); loadPharmacies(); }
+    else { const err = await res.json(); toast(err.error || 'فشل الإضافة', 'error'); }
+  } catch(e) { toast('خطأ في الاتصال', 'error'); }
 }
 async function togglePharmacy(id) { await apiFetch(API + '/admin/pharmacies/' + id + '/toggle', { method: 'PATCH' }); loadPharmacies(); }
 async function deletePharmacy(id) { if (confirm('حذف هذه الصيدلية؟')) { await apiFetch(API + '/admin/pharmacies/' + id, { method: 'DELETE' }); loadPharmacies(); } }
 
-// ========== Drivers (professional) ==========
+// ========== Drivers (professional with detailed view) ==========
 async function loadDrivers() {
   const res = await apiFetch(API + '/admin/drivers').then(r => r.json()).catch(() => []);
   allDriversCache = res;
@@ -473,15 +538,15 @@ async function loadDrivers() {
       <div class="stat-card"><div class="sc-value">${res.filter(d=>d.activeOrdersCount>0).length}</div><div class="sc-label">مشغولون</div></div>
     </div>
     <div class="section"><div class="table-wrap"><table><thead><tr><th>الاسم</th><th>الهاتف</th><th>الأرباح</th><th>طلبات نشطة</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>
-    ${res.length ? res.map(d => `<tr><td style="font-weight:700">${d.name}</td><td>${d.phone}</td><td style="color:var(--orange)">${d.earnings || 0} ج</td><td>${d.activeOrdersCount || 0}</td><td><span class="badge ${d.isAvailable ? 'badge-green' : 'badge-gray'}">${d.isAvailable ? 'متاح' : 'مشغول'}</span> ${!d.isActive ? '<span class="badge badge-red">محظور</span>' : ''}</td><td><div style="display:flex;gap:6px"><button class="btn btn-sm ${d.isAvailable ? 'btn-danger' : 'btn-success'}" onclick="toggleDriver('${d.id}')">${d.isAvailable ? 'إيقاف' : 'تشغيل'}</button><button class="btn btn-sm ${d.isActive ? 'btn-danger' : 'btn-ghost'}" onclick="blockDriver('${d.id}')">${d.isActive ? 'حظر' : 'تفعيل'}</button><button class="btn btn-sm btn-ghost" onclick="viewDriverDetails('${d.id}')">📋 تفاصيل</button></div></td></tr>`).join('') : `<tr><td colspan="6"><div class="empty-state"><div class="icon">👨‍✈️</div><div class="msg">لا يوجد طيارين</div></div><td></tr>`}
-    </tbody></table></div></div>`;
+    ${res.length ? res.map(d => `<tr><td style="font-weight:700">${d.name}</td><td>${d.phone}</td><td style="color:var(--orange)">${d.earnings || 0} ج</td><td>${d.activeOrdersCount || 0}</td><td><span class="badge ${d.isAvailable ? 'badge-green' : 'badge-gray'}">${d.isAvailable ? 'متاح' : 'مشغول'}</span> ${!d.isActive ? '<span class="badge badge-red">محظور</span>' : ''}</td><td><div style="display:flex;gap:6px"><button class="btn btn-sm ${d.isAvailable ? 'btn-danger' : 'btn-success'}" onclick="toggleDriver('${d.id}')">${d.isAvailable ? 'إيقاف' : 'تشغيل'}</button><button class="btn btn-sm ${d.isActive ? 'btn-danger' : 'btn-ghost'}" onclick="blockDriver('${d.id}')">${d.isActive ? 'حظر' : 'تفعيل'}</button><button class="btn btn-sm btn-ghost" onclick="viewDriverDetails('${d.id}')">📋 تفاصيل</button></div></td></tr>`).join('') : `<tr><td colspan="6"><div class="empty-state"><div class="icon">👨‍✈️</div><div class="msg">لا يوجد طيارين</div></div></td></tr>`}
+    </tbody><tr></div></div>`;
 }
 async function toggleDriver(id) { await apiFetch(API + '/admin/drivers/' + id + '/toggle', { method: 'PATCH' }); loadDrivers(); }
 async function blockDriver(id) { await apiFetch(API + '/admin/drivers/' + id + '/block', { method: 'PATCH' }); loadDrivers(); }
 function showAddDriver() { openModal('إضافة طيار', `<div class="field"><label>الاسم</label><input id="d-name"></div><div class="field"><label>الهاتف</label><input id="d-phone"></div><div class="field"><label>كلمة المرور</label><input id="d-pass" type="password"></div>`, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addDriver()">إضافة</button>`); }
 async function addDriver() {
-  const name = document.getElementById('d-name').value;
-  const phone = document.getElementById('d-phone').value;
+  const name = document.getElementById('d-name').value.trim();
+  const phone = document.getElementById('d-phone').value.trim();
   const pass = document.getElementById('d-pass').value;
   if (!name || !phone || !pass) return toast('أكمل الحقول', 'error');
   const res = await apiFetch(API + '/admin/drivers', { method: 'POST', body: JSON.stringify({ name, phone, password: pass }) });
@@ -492,9 +557,36 @@ async function addDriver() {
 async function viewDriverDetails(id) {
   try {
     const res = await apiFetch(API + '/admin/drivers/' + id + '/details');
+    if (!res.ok) {
+      toast('هذا المسار غير موجود في السيرفر، يرجى إضافته (راجع تعليمات الإضافة)', 'error');
+      return;
+    }
     const d = await res.json();
-    openModal(`تفاصيل الطيار: ${d.name}`, `<div><strong>الهاتف:</strong> ${d.phone}</div><div><strong>الحالة:</strong> ${d.isAvailable ? '🟢 متاح' : '🔴 مشغول'}</div><div><strong>إجمالي الأرباح:</strong> ${d.earnings} ج</div><div><strong>طلبات اليوم:</strong> ${d.todayOrdersCount} (إيرادات: ${d.todayRevenue} ج)</div><div style="background:var(--surface2);padding:10px;border-radius:8px;max-height:200px;overflow-y:auto"><strong>آخر طلبات اليوم:</strong> ${d.todayOrders.length ? d.todayOrders.map(o => `<div>#${(o.id||'').slice(-6)} - ${o.customerName} - ${o.total} ج</div>`).join('') : '<div>لا توجد طلبات اليوم</div>'}</div>`, '');
-  } catch { toast('فشل تحميل التفاصيل', 'error'); }
+    if (d.error) return toast(d.error, 'error');
+    let ordersHtml = '';
+    if (d.todayOrders && d.todayOrders.length) {
+      ordersHtml = d.todayOrders.map(o => `
+        <div style="border-bottom:1px solid var(--border); padding:8px 0;">
+          <div><strong>طلب #${(o.id||'').slice(-6)}</strong> - ${o.customerName || '—'} - ${o.total} ج</div>
+          <div style="font-size:11px; color:var(--text2);">${new Date(o.createdAt).toLocaleString('ar-EG')}</div>
+        </div>
+      `).join('');
+    } else {
+      ordersHtml = '<div>لا توجد طلبات اليوم</div>';
+    }
+    openModal(`تفاصيل الطيار: ${d.name}`, `
+      <div><strong>الهاتف:</strong> ${d.phone}</div>
+      <div><strong>الحالة:</strong> ${d.isAvailable ? '🟢 متاح' : '🔴 مشغول'}</div>
+      <div><strong>إجمالي الأرباح:</strong> ${d.earnings} ج</div>
+      <div><strong>طلبات اليوم:</strong> ${d.todayOrdersCount} (إيرادات: ${d.todayRevenue} ج)</div>
+      <div style="background:var(--surface2);padding:10px;border-radius:8px;max-height:200px;overflow-y:auto;margin-top:10px;">
+        <strong>طلبات اليوم:</strong> ${ordersHtml}
+      </div>
+    `, '');
+  } catch(e) {
+    toast('حدث خطأ في الاتصال', 'error');
+    console.error(e);
+  }
 }
 
 // ========== Products (dynamic restaurant selection) ==========
@@ -504,7 +596,7 @@ async function loadProducts() {
   allProductsCache = products;
   document.getElementById('content').innerHTML = `<div class="page-header"><div><div class="page-title">📋 المنتجات</div><div class="page-sub">${products.length} منتج</div></div><button class="btn btn-primary" onclick="showAddProduct()">+ إضافة</button></div>
     <div class="section"><div class="table-wrap"><table><thead><tr><th>الصورة</th><th>الاسم</th><th>المطعم</th><th>السعر</th><th>التصنيف</th><th>إجراءات</th></tr></thead><tbody>
-    ${products.length ? products.map(p => `<tr><td>${p.image ? `<img src="${p.image}" style="width:40px;height:40px;border-radius:8px;object-fit:cover">` : '—'}</td><td style="font-weight:600">${p.name}</td><td>${p.restaurantName || '—'}</td><td style="color:var(--orange)">${p.price || 0} ج</td><td>${p.category || 'عام'}</td><td><button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">🗑️</button></td></tr>`).join('') : `<tr><td colspan="6"><div class="empty-state"><div class="icon">📋</div><div class="msg">لا توجد منتجات</div></div><td></tr>`}
+    ${products.length ? products.map(p => `<tr><td>${p.image ? `<img src="${p.image}" style="width:40px;height:40px;border-radius:8px;object-fit:cover">` : '—'}</td><td style="font-weight:600">${p.name}</td><td>${p.restaurantName || '—'}</td><td style="color:var(--orange)">${p.price || 0} ج</td><td>${p.category || 'عام'}</td><td><button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">🗑️</button></td></tr>`).join('') : `<tr><td colspan="6"><div class="empty-state"><div class="icon">📋</div><div class="msg">لا توجد منتجات</div></div></td></tr>`}
     </tbody></table></div></div>`;
 }
 function showAddProduct() {
@@ -541,12 +633,12 @@ async function loadCategories() {
   const res = await apiFetch(API + '/admin/categories').then(r => r.json()).catch(() => []);
   document.getElementById('content').innerHTML = `<div class="page-header"><div><div class="page-title">🏷️ التصنيفات</div></div><button class="btn btn-primary" onclick="showAddCategory()">+ إضافة</button></div>
     <div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>إجراءات</th></tr></thead><tbody>
-    ${res.length ? res.map((c, i) => `<tr><td>${i+1}</td><td style="font-weight:600">${c.name}</td><td><button class="btn btn-danger btn-sm" onclick="deleteCategory('${c.id}')">🗑️</button></td></tr>`).join('') : `<tr><td colspan="3"><div class="empty-state"><div class="icon">🏷️</div><div class="msg">لا توجد تصنيفات</div></div><td></tr>`}
+    ${res.length ? res.map((c, i) => `<tr><td>${i+1}</td><td style="font-weight:600">${c.name}</td><td><button class="btn btn-danger btn-sm" onclick="deleteCategory('${c.id}')">🗑️</button></td></tr>`).join('') : `<tr><td colspan="3"><div class="empty-state"><div class="icon">🏷️</div><div class="msg">لا توجد تصنيفات</div></div></td></tr>`}
     </tbody></table></div></div>`;
 }
 function showAddCategory() { openModal('إضافة تصنيف', `<div class="field"><label>الاسم</label><input id="cat-name"></div>`, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addCategory()">إضافة</button>`); }
 async function addCategory() {
-  const name = document.getElementById('cat-name').value;
+  const name = document.getElementById('cat-name').value.trim();
   if (!name) return toast('أدخل اسماً', 'error');
   await apiFetch(API + '/admin/categories', { method: 'POST', body: JSON.stringify({ name }) });
   toast('تمت الإضافة'); closeModal(); loadCategories();
@@ -558,12 +650,12 @@ async function loadRegions() {
   const res = await apiFetch(API + '/admin/regions').then(r => r.json()).catch(() => []);
   document.getElementById('content').innerHTML = `<div class="page-header"><div><div class="page-title">🌍 مناطق التوصيل</div></div><button class="btn btn-primary" onclick="showAddRegion()">+ إضافة</button></div>
     <div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>الرسوم</th><th>إجراءات</th></tr></thead><tbody>
-    ${res.length ? res.map((r, i) => `<tr><td>${i+1}</td><td style="font-weight:600">${r.name}</td><td style="color:var(--orange);font-weight:700">${r.fee} ج</td><td><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="editRegion('${r.id}','${r.name}',${r.fee})">✏️</button><button class="btn btn-danger btn-sm" onclick="deleteRegion('${r.id}')">🗑️</button></div></td></tr>`).join('') : `<tr><td colspan="4"><div class="empty-state"><div class="icon">🌍</div><div class="msg">لا توجد مناطق</div></div></td></tr>`}
-    </tbody></table></div></div>`;
+    ${res.length ? res.map((r, i) => `<tr><td>${i+1}</td><td style="font-weight:600">${r.name}</td><td style="color:var(--orange)">${r.fee} ج</td><td><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="editRegion('${r.id}','${r.name}',${r.fee})">✏️</button><button class="btn btn-danger btn-sm" onclick="deleteRegion('${r.id}')">🗑️</button></div></td></tr>`).join('') : `<tr><td colspan="4"><div class="empty-state"><div class="icon">🌍</div><div class="msg">لا توجد مناطق</div></div></td></tr>`}
+    </tbody><tr></div></div>`;
 }
 function showAddRegion() { openModal('إضافة منطقة', `<div class="field"><label>الاسم</label><input id="reg-name"></div><div class="field"><label>الرسوم</label><input id="reg-fee" type="number"></div>`, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addRegion()">إضافة</button>`); }
 async function addRegion() {
-  const name = document.getElementById('reg-name').value;
+  const name = document.getElementById('reg-name').value.trim();
   const fee = Number(document.getElementById('reg-fee').value);
   if (!name || !fee) return toast('أكمل الحقول', 'error');
   await apiFetch(API + '/admin/regions', { method: 'POST', body: JSON.stringify({ name, fee }) });
@@ -571,7 +663,7 @@ async function addRegion() {
 }
 function editRegion(id, name, fee) { openModal('تعديل منطقة', `<div class="field"><label>الاسم</label><input id="reg-name-e" value="${name}"></div><div class="field"><label>الرسوم</label><input id="reg-fee-e" type="number" value="${fee}"></div>`, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="updateRegion('${id}')">حفظ</button>`); }
 async function updateRegion(id) {
-  const name = document.getElementById('reg-name-e').value;
+  const name = document.getElementById('reg-name-e').value.trim();
   const fee = Number(document.getElementById('reg-fee-e').value);
   await apiFetch(API + '/admin/regions/' + id, { method: 'PATCH', body: JSON.stringify({ name, fee }) });
   toast('تم التعديل'); closeModal(); loadRegions();
@@ -593,7 +685,7 @@ async function renderCustomersTable() {
   const res = await apiFetch(url);
   const customers = await res.json();
   if (!customers.length) { container.innerHTML = `<div class="empty-state"><div class="icon">👥</div><div class="msg">لا يوجد عملاء مسجلين</div></div>`; return; }
-  container.innerHTML = `<div class="section"><div class="table-wrap"><table><thead><tr><th>الاسم</th><th>الهاتف</th><th>المنطقة</th><th>رسوم التوصيل</th><th>العنوان</th><th>عدد الطلبات</th><th>آخر طلب</th><th>إجراءات</th></tr></thead><tbody>${customers.map(c => `<tr><td style="font-weight:600">${c.name}</td><td>${c.phone}</td><td>${c.regionName}</td><td style="color:var(--orange)">${c.regionFee} ج</td><td>${c.address}</td><td>${c.totalOrders}</td><td>${c.lastOrderDate ? new Date(c.lastOrderDate).toLocaleDateString('ar-EG') : '—'}</td><td><button class="btn btn-ghost btn-sm" onclick="editCustomer('${c.id}')">✏️ تعديل</button></td></tr>`).join('')}</tbody></table></div></div>`;
+  container.innerHTML = `<div class="section"><div class="table-wrap"></table><thead><tr><th>الاسم</th><th>الهاتف</th><th>المنطقة</th><th>رسوم التوصيل</th><th>العنوان</th><th>عدد الطلبات</th><th>آخر طلب</th><th>إجراءات</th></tr></thead><tbody>${customers.map(c => `<tr><td style="font-weight:600">${c.name}</td><td>${c.phone}</td><td>${c.regionName}</td><td style="color:var(--orange)">${c.regionFee} ج</td><td>${c.address}</td><td>${c.totalOrders}</td><td>${c.lastOrderDate ? new Date(c.lastOrderDate).toLocaleDateString('ar-EG') : '—'}</td><td><button class="btn btn-ghost btn-sm" onclick="editCustomer('${c.id}')">✏️ تعديل</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 async function editCustomer(id) {
   const res = await apiFetch(API + '/admin/customers/' + id);
@@ -638,7 +730,7 @@ function switchReportTab(tab) {
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
       <div class="section"><div class="sec-head"><div class="sec-title">🍽️ دخل المطاعم (المنتجات)</div></div><div class="table-wrap"><table><thead><tr><th>المطعم</th><th>دخل المنتجات</th><th>نسبة المنصة</th><th>صافي الدخل</th><th>الطلبات</th></tr></thead><tbody>${restaurants.length ? restaurants.map(r => `<tr><td>${r.name}</td><td style="color:var(--orange)">${(r.productRevenue || 0).toLocaleString()} ج</td><td style="color:var(--red)">${(r.platformFee || 0).toLocaleString()} ج</td><td style="color:var(--green)">${(r.netRevenue || 0).toLocaleString()} ج</td><td>${r.count}</td></tr>`).join('') : `<tr><td colspan="5"><div class="empty-state"><div class="msg">لا توجد بيانات</div></div></td></tr>`}</tbody></table></div></div>
-      <div class="section"><div class="sec-head"><div class="sec-title">👨‍✈️ عمولات الطيارين (التوصيل)</div></div><div class="table-wrap"><table><thead><tr><th>الطيار</th><th>العمولات</th><th>الطلبات</th></tr></thead><tbody>${drivers.length ? drivers.map(d => `<tr><td>${d.name}</td><td style="color:var(--orange)">${(d.revenue || 0).toLocaleString()} ج</td><td>${d.count}</td></tr>`).join('') : `<tr><td colspan="3"><div class="empty-state"><div class="msg">لا توجد بيانات</div></div></td></tr>`}</tbody></table></div></div>
+      <div class="section"><div class="sec-head"><div class="sec-title">👨‍✈️ عمولات الطيارين (التوصيل)</div></div><div class="table-wrap"><table><thead><td><th>الطيار</th><th>العمولات</th><th>الطلبات</th></tr></thead><tbody>${drivers.length ? drivers.map(d => `<tr><td>${d.name}</td><td style="color:var(--orange)">${(d.revenue || 0).toLocaleString()} ج</td><td>${d.count}</td></tr>`).join('') : `<tr><td colspan="3"><div class="empty-state"><div class="msg">لا توجد بيانات</div></div></td></tr>`}</tbody></table></div></div>
     </div>`;
 }
 
