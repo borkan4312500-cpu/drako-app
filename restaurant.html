@@ -106,7 +106,6 @@ tbody tr:hover{background:var(--surface2);}
 .tab-btn{padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text2);transition:all .2s;}
 .tab-btn.active{background:var(--orange);color:#fff;border-color:var(--orange);}
 
-/* تنسيقات الملف الشخصي */
 .profile-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -148,7 +147,6 @@ tbody tr:hover{background:var(--surface2);}
   color: var(--yellow);
 }
 
-/* تنسيق الكروت للتصنيفات */
 .categories-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -207,13 +205,38 @@ tbody tr:hover{background:var(--surface2);}
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
+// ========== إصلاح مشكلة التحقق من المصادقة (تم تعديل checkAuth) ==========
+async function apiFetch(url, options = {}) {
+  const res = await fetch(url, { ...options, credentials: 'include', headers: { ...(options.headers || {}), ...(typeof options.body === 'string' ? { 'Content-Type': 'application/json' } : {}) } });
+  if (res.status === 401) { 
+    // حفظ الصفحة الحالية لإعادة التوجيه بعد تسجيل الدخول
+    localStorage.setItem('redirectAfterLogin', window.location.pathname);
+    window.location.href = '/login.html'; 
+  }
+  return res;
+}
+
 async function checkAuth() {
   try {
-    const res = await fetch('/api/restaurant/profile', { credentials: 'include' });
-    if (res.status === 401) window.location.href = '/login.html';
-  } catch(e) { window.location.href = '/login.html'; }
+    // استخدام apiFetch بدلاً من fetch العادي لضمان إرسال التوكن
+    const res = await apiFetch('/api/restaurant/profile');
+    if (res.status === 401) {
+      window.location.href = '/login.html';
+      return false;
+    }
+    const data = await res.json();
+    // تخزين معرف المطعم واسمه للاستخدام العالمي
+    window.myRestaurantId = data.id;
+    localStorage.setItem('restaurantId', data.id);
+    localStorage.setItem('restaurantName', data.name);
+    if (data.logo) localStorage.setItem('restaurantLogo', data.logo);
+    return true;
+  } catch(e) {
+    console.error('Auth check error:', e);
+    window.location.href = '/login.html';
+    return false;
+  }
 }
-checkAuth();
 
 // ========== SOUND ENGINE (كما هو) ==========
 function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
@@ -268,14 +291,8 @@ createSound('orderCancelled', generateToneWAV(400, 0.3, 'triangle'));
 const API = '/api';
 let currentPage = 'profile';
 window._catOptions = '<option value="">بدون تصنيف</option>';
-window.myRestaurantId = null;
 let categoriesList = [];
 
-async function apiFetch(url, options = {}) {
-  const res = await fetch(url, { ...options, credentials: 'include', headers: { ...(options.headers || {}), ...(typeof options.body === 'string' ? { 'Content-Type': 'application/json' } : {}) } });
-  if (res.status === 401) { location.href = '/'; }
-  return res;
-}
 function toast(msg, type = 'success') {
   const t = document.createElement('div');
   t.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1E2535;color:#fff;padding:12px 20px;border-radius:12px;z-index:9999;font-weight:600;';
@@ -325,20 +342,35 @@ async function renderPage(page) {
   } catch (e) { toast('خطأ في التحميل', 'error'); console.error(e); }
 }
 
-// ========== الملف الشخصي (جديد) ==========
+// ========== الملف الشخصي (مُعدل لحفظ الصورة محلياً) ==========
 async function renderProfile() {
-  const profile = await apiFetch(API + '/restaurant/profile').then(r => r.json()).catch(() => ({ name: 'مطعمي', logo: '' }));
-  const stats = await apiFetch(API + '/restaurant/stats').then(r => r.json()).catch(() => ({}));
-  window.myRestaurantId = profile.id;
-  document.getElementById('rest-name-side').innerHTML = profile.name || 'مطعمي';
+  let profile = null;
+  let stats = null;
+  try {
+    const profileRes = await apiFetch(API + '/restaurant/profile');
+    profile = await profileRes.json();
+    const statsRes = await apiFetch(API + '/restaurant/stats');
+    stats = await statsRes.json();
+  } catch(e) { console.error(e); }
+  
+  // استخدام البيانات من localStorage كنسخ احتياطي
+  const name = profile?.name || localStorage.getItem('restaurantName') || 'مطعمي';
+  let logo = profile?.logo || localStorage.getItem('restaurantLogo') || '';
+  // إضافة timestamp لتجنب الكاش
+  if (logo && !logo.includes('?t=')) logo += '?t=' + Date.now();
+  
+  window.myRestaurantId = profile?.id || localStorage.getItem('restaurantId');
+  document.getElementById('rest-name-side').innerHTML = name;
+  
   const savedBio = localStorage.getItem('restaurant_bio') || 'مرحباً بكم في مطعمنا، نقدم أشهى المأكولات بجودة عالية.';
   const savedRating = localStorage.getItem('restaurant_rating') || '4.8';
   const savedReviews = localStorage.getItem('restaurant_reviews') || '128';
+  
   const html = `
     <div class="profile-card">
-      <img src="${profile.logo || 'https://placehold.co/100x100/FF6B00/white?text=🍽️'}" class="profile-image" id="profileLogo">
+      <img src="${logo || 'https://placehold.co/100x100/FF6B00/white?text=🍽️'}" class="profile-image" id="profileLogo">
       <div class="profile-info">
-        <div class="profile-name" id="profileName">${profile.name}</div>
+        <div class="profile-name" id="profileName">${name}</div>
         <div class="profile-bio" id="profileBio">${savedBio}</div>
         <div class="profile-rating"><span class="rating-stars">⭐⭐⭐⭐⭐</span><span>${savedRating} (${savedReviews} تقييم)</span></div>
       </div>
@@ -349,10 +381,10 @@ async function renderProfile() {
       </div>
     </div>
     <div class="stats-grid">
-      <div class="stat-card" onclick="navigate('orders');setOrdersTab('new')"><div class="sc-value">${stats.pending || 0}</div><div class="sc-label">طلبات جديدة</div></div>
-      <div class="stat-card" onclick="navigate('orders');setOrdersTab('accepted')"><div class="sc-value">${stats.accepted || 0}</div><div class="sc-label">مقبولة</div></div>
-      <div class="stat-card" onclick="navigate('orders');setOrdersTab('preparing')"><div class="sc-value">${stats.preparing || 0}</div><div class="sc-label">قيد التحضير</div></div>
-      <div class="stat-card"><div class="sc-value">${stats.todayRevenue || 0} ج</div><div class="sc-label">إيرادات اليوم</div></div>
+      <div class="stat-card" onclick="navigate('orders');setOrdersTab('new')"><div class="sc-value">${stats?.pending || 0}</div><div class="sc-label">طلبات جديدة</div></div>
+      <div class="stat-card" onclick="navigate('orders');setOrdersTab('accepted')"><div class="sc-value">${stats?.accepted || 0}</div><div class="sc-label">مقبولة</div></div>
+      <div class="stat-card" onclick="navigate('orders');setOrdersTab('preparing')"><div class="sc-value">${stats?.preparing || 0}</div><div class="sc-label">قيد التحضير</div></div>
+      <div class="stat-card"><div class="sc-value">${stats?.todayRevenue || 0} ج</div><div class="sc-label">إيرادات اليوم</div></div>
     </div>
   `;
   document.getElementById('content').innerHTML = html;
@@ -387,11 +419,15 @@ async function uploadLogo(input) {
   const fd = new FormData(); fd.append('logo', file);
   const res = await apiFetch(API + '/restaurant/profile', { method: 'PATCH', body: fd });
   const data = await res.json();
-  if (data.logo) { document.getElementById('profileLogo').src = data.logo + '?t=' + Date.now(); toast('تم رفع الشعار'); }
-  else toast('فشل الرفع', 'error');
+  if (data.logo) {
+    const logoUrl = data.logo + '?t=' + Date.now();
+    document.getElementById('profileLogo').src = logoUrl;
+    localStorage.setItem('restaurantLogo', data.logo);
+    toast('تم رفع الشعار');
+  } else toast('فشل الرفع', 'error');
 }
 
-// ========== DASHBOARD (نفس الأصلي) ==========
+// ========== باقي الدوال (دون تغيير) ==========
 async function loadDashboard() {
   const [profile, stats, reports] = await Promise.all([
     apiFetch(API + '/restaurant/profile').then(r => r.json()).catch(() => ({ name: 'مطعمي', logo: '' })),
@@ -399,11 +435,14 @@ async function loadDashboard() {
     apiFetch(API + '/restaurant/reports').then(r => r.json()).catch(() => ({}))
   ]);
   window.myRestaurantId = profile.id;
-  document.getElementById('rest-name-side').textContent = profile.name || 'مطعمي';
+  localStorage.setItem('restaurantId', profile.id);
+  localStorage.setItem('restaurantName', profile.name);
+  if (profile.logo) localStorage.setItem('restaurantLogo', profile.logo);
+  document.getElementById('rest-name-side').innerHTML = profile.name || 'مطعمي';
   document.getElementById('content').innerHTML = `
     <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;background:var(--surface);padding:20px;border-radius:var(--radius-lg);border:1px solid var(--border)">
       <img src="${profile.logo || 'https://via.placeholder.com/80'}" style="width:80px;height:80px;border-radius:16px;object-fit:cover" id="logo-preview">
-      <div><h3>🖼️ شعار المطعم</h3><input type="file" id="logo-file" accept="image/*" style="color:var(--text2);margin-top:8px"><button class="btn btn-primary btn-sm" onclick="uploadLogo()" style="margin-top:8px">رفع الشعار</button></div>
+      <div><h3>🖼️ شعار المطعم</h3><input type="file" id="logo-file" accept="image/*" style="color:var(--text2);margin-top:8px"><button class="btn btn-primary btn-sm" onclick="uploadLogoDashboard()" style="margin-top:8px">رفع الشعار</button></div>
     </div>
     <div class="stats-grid">
       <div class="stat-card" onclick="navigate('orders');setOrdersTab('new')"><div class="sc-top"><div><div class="sc-value">${stats.pending || 0}</div><div class="sc-label">طلبات جديدة</div></div><div class="sc-icon" style="background:var(--orange-dim)">📦</div></div></div>
@@ -420,8 +459,21 @@ async function loadDashboard() {
       </div>
     </div>`;
 }
+async function uploadLogoDashboard() {
+  const file = document.getElementById('logo-file').files[0];
+  if (!file) return;
+  const fd = new FormData(); fd.append('logo', file);
+  const res = await apiFetch(API + '/restaurant/profile', { method: 'PATCH', body: fd });
+  const data = await res.json();
+  if (data.logo) {
+    const logoUrl = data.logo + '?t=' + Date.now();
+    document.getElementById('logo-preview').src = logoUrl;
+    document.getElementById('profileLogo') && (document.getElementById('profileLogo').src = logoUrl);
+    localStorage.setItem('restaurantLogo', data.logo);
+    toast('تم رفع الشعار');
+  } else toast('فشل الرفع', 'error');
+}
 
-// ========== ORDERS (نفس الأصلي) ==========
 let ordersSelectedDate = new Date().toISOString().slice(0, 10);
 let currentOrderTab = 'all';
 function setOrdersTab(tab) { currentOrderTab = tab; }
@@ -461,7 +513,7 @@ async function loadOrdersData(){
   if(!filtered.length){ container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><div>لا توجد طلبات</div></div>`; return; }
   let html = `<div class="section"><div class="sec-head"><div class="sec-title">📦 ${filtered.length} طلب</div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>العميل</th><th>الهاتف</th><th>الأصناف</th><th>الإجمالي</th><th>الحالة</th><th>الوقت</th><th>إجراء</th></tr></thead><tbody>`;
   filtered.forEach(o => {
-    const itemsStr = (o.items||[]).map(i=>`<strong>${i.name}</strong> ×${i.qty||1}`).join('<br>')||'—';
+    const itemsStr = (o.items||[]).map(i=>`<strong>${i.name}</strong> ×${i.quantity||1}`).join('<br>')||'—';
     const productTotal = (o.total||0)-(o.deliveryFee||0);
     let statusHTML = statusBadge(o.status);
     if(o.status==='PREPARING' && o.preparingAt){
@@ -496,7 +548,6 @@ function applyOrderFilter(){ const inp = document.getElementById('order-date-inp
 function setTodayOrders(){ ordersSelectedDate = new Date().toISOString().slice(0,10); document.getElementById('order-date-input').value = ordersSelectedDate; loadOrdersData(); }
 function clearOrderFilter(){ ordersSelectedDate = ''; document.getElementById('order-date-input').value = ''; loadOrdersData(); }
 
-// ========== CATEGORIES مع تصميم كروت ==========
 async function loadCategories() {
   const res = await apiFetch(API + '/restaurant/categories');
   const cats = await res.json();
@@ -540,12 +591,11 @@ async function deleteCategory(id) {
   loadCategories(); toast('تم الحذف');
 }
 
-// ========== PRODUCTS (نفس الأصلي) ==========
 async function loadProducts() {
   await loadCategoriesOptions();
   const prodRes = await apiFetch(API + '/restaurant/products');
   const products = await prodRes.json();
-  document.getElementById('content').innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:16px"><h2>📋 المنتجات</h2><button class="btn btn-primary" onclick="showAddProduct()">+ إضافة منتج</button></div><div class="section"><div class="table-wrap"><table><thead><tr><th>الصورة</th><th>الاسم</th><th>المجموعات</th><th>التصنيف</th><th>متاح</th><th>إجراءات</th></tr></thead><tbody>${products.map(p => { const groupsStr = (p.groups || []).map(g => `<div style="font-size:11px;color:var(--text2)">${g.name}: ${g.options?.map(o=>`${o.value}(${o.price}ج)`).join(', ')||''}</div>`).join(''); return `<tr><td>${p.image?`<img src="${p.image}" style="width:42px;height:42px;border-radius:8px;object-fit:cover">`:'—'}</td><td style="font-weight:600">${p.name}</td><td>${groupsStr || '—'}</td><td>${p.category||'—'}</td><td><span class="badge ${p.isAvailable?'badge-green':'badge-red'}">${p.isAvailable?'نعم':'لا'}</span></td><td><button class="btn btn-ghost btn-sm" onclick="editProduct('${p.id}')">✏️</button> <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">🗑️</button></td></tr>`; }).join('')}</tbody><table></div></div>`;
+  document.getElementById('content').innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:16px"><h2>📋 المنتجات</h2><button class="btn btn-primary" onclick="showAddProduct()">+ إضافة منتج</button></div><div class="section"><div class="table-wrap"></td><thead><tr><th>الصورة</th><th>الاسم</th><th>المجموعات</th><th>التصنيف</th><th>متاح</th><th>إجراءات</th></tr></thead><tbody>${products.map(p => { const groupsStr = (p.groups || []).map(g => `<div style="font-size:11px;color:var(--text2)">${g.name}: ${g.options?.map(o=>`${o.value}(${o.price}ج)`).join(', ')||''}</div>`).join(''); return `<tr><td>${p.image?`<img src="${p.image}" style="width:42px;height:42px;border-radius:8px;object-fit:cover">`:'—'}</td><td style="font-weight:600">${p.name}</td><td>${groupsStr || '—'}</td><td>${p.category||'—'}</td><td><span class="badge ${p.isAvailable?'badge-green':'badge-red'}">${p.isAvailable?'نعم':'لا'}</span></td><td><button class="btn btn-ghost btn-sm" onclick="editProduct('${p.id}')">✏️</button> <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">🗑️</button></td></tr>`; }).join('')}</tbody></table></div></div>`;
 }
 function showAddProduct() {
   const catOptions = window._catOptions;
@@ -721,9 +771,15 @@ function addQuickGroup(type) {
   });
 }
 
-loadCategoriesOptions();
-navigate('profile');
+// ========== بدء التشغيل ==========
+(async function init() {
+  const isAuth = await checkAuth();
+  if (!isAuth) return;
+  await loadCategoriesOptions();
+  navigate('profile');
+})();
 
+// Socket.IO
 const socket = io();
 socket.on('newOrder', (data) => {
   if (data.restaurantId === window.myRestaurantId) {
