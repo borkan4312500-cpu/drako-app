@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
@@ -7,21 +7,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
-    body {
-      background: #F7F7F7; color: #1A1A1A; max-width: 430px; margin: auto; height: 100vh;
-      display: flex; flex-direction: column; overflow: hidden;
-    }
-    :root {
-      --brand: #FF6B00; --brand-dark: #E55D00; --brand-light: #FFF3EB;
-      --bg: #F7F7F7; --card: #FFFFFF; --text: #1A1A1A; --text-muted: #7A7A7A;
-      --border: #EBEBEB; --radius: 18px; --radius-sm: 12px;
-    }
-    .header {
-      background: rgba(255,255,255,0.94); backdrop-filter: blur(14px);
-      padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;
-      border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 100;
-      position: sticky; top: 0;
-    }
+    body { background: #F7F7F7; color: #1A1A1A; max-width: 430px; margin: auto; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    :root { --brand: #FF6B00; --brand-dark: #E55D00; --brand-light: #FFF3EB; --bg: #F7F7F7; --card: #FFFFFF; --text: #1A1A1A; --text-muted: #7A7A7A; --border: #EBEBEB; --radius: 18px; --radius-sm: 12px; }
+    .header { background: rgba(255,255,255,0.94); backdrop-filter: blur(14px); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 100; position: sticky; top: 0; }
     .logo { display: flex; align-items: center; gap: 10px; }
     .logo img { width: 38px; height: 38px; border-radius: 12px; object-fit: cover; background: var(--brand-light); }
     .logo-text { font-size: 18px; font-weight: 800; background: linear-gradient(135deg, var(--brand), #ff8c3a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
@@ -82,7 +70,7 @@
   <div class="main-content" id="mainContent"></div>
 
   <div class="bottom-nav">
-    <div class="nav-item active" id="nav-home" onclick="navigate('dashboard')"><i>📊</i><span>الرئيسية</span></div>
+    <div class="nav-item active" id="nav-dashboard" onclick="navigate('dashboard')"><i>📊</i><span>الرئيسية</span></div>
     <div class="nav-item" id="nav-orders" onclick="navigate('orders')"><i>📦</i><span>الطلبات</span></div>
     <div class="nav-item" id="nav-profile" onclick="navigate('profile')"><i>👤</i><span>حسابي</span></div>
   </div>
@@ -105,7 +93,6 @@
     let ordersData = [];
     let currentOrderTab = 'active';
 
-    // Helper functions
     function showToast(msg, error = false) {
       const t = document.getElementById('toast');
       t.textContent = msg; t.style.background = error ? '#F05252' : '#1A1A1A';
@@ -118,14 +105,15 @@
     }
     function closeModal() { document.getElementById('modal').classList.remove('open'); }
 
-    // API Fetch (لا يعيد توجيه تلقائي)
     async function apiFetch(url, options = {}) {
       const res = await fetch(url, { ...options, credentials: 'include', headers: { ...(options.headers||{}), 'Content-Type': options.body instanceof FormData ? undefined : 'application/json' } });
-      // فقط نعيد الاستجابة؛ التعامل مع 401/403 سيكون في مكان الاستدعاء
+      if (res.status === 401 || res.status === 403) {
+        // لا نعيد توجيه تلقائي، نترك للدوال الأعلى التعامل
+        return res;
+      }
       return res;
     }
 
-    // التحقق من الجلسة عند التحميل
     async function checkSession() {
       try {
         const res = await fetch(API + '/market/orders', { credentials: 'include' });
@@ -150,20 +138,18 @@
       }
     }
 
-    // Load profile
     async function loadProfile() {
       try {
         const res = await apiFetch(API + '/market/profile');
-        if (!res.ok) throw new Error('Profile load failed');
+        if (!res.ok) return;
         currentMarketProfile = await res.json();
         document.getElementById('headerName').textContent = currentMarketProfile.name || 'الماركت';
         if (currentMarketProfile.logo) {
           document.getElementById('headerLogo').src = currentMarketProfile.logo;
         }
-      } catch(e) { /* ignore - profile may be unavailable */ }
+      } catch(e) {}
     }
 
-    // Navigation
     function navigate(page) {
       currentPage = page;
       document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -183,11 +169,10 @@
       } catch(e) { showToast('خطأ في التحميل', true); }
     }
 
-    // Dashboard
     async function renderDashboard() {
       const res = await apiFetch(API + '/market/orders');
       if (res.status === 401 || res.status === 403) {
-        document.getElementById('mainContent').innerHTML = '<div class="error-box"><p>انتهت الجلسة. يرجى تسجيل الدخول.</p></div>';
+        document.getElementById('mainContent').innerHTML = '<div class="error-box"><p>انتهت الجلسة.</p></div>';
         return;
       }
       const orders = await res.json().catch(() => []);
@@ -220,7 +205,6 @@
       `;
     }
 
-    // Profile
     async function renderProfile() {
       if (!currentMarketProfile) await loadProfile();
       const profile = currentMarketProfile || {};
@@ -235,6 +219,7 @@
         </div>
       `;
     }
+
     function openEditProfileModal() {
       const name = currentMarketProfile?.name || '';
       openModal('تعديل الاسم', `
@@ -242,13 +227,15 @@
         <button class="btn btn-block" onclick="saveProfileName()">حفظ</button>
       `);
     }
+
     async function saveProfileName() {
       const newName = document.getElementById('editName').value.trim();
       if (!newName) return showToast('الاسم مطلوب', true);
       const fd = new FormData(); fd.append('name', newName);
       const res = await apiFetch(API + '/market/profile', { method: 'PATCH', body: fd });
-      if (res.status === 401 || res.status === 403) {
-        showToast('انتهت الجلسة', true);
+      if (!res.ok) {
+        const err = await res.json();
+        showToast(err.error || 'فشل', true);
         return;
       }
       const data = await res.json();
@@ -257,48 +244,37 @@
       document.getElementById('profileName').textContent = data.name;
       closeModal(); showToast('تم التحديث');
     }
- async function uploadLogo(input) {
-  const file = input.files[0];
-  if (!file) return;
-  if (!file.type.startsWith('image/')) {
-    showToast('⚠️ يرجى اختيار صورة فقط', true);
-    input.value = '';
-    return;
-  }
-  const fd = new FormData();
-  fd.append('logo', file);
-  try {
-    const res = await fetch(API + '/market/profile', {
-      method: 'PATCH',
-      credentials: 'include',
-      body: fd
-    });
-    const contentType = res.headers.get('content-type');
-    let data;
-    if (contentType && contentType.includes('application/json')) {
-      data = await res.json();
-    } else {
-      const text = await res.text();
-      throw new Error('استجابة غير JSON: ' + text.substring(0, 100));
-    }
-    if (!res.ok) throw new Error(data.error || 'فشل رفع الشعار');
-    if (data.logo) {
-      const logoUrl = data.logo + '?t=' + Date.now();
-      document.getElementById('headerLogo').src = logoUrl;
-      const profileLogo = document.getElementById('profileLogo');
-      if (profileLogo) profileLogo.src = logoUrl;
-      currentMarketProfile.logo = data.logo;  // ✅ الصحيح
-      showToast('✅ تم رفع الشعار');
-    } else {
-      showToast('⚠️ لم يتم إرجاع رابط الشعار', true);
-    }
-  } catch(e) {
-    showToast('❌ ' + (e.message || 'فشل رفع الشعار'), true);
-    console.error(e);
-  }
-}
 
-    // Orders (باقي الدوال كما هي بدون تغيير)
+    async function uploadLogo(input) {
+      const file = input.files[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        showToast('⚠️ يرجى اختيار صورة فقط', true);
+        input.value = '';
+        return;
+      }
+      const fd = new FormData();
+      fd.append('logo', file);
+      try {
+        const res = await fetch(API + '/market/profile', { method: 'PATCH', credentials: 'include', body: fd });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'فشل الرفع');
+        }
+        const data = await res.json();
+        if (data.logo) {
+          const logoUrl = data.logo + '?t=' + Date.now();
+          document.getElementById('headerLogo').src = logoUrl;
+          document.getElementById('profileLogo').src = logoUrl;
+          currentMarketProfile.logo = data.logo;
+          showToast('✅ تم رفع الشعار');
+        }
+      } catch(e) {
+        showToast('❌ ' + e.message, true);
+      }
+    }
+
+    // ========== الطلبات (باقي الدوال كما هي) ==========
     async function renderOrders() {
       document.getElementById('mainContent').innerHTML = `
         <div style="display:flex; gap:10px; margin-bottom:16px;">
@@ -313,12 +289,12 @@
     async function loadOrderList() {
       const container = document.getElementById('ordersList');
       container.innerHTML = '<div style="text-align:center;padding:32px;color:#888;">⏳ جاري التحميل...</div>';
+      const res = await apiFetch(API + '/market/orders');
+      if (res.status === 401 || res.status === 403) {
+        container.innerHTML = '<div class="error-box">انتهت الجلسة</div>';
+        return;
+      }
       try {
-        const res = await apiFetch(API + '/market/orders');
-        if (res.status === 401 || res.status === 403) {
-          container.innerHTML = '<div class="error-box">انتهت الجلسة</div>';
-          return;
-        }
         const orders = await res.json();
         ordersData = orders;
         const filtered = currentOrderTab === 'active' 
@@ -344,14 +320,11 @@
         `).join('');
       } catch(e) { console.error(e); }
     }
-    function getStatusText(s) {
-      const map = { PENDING: 'جديد', ACCEPTED: 'قيد التحضير', INVOICE_ADDED: 'الفاتورة', READY: 'جاهز', DELIVERED: 'تم', CANCELLED: 'ملغي' };
-      return map[s] || s;
-    }
+    function getStatusText(s) { const map={PENDING:'جديد', ACCEPTED:'قيد التحضير', INVOICE_ADDED:'الفاتورة', READY:'جاهز', DELIVERED:'تم', CANCELLED:'ملغي'}; return map[s]||s; }
     async function acceptOrder(id) {
       const res = await apiFetch(API + '/market/orders/' + id + '/accept', { method: 'PATCH' });
-      if (res.status === 401 || res.status === 403) { showToast('انتهت الجلسة', true); return; }
-      showToast('تم القبول'); loadOrderList();
+      if (res.ok) { showToast('تم القبول'); loadOrderList(); }
+      else showToast('فشل', true);
     }
     function showInvoiceModal(id) {
       const order = ordersData.find(o => o.id === id);
@@ -362,15 +335,15 @@
     }
     async function setInvoice(id) {
       const amount = parseFloat(document.getElementById('invoiceAmount').value);
-      if (isNaN(amount) || amount <= 0) return showToast('قيمة غير صحيحة', true);
+      if (isNaN(amount)||amount<=0) return showToast('قيمة غير صحيحة', true);
       const res = await apiFetch(API + '/market/orders/' + id + '/invoice', { method: 'PATCH', body: JSON.stringify({ invoiceAmount: amount }) });
-      if (res.status === 401 || res.status === 403) { showToast('انتهت الجلسة', true); return; }
-      showToast('تم تحديث الفاتورة'); closeModal(); loadOrderList();
+      if (res.ok) { showToast('تم التحديث'); closeModal(); loadOrderList(); }
+      else showToast('فشل', true);
     }
     async function markReady(id) {
       const res = await apiFetch(API + '/market/orders/' + id + '/ready', { method: 'PATCH' });
-      if (res.status === 401 || res.status === 403) { showToast('انتهت الجلسة', true); return; }
-      showToast('تم التجهيز'); loadOrderList();
+      if (res.ok) { showToast('تم التجهيز'); loadOrderList(); }
+      else showToast('فشل', true);
     }
     function openOrderDetails(id) {
       const order = ordersData.find(o => o.id === id);
@@ -451,22 +424,24 @@
         method: 'PATCH',
         body: JSON.stringify({ items: newItems, total: newTotal })
       });
-      if (res.status === 401 || res.status === 403) { showToast('انتهت الجلسة', true); return; }
-      order.items = newItems;
-      order.total = newTotal;
-      showToast('تم تحديث الطلب');
-      loadOrderList();
+      if (res.ok) {
+        order.items = newItems;
+        order.total = newTotal;
+        showToast('تم تحديث الطلب');
+        loadOrderList();
+      } else {
+        showToast('فشل', true);
+      }
     }
 
-    // Initialization
+    // التشغيل
     (async function() {
       const ok = await checkSession();
-      if (!ok) return; // نعرض رسالة الخطأ ولا نكمل
+      if (!ok) return;
       await loadProfile();
       navigate('dashboard');
     })();
 
-    // Socket
     const socket = io();
     socket.on('orderStatusUpdate', () => { if (currentPage === 'orders') loadOrderList(); });
     socket.on('newSpecialOrder', () => { showToast('طلب جديد!'); if (currentPage === 'orders') loadOrderList(); });
