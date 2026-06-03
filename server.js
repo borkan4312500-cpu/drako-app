@@ -198,6 +198,31 @@ app.patch('/api/admin/restaurants/:id/toggle', requireAuth, adminOnly, (req, res
   writeData(data);
   res.json({ isOpen: restaurant.isOpen });
 });
+// تعديل وحذف مطعم
+app.patch('/api/admin/restaurants/:id', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const restaurant = data.restaurants.find(r => r.id === req.params.id);
+  if (!restaurant) return res.status(404).json({ error: 'غير موجود' });
+  const { name, ownerPhone } = req.body;
+  if (name) restaurant.name = name;
+  if (ownerPhone) {
+    const user = data.users.find(u => u.id === restaurant.userId);
+    if (user) user.phone = ownerPhone;
+  }
+  writeData(data);
+  res.json({ success: true });
+});
+app.delete('/api/admin/restaurants/:id', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const idx = data.restaurants.findIndex(r => r.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'غير موجود' });
+  const restaurant = data.restaurants[idx];
+  const userIndex = data.users.findIndex(u => u.id === restaurant.userId);
+  if (userIndex !== -1) data.users.splice(userIndex, 1);
+  data.restaurants.splice(idx, 1);
+  writeData(data);
+  res.json({ success: true });
+});
 
 // طيارين (أدمن)
 app.get('/api/admin/drivers', requireAuth, adminOnly, (req, res) => {
@@ -239,17 +264,39 @@ app.patch('/api/admin/drivers/:id/block', requireAuth, adminOnly, (req, res) => 
   writeData(data);
   res.json({ isActive: user.isActive });
 });
+// تعديل وحذف طيار
+app.patch('/api/admin/drivers/:id', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const user = data.users.find(u => u.id === req.params.id && u.role === 'DRIVER');
+  if (!user) return res.status(404).json({ error: 'غير موجود' });
+  const { name, phone, password } = req.body;
+  if (name) user.name = name;
+  if (phone) user.phone = phone;
+  if (password) user.password = bcrypt.hashSync(password, 10);
+  writeData(data);
+  res.json({ success: true });
+});
+app.delete('/api/admin/drivers/:id', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const userIndex = data.users.findIndex(u => u.id === req.params.id && u.role === 'DRIVER');
+  if (userIndex === -1) return res.status(404).json({ error: 'غير موجود' });
+  const driverIndex = data.drivers.findIndex(d => d.userId === req.params.id);
+  if (driverIndex !== -1) data.drivers.splice(driverIndex, 1);
+  data.users.splice(userIndex, 1);
+  writeData(data);
+  res.json({ success: true });
+});
 
-// === تفاصيل الطيار (تمت الإضافة) ===
+// تفاصيل الطيار
 app.get('/api/admin/drivers/:id/details', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const user = data.users.find(u => u.id === req.params.id && u.role === 'DRIVER');
   if (!user) return res.status(404).json({ error: 'الطيار غير موجود' });
   const driver = data.drivers.find(d => d.userId === user.id) || {};
   const today = new Date().toISOString().slice(0, 10);
-  const todayOrders = data.orders.filter(o => 
-    o.driverId === user.id && 
-    o.status === 'DELIVERED' && 
+  const todayOrders = data.orders.filter(o =>
+    o.driverId === user.id &&
+    o.status === 'DELIVERED' &&
     o.deliveredAt && o.deliveredAt.startsWith(today)
   );
   const todayRevenue = todayOrders.reduce((sum, o) => sum + (o.deliveryFee || 0), 0);
@@ -1046,6 +1093,7 @@ app.get('/api/admin/markets', requireAuth, adminOnly, (req, res) => {
   res.json(data.markets || []);
 });
 app.post('/api/admin/markets', requireAuth, adminOnly, upload.single('logo'), (req, res) => {
+  console.log('📦 Market body:', req.body); // ← تشخيص مؤقت
   const data = readData();
   const { name, ownerPhone, ownerPassword } = req.body;
   if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
@@ -1067,6 +1115,19 @@ app.patch('/api/admin/markets/:id/toggle', requireAuth, adminOnly, (req, res) =>
   writeData(data);
   res.json({ success: true });
 });
+app.patch('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const market = data.markets.find(m => m.id === req.params.id);
+  if (!market) return res.status(404).json({ error: 'غير موجود' });
+  const { name, ownerPhone } = req.body;
+  if (name) market.name = name;
+  if (ownerPhone) {
+    const user = data.users.find(u => u.id === market.userId);
+    if (user) user.phone = ownerPhone;
+  }
+  writeData(data);
+  res.json({ success: true });
+});
 app.delete('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const idx = data.markets.findIndex(m => m.id === req.params.id);
@@ -1079,12 +1140,13 @@ app.delete('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
   res.json({ success: true });
 });
 
-// إدارة الصيدليات (أدمن) – مطابقة للماركت
+// إدارة الصيدليات (أدمن)
 app.get('/api/admin/pharmacies', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   res.json(data.pharmacies || []);
 });
 app.post('/api/admin/pharmacies', requireAuth, adminOnly, upload.single('logo'), (req, res) => {
+  console.log('📦 Pharmacy body:', req.body); // ← تشخيص مؤقت
   const data = readData();
   const { name, ownerPhone, ownerPassword } = req.body;
   if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
@@ -1103,6 +1165,19 @@ app.patch('/api/admin/pharmacies/:id/toggle', requireAuth, adminOnly, (req, res)
   const pharmacy = data.pharmacies.find(p => p.id === req.params.id);
   if (!pharmacy) return res.status(404).json({ error: 'غير موجود' });
   pharmacy.isOpen = !pharmacy.isOpen;
+  writeData(data);
+  res.json({ success: true });
+});
+app.patch('/api/admin/pharmacies/:id', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const pharmacy = data.pharmacies.find(p => p.id === req.params.id);
+  if (!pharmacy) return res.status(404).json({ error: 'غير موجود' });
+  const { name, ownerPhone } = req.body;
+  if (name) pharmacy.name = name;
+  if (ownerPhone) {
+    const user = data.users.find(u => u.id === pharmacy.userId);
+    if (user) user.phone = ownerPhone;
+  }
   writeData(data);
   res.json({ success: true });
 });
@@ -1184,7 +1259,7 @@ app.patch('/api/market/orders/:id/ready', requireAuth, (req, res) => {
   res.json({ success: true });
 });
 
-// ==================== PHARMACY ORDERS API (جديد - مطابقة للماركت) ====================
+// ==================== PHARMACY ORDERS API ====================
 app.get('/api/pharmacy/orders', requireAuth, (req, res) => {
   if (req.user.role !== 'PHARMACY') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
@@ -1275,91 +1350,6 @@ setInterval(() => {
   }
 }, 60000);
 
-// ---------- تعديل وحذف المطاعم (لأول مرة) ----------
-app.patch('/api/admin/restaurants/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const restaurant = data.restaurants.find(r => r.id === req.params.id);
-  if (!restaurant) return res.status(404).json({ error: 'غير موجود' });
-  const { name, ownerPhone } = req.body;
-  if (name) restaurant.name = name;
-  if (ownerPhone) {
-    // تغيير رقم هاتف المالك في جدول users أيضاً
-    const user = data.users.find(u => u.id === restaurant.userId);
-    if (user) user.phone = ownerPhone;
-  }
-  writeData(data);
-  res.json({ success: true });
-});
-
-app.delete('/api/admin/restaurants/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const idx = data.restaurants.findIndex(r => r.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: 'غير موجود' });
-  const restaurant = data.restaurants[idx];
-  // حذف المستخدم المالك
-  const userIndex = data.users.findIndex(u => u.id === restaurant.userId);
-  if (userIndex !== -1) data.users.splice(userIndex, 1);
-  data.restaurants.splice(idx, 1);
-  writeData(data);
-  res.json({ success: true });
-});
-
-// ---------- تعديل وحذف الأسواق ----------
-app.patch('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const market = data.markets.find(m => m.id === req.params.id);
-  if (!market) return res.status(404).json({ error: 'غير موجود' });
-  const { name, ownerPhone } = req.body;
-  if (name) market.name = name;
-  if (ownerPhone) {
-    const user = data.users.find(u => u.id === market.userId);
-    if (user) user.phone = ownerPhone;
-  }
-  writeData(data);
-  res.json({ success: true });
-});
-// DELETE /api/admin/markets/:id موجود مسبقاً
-
-// ---------- تعديل وحذف الصيدليات ----------
-app.patch('/api/admin/pharmacies/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const pharmacy = data.pharmacies.find(p => p.id === req.params.id);
-  if (!pharmacy) return res.status(404).json({ error: 'غير موجود' });
-  const { name, ownerPhone } = req.body;
-  if (name) pharmacy.name = name;
-  if (ownerPhone) {
-    const user = data.users.find(u => u.id === pharmacy.userId);
-    if (user) user.phone = ownerPhone;
-  }
-  writeData(data);
-  res.json({ success: true });
-});
-// DELETE /api/admin/pharmacies/:id موجود مسبقاً
-
-// ---------- تعديل وحذف الطيارين ----------
-app.patch('/api/admin/drivers/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const user = data.users.find(u => u.id === req.params.id && u.role === 'DRIVER');
-  if (!user) return res.status(404).json({ error: 'غير موجود' });
-  const { name, phone, password } = req.body;
-  if (name) user.name = name;
-  if (phone) user.phone = phone;
-  if (password) user.password = bcrypt.hashSync(password, 10);
-  writeData(data);
-  res.json({ success: true });
-});
-
-app.delete('/api/admin/drivers/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const userIndex = data.users.findIndex(u => u.id === req.params.id && u.role === 'DRIVER');
-  if (userIndex === -1) return res.status(404).json({ error: 'غير موجود' });
-  // حذف ملف الطيار
-  const driverIndex = data.drivers.findIndex(d => d.userId === req.params.id);
-  if (driverIndex !== -1) data.drivers.splice(driverIndex, 1);
-  data.users.splice(userIndex, 1);
-  writeData(data);
-  res.json({ success: true });
-});
 io.on('connection', (socket) => {
   console.log('عميل متصل:', socket.id);
 });
