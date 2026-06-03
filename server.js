@@ -119,6 +119,7 @@ app.get('/admin', rolePageAuth('ADMIN'), (req, res) => res.sendFile(path.join(__
 app.get('/restaurant', rolePageAuth('RESTAURANT'), (req, res) => res.sendFile(path.join(__dirname, 'restaurant.html')));
 app.get('/driver', rolePageAuth('DRIVER'), (req, res) => res.sendFile(path.join(__dirname, 'driver.html')));
 app.get('/market', rolePageAuth('MARKET'), (req, res) => res.sendFile(path.join(__dirname, 'market.html')));
+app.get('/pharmacy', rolePageAuth('PHARMACY'), (req, res) => res.sendFile(path.join(__dirname, 'pharmacy.html')));
 
 // تسجيل الدخول (يدعم إعادة التوجيه)
 app.post('/login', (req, res) => {
@@ -136,6 +137,7 @@ app.post('/login', (req, res) => {
     case 'RESTAURANT': target = '/restaurant'; break;
     case 'DRIVER': target = '/driver'; break;
     case 'MARKET': target = '/market'; break;
+    case 'PHARMACY': target = '/pharmacy'; break;
     default: return res.send('تم الدخول');
   }
   if (redirect) {
@@ -1077,7 +1079,7 @@ app.delete('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
   res.json({ success: true });
 });
 
-// نفس المسارات للصيدليات (يمكنك تكرارها)
+// إدارة الصيدليات (أدمن) – مطابقة للماركت
 app.get('/api/admin/pharmacies', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   res.json(data.pharmacies || []);
@@ -1176,6 +1178,72 @@ app.patch('/api/market/orders/:id/ready', requireAuth, (req, res) => {
   if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
   const market = data.markets.find(m => m.userId === req.user.id);
   if (!market || order.storeId !== market.id) return res.status(403).json({ error: 'ليس طلبك' });
+  order.status = 'READY';
+  writeData(data);
+  io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
+  res.json({ success: true });
+});
+
+// ==================== PHARMACY ORDERS API (جديد - مطابقة للماركت) ====================
+app.get('/api/pharmacy/orders', requireAuth, (req, res) => {
+  if (req.user.role !== 'PHARMACY') return res.status(403).json({ error: 'غير مسموح' });
+  const data = readData();
+  const pharmacy = data.pharmacies.find(p => p.userId === req.user.id);
+  if (!pharmacy) return res.status(404).json({ error: 'الصيدلية غير موجودة' });
+  const orders = data.orders.filter(o => o.type === 'special' && o.storeId === pharmacy.id);
+  res.json(orders);
+});
+
+app.patch('/api/pharmacy/orders/:id/items', requireAuth, (req, res) => {
+  if (req.user.role !== 'PHARMACY') return res.status(403).json({ error: 'غير مسموح' });
+  const data = readData();
+  const order = data.orders.find(o => o.id === req.params.id);
+  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
+  const pharmacy = data.pharmacies.find(p => p.userId === req.user.id);
+  if (!pharmacy || order.storeId !== pharmacy.id) return res.status(403).json({ error: 'ليس طلبك' });
+  const { items, total } = req.body;
+  if (items) order.items = items;
+  if (total !== undefined) order.total = total;
+  writeData(data);
+  io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
+  res.json({ success: true });
+});
+
+app.patch('/api/pharmacy/orders/:id/accept', requireAuth, (req, res) => {
+  if (req.user.role !== 'PHARMACY') return res.status(403).json({ error: 'غير مسموح' });
+  const data = readData();
+  const order = data.orders.find(o => o.id === req.params.id);
+  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
+  const pharmacy = data.pharmacies.find(p => p.userId === req.user.id);
+  if (!pharmacy || order.storeId !== pharmacy.id) return res.status(403).json({ error: 'ليس طلبك' });
+  order.status = 'ACCEPTED';
+  writeData(data);
+  io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
+  res.json({ success: true });
+});
+
+app.patch('/api/pharmacy/orders/:id/invoice', requireAuth, (req, res) => {
+  if (req.user.role !== 'PHARMACY') return res.status(403).json({ error: 'غير مسموح' });
+  const data = readData();
+  const order = data.orders.find(o => o.id === req.params.id);
+  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
+  const pharmacy = data.pharmacies.find(p => p.userId === req.user.id);
+  if (!pharmacy || order.storeId !== pharmacy.id) return res.status(403).json({ error: 'ليس طلبك' });
+  const { invoiceAmount } = req.body;
+  order.invoiceAmount = invoiceAmount;
+  order.status = 'INVOICE_ADDED';
+  writeData(data);
+  io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
+  res.json({ success: true });
+});
+
+app.patch('/api/pharmacy/orders/:id/ready', requireAuth, (req, res) => {
+  if (req.user.role !== 'PHARMACY') return res.status(403).json({ error: 'غير مسموح' });
+  const data = readData();
+  const order = data.orders.find(o => o.id === req.params.id);
+  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
+  const pharmacy = data.pharmacies.find(p => p.userId === req.user.id);
+  if (!pharmacy || order.storeId !== pharmacy.id) return res.status(403).json({ error: 'ليس طلبك' });
   order.status = 'READY';
   writeData(data);
   io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
