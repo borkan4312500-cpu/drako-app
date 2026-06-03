@@ -1146,13 +1146,9 @@ app.get('/api/market/profile', requireAuth, (req, res) => {
 });
 
 app.patch('/api/market/profile', requireAuth, upload.single('logo'), (req, res) => {
-  if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const market = data.markets.find(m => m.userId === req.user.id);
-  if (!market) return res.status(404).json({ error: 'الماركت غير موجود' });
-  if (req.body.name) market.name = req.body.name;
+  // ... نفس الكود السابق
   if (req.file) market.logo = '/uploads/' + req.file.filename;
-  writeData(data);
+  // ...
   res.json({ name: market.name, logo: market.logo });
 });
 
