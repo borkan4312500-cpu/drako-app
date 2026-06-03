@@ -56,6 +56,7 @@
     .error-box { background: #FFF3EB; border: 1px solid var(--brand); border-radius: 16px; padding: 20px; margin: 20px; text-align: center; }
     .attachments { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
     .attachments img { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; cursor: pointer; border: 1px solid #eee; }
+    .order-note { background: #F9F9F9; padding: 10px; border-radius: 8px; margin-bottom: 12px; white-space: pre-wrap; }
   </style>
 </head>
 <body>
@@ -109,9 +110,7 @@
 
     async function apiFetch(url, options = {}) {
       const res = await fetch(url, { ...options, credentials: 'include', headers: { ...(options.headers||{}), 'Content-Type': options.body instanceof FormData ? undefined : 'application/json' } });
-      if (res.status === 401 || res.status === 403) {
-        return res;
-      }
+      if (res.status === 401 || res.status === 403) return res;
       return res;
     }
 
@@ -349,6 +348,8 @@
     function openOrderDetails(id) {
       const order = ordersData.find(o => o.id === id);
       if (!order) return;
+
+      // عرض المنتجات (إن وجدت)
       let productsHtml = (order.items||[]).map((item, idx) => `
         <div class="product-item">
           <div><strong>${item.name}</strong><br><small>${item.quantity} × ${item.price} ج</small></div>
@@ -358,7 +359,8 @@
           </div>
         </div>
       `).join('');
-      // عرض المرفقات
+
+      // المرفقات
       let attachmentsHtml = '';
       if (order.attachments && order.attachments.length) {
         attachmentsHtml = `
@@ -368,13 +370,21 @@
           </div>
         `;
       }
+
+      // تفاصيل الطلب (نص مكتوب)
+      const notesHtml = order.orderNotes ? `<div class="order-note"><strong>📝 الطلب:</strong><br>${order.orderNotes}</div>` : '';
+
+      // الفاتورة مع اسم الجهة
+      const invoiceHtml = order.invoiceAmount ? `<div style="margin-top:12px;"><strong>💰 الفاتورة:</strong> ${order.invoiceAmount} ج ${order.invoiceBy ? 'من ' + order.invoiceBy : ''}</div>` : '';
+
       openModal(`طلب #${id.slice(-6)}`, `
         <div style="margin-bottom:12px;"><strong>العميل:</strong> ${order.customerName}</div>
         <div style="margin-bottom:12px;"><strong>العنوان:</strong> ${order.address}</div>
+        ${notesHtml}
         <div style="margin-bottom:12px;"><strong>المنتجات:</strong></div>
-        ${productsHtml}
+        ${productsHtml || '<div style="color:#888; margin-bottom:12px;">لا توجد منتجات مضافة</div>'}
         <button class="btn btn-sm" style="margin-top:12px" onclick="addProductToOrder('${id}')">+ إضافة منتج</button>
-        ${order.invoiceAmount ? `<div style="margin-top:12px;"><strong>الفاتورة:</strong> ${order.invoiceAmount} ج</div>` : ''}
+        ${invoiceHtml}
         ${attachmentsHtml}
         <div style="margin-top:12px;"><strong>الإجمالي:</strong> ${order.total} ج</div>
       `);
