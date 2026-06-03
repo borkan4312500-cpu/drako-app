@@ -1092,7 +1092,9 @@ app.get('/api/admin/markets', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   res.json(data.markets || []);
 });
+
 app.post('/api/admin/markets', requireAuth, adminOnly, (req, res, next) => {
+  // إذا الطلب يحتوي على ملف، استخدم multer
   if (req.is('multipart/form-data')) {
     upload.single('logo')(req, res, next);
   } else {
@@ -1101,6 +1103,7 @@ app.post('/api/admin/markets', requireAuth, adminOnly, (req, res, next) => {
 }, (req, res) => {
   const data = readData();
   const { name, ownerPhone, ownerPassword } = req.body;
+  console.log('📦 Market body:', req.body); // للتأكيد
   if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
   if (data.users.find(u => u.phone === ownerPhone)) return res.status(400).json({ error: 'الهاتف مستخدم' });
   const userId = 'usr_' + Date.now();
@@ -1112,6 +1115,7 @@ app.post('/api/admin/markets', requireAuth, adminOnly, (req, res, next) => {
   writeData(data);
   res.json({ id: marketId, name });
 });
+
 app.patch('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const market = data.markets.find(m => m.id === req.params.id);
@@ -1151,6 +1155,7 @@ app.post('/api/admin/pharmacies', requireAuth, adminOnly, (req, res, next) => {
 }, (req, res) => {
   const data = readData();
   const { name, ownerPhone, ownerPassword } = req.body;
+  console.log('📦 Pharmacy body:', req.body);
   if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
   if (data.users.find(u => u.phone === ownerPhone)) return res.status(400).json({ error: 'الهاتف مستخدم' });
   const userId = 'usr_' + Date.now();
