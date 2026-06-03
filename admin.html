@@ -465,8 +465,19 @@ async function loadRestaurants(){
   const res=await apiFetch(API+'/admin/restaurants').then(r=>r.json()).catch(()=>[]);
   allRestaurantsCache=res;
   document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">🍽️ المطاعم</div><div class="page-sub">${res.length} مطعم</div></div><button class="btn btn-primary" onclick="showAddRestaurant()">+ إضافة</button></div>
-    <div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>المالك</th><th>الهاتف</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>
-    ${res.length?res.map((r,i)=>`<tr><td>${i+1}</td><td style="font-weight:700">${r.name||'—'}</td><td>${r.ownerName||'—'}</td><td style="font-size:12px;color:var(--text3)">${r.ownerPhone||'—'}</td><td><span class="badge ${r.isOpen?'badge-green':'badge-red'}">${r.isOpen?'مفتوح':'مغلق'}</span></td><td><button class="btn btn-sm ${r.isOpen?'btn-danger':'btn-success'}" onclick="toggleRestaurant('${r.id}')">${r.isOpen?'إغلاق':'فتح'}</button></td></tr>`).join(''):`<tr><td colspan="6"><div class="empty-state"><div class="icon">🍽️</div><div class="msg">لا توجد مطاعم</div></div></td></tr>`}
+    <div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>المالك</th><th>الهاتف</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>
+    ${res.length?res.map((r,i)=>`<tr>
+      <td>${i+1}</td>
+      <td style="font-weight:700">${r.name||'—'}</td>
+      <td>${r.ownerName||'—'}</td>
+      <td style="font-size:12px;color:var(--text3)">${r.ownerPhone||'—'}</td>
+      <td><span class="badge ${r.isOpen?'badge-green':'badge-red'}">${r.isOpen?'مفتوح':'مغلق'}</span></td>
+      <td><div style="display:flex;gap:4px;flex-wrap:wrap">
+        <button class="btn btn-sm ${r.isOpen?'btn-danger':'btn-success'}" onclick="toggleRestaurant('${r.id}')">${r.isOpen?'إغلاق':'فتح'}</button>
+        <button class="btn btn-sm btn-ghost" onclick="editRestaurant('${r.id}')">✏️</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteRestaurant('${r.id}')">🗑️</button>
+      </div></td>
+    </tr>`).join(''):`<tr><td colspan="6"><div class="empty-state"><div class="icon">🍽️</div><div class="msg">لا توجد مطاعم</div></div></td></tr>`}
     </tbody></table></div></div>`;
 }
 async function toggleRestaurant(id){ await apiFetch(API+'/admin/restaurants/'+id+'/toggle',{method:'PATCH'}); loadRestaurants(); }
@@ -481,12 +492,47 @@ async function addRestaurant(){
   if(d.error) toast(d.error,'error'); else { toast('تمت الإضافة'); closeModal(); loadRestaurants(); }
 }
 
+async function editRestaurant(id) {
+  const r = allRestaurantsCache.find(r => r.id === id);
+  if (!r) return;
+  openModal('تعديل مطعم', `
+    <div class="field"><label>اسم المطعم</label><input id="edit-r-name" value="${r.name||''}"></div>
+    <div class="field"><label>هاتف المالك</label><input id="edit-r-phone" value="${r.ownerPhone||''}"></div>
+  `, `
+    <button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>
+    <button class="btn btn-primary" onclick="saveRestaurantEdit('${id}')">حفظ</button>
+  `);
+}
+async function saveRestaurantEdit(id) {
+  const name = document.getElementById('edit-r-name').value.trim();
+  const phone = document.getElementById('edit-r-phone').value.trim();
+  if (!name || !phone) return alert('الاسم والهاتف مطلوبان');
+  const d = await apiFetch(API+'/admin/restaurants/'+id, {method:'PATCH', body:JSON.stringify({name, ownerPhone:phone})}).then(r=>r.json());
+  if(d.error) toast(d.error,'error'); else { toast('تم التعديل'); closeModal(); loadRestaurants(); }
+}
+async function deleteRestaurant(id) {
+  if (!confirm('هل أنت متأكد من حذف هذا المطعم؟')) return;
+  const d = await apiFetch(API+'/admin/restaurants/'+id, {method:'DELETE'}).then(r=>r.json());
+  if(d.error) toast(d.error,'error'); else { toast('تم الحذف'); loadRestaurants(); }
+}
+
 // ========== MARKETS ==========
 async function loadMarkets(){
   const res=await apiFetch(API+'/admin/markets').then(r=>r.json()).catch(()=>[]);
   document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">🛒 الأسواق</div><div class="page-sub">${res.length} سوق</div></div><button class="btn btn-primary" onclick="showAddMarket()">+ إضافة</button></div>
-    <div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>المالك</th><th>الهاتف</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>
-    ${res.length?res.map((m,i)=>`<tr><td>${i+1}</td><td style="font-weight:700">${m.name||'—'}</td><td>${m.ownerName||'—'}</td><td style="font-size:12px;color:var(--text3)">${m.ownerPhone||'—'}</td><td><span class="badge ${m.isOpen?'badge-green':'badge-red'}">${m.isOpen?'مفتوح':'مغلق'}</span></td><td><button class="btn btn-sm ${m.isOpen?'btn-danger':'btn-success'}" onclick="toggleMarket('${m.id}')">${m.isOpen?'إغلاق':'فتح'}</button></td></tr>`).join(''):`<tr><td colspan="6"><div class="empty-state"><div class="icon">🛒</div><div class="msg">لا توجد أسواق</div></div></td></tr>`}
+    <div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>المالك</th><th>الهاتف</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>
+    ${res.length?res.map((m,i)=>`<tr>
+      <td>${i+1}</td>
+      <td style="font-weight:700">${m.name||'—'}</td>
+      <td>${m.ownerName||'—'}</td>
+      <td style="font-size:12px;color:var(--text3)">${m.ownerPhone||'—'}</td>
+      <td><span class="badge ${m.isOpen?'badge-green':'badge-red'}">${m.isOpen?'مفتوح':'مغلق'}</span></td>
+      <td><div style="display:flex;gap:4px;flex-wrap:wrap">
+        <button class="btn btn-sm ${m.isOpen?'btn-danger':'btn-success'}" onclick="toggleMarket('${m.id}')">${m.isOpen?'إغلاق':'فتح'}</button>
+        <button class="btn btn-sm btn-ghost" onclick="editMarket('${m.id}')">✏️</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteMarket('${m.id}')">🗑️</button>
+      </div></td>
+    </tr>`).join(''):`<tr><td colspan="6"><div class="empty-state"><div class="icon">🛒</div><div class="msg">لا توجد أسواق</div></div></td></tr>`}
     </tbody></table></div></div>`;
 }
 async function toggleMarket(id){ await apiFetch(API+'/admin/markets/'+id+'/toggle',{method:'PATCH'}); loadMarkets(); }
@@ -499,24 +545,58 @@ async function addMarket(){
   const p=document.getElementById('m-phone').value.trim();
   const ps=document.getElementById('m-pass').value.trim();
   if(!n||!p||!ps) return toast('أكمل الحقول','error');
-  
   const form = new FormData();
   form.append('name', n);
   form.append('ownerPhone', p);
   form.append('ownerPassword', ps);
   const logoFile = document.getElementById('m-logo').files[0];
   if(logoFile) form.append('logo', logoFile);
-  
   const d=await apiFetch(API+'/admin/markets',{method:'POST',body:form}).then(r=>r.json());
   if(d.error) toast(d.error,'error'); else { toast('تمت الإضافة'); closeModal(); loadMarkets(); }
+}
+
+async function editMarket(id) {
+  const markets = await apiFetch(API+'/admin/markets').then(r=>r.json());
+  const m = markets.find(m => m.id === id);
+  if (!m) return;
+  openModal('تعديل سوق', `
+    <div class="field"><label>اسم السوق</label><input id="edit-m-name" value="${m.name||''}"></div>
+    <div class="field"><label>هاتف المالك</label><input id="edit-m-phone" value="${m.ownerPhone||''}"></div>
+  `, `
+    <button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>
+    <button class="btn btn-primary" onclick="saveMarketEdit('${id}')">حفظ</button>
+  `);
+}
+async function saveMarketEdit(id) {
+  const name = document.getElementById('edit-m-name').value.trim();
+  const phone = document.getElementById('edit-m-phone').value.trim();
+  if (!name || !phone) return alert('الاسم والهاتف مطلوبان');
+  const d = await apiFetch(API+'/admin/markets/'+id, {method:'PATCH', body:JSON.stringify({name, ownerPhone:phone})}).then(r=>r.json());
+  if(d.error) toast(d.error,'error'); else { toast('تم التعديل'); closeModal(); loadMarkets(); }
+}
+async function deleteMarket(id) {
+  if (!confirm('هل أنت متأكد من حذف هذا السوق؟')) return;
+  const d = await apiFetch(API+'/admin/markets/'+id, {method:'DELETE'}).then(r=>r.json());
+  if(d.error) toast(d.error,'error'); else { toast('تم الحذف'); loadMarkets(); }
 }
 
 // ========== PHARMACIES ==========
 async function loadPharmacies(){
   const res=await apiFetch(API+'/admin/pharmacies').then(r=>r.json()).catch(()=>[]);
   document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">💊 الصيدليات</div><div class="page-sub">${res.length} صيدلية</div></div><button class="btn btn-primary" onclick="showAddPharmacy()">+ إضافة</button></div>
-    <div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>المالك</th><th>الهاتف</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>
-    ${res.length?res.map((p,i)=>`<tr><td>${i+1}</td><td style="font-weight:700">${p.name||'—'}</td><td>${p.ownerName||'—'}</td><td style="font-size:12px;color:var(--text3)">${p.ownerPhone||'—'}</td><td><span class="badge ${p.isOpen?'badge-green':'badge-red'}">${p.isOpen?'مفتوح':'مغلق'}</span></td><td><button class="btn btn-sm ${p.isOpen?'btn-danger':'btn-success'}" onclick="togglePharmacy('${p.id}')">${p.isOpen?'إغلاق':'فتح'}</button></td></tr>`).join(''):`<tr><td colspan="6"><div class="empty-state"><div class="icon">💊</div><div class="msg">لا توجد صيدليات</div></div></td></tr>`}
+    <div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>المالك</th><th>الهاتف</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>
+    ${res.length?res.map((p,i)=>`<tr>
+      <td>${i+1}</td>
+      <td style="font-weight:700">${p.name||'—'}</td>
+      <td>${p.ownerName||'—'}</td>
+      <td style="font-size:12px;color:var(--text3)">${p.ownerPhone||'—'}</td>
+      <td><span class="badge ${p.isOpen?'badge-green':'badge-red'}">${p.isOpen?'مفتوح':'مغلق'}</span></td>
+      <td><div style="display:flex;gap:4px;flex-wrap:wrap">
+        <button class="btn btn-sm ${p.isOpen?'btn-danger':'btn-success'}" onclick="togglePharmacy('${p.id}')">${p.isOpen?'إغلاق':'فتح'}</button>
+        <button class="btn btn-sm btn-ghost" onclick="editPharmacy('${p.id}')">✏️</button>
+        <button class="btn btn-sm btn-danger" onclick="deletePharmacy('${p.id}')">🗑️</button>
+      </div></td>
+    </tr>`).join(''):`<tr><td colspan="6"><div class="empty-state"><div class="icon">💊</div><div class="msg">لا توجد صيدليات</div></div></td></tr>`}
     </tbody></table></div></div>`;
 }
 async function togglePharmacy(id){ await apiFetch(API+'/admin/pharmacies/'+id+'/toggle',{method:'PATCH'}); loadPharmacies(); }
@@ -529,16 +609,39 @@ async function addPharmacy(){
   const p=document.getElementById('ph-phone').value.trim();
   const ps=document.getElementById('ph-pass').value.trim();
   if(!n||!p||!ps) return toast('أكمل الحقول','error');
-  
   const form = new FormData();
   form.append('name', n);
   form.append('ownerPhone', p);
   form.append('ownerPassword', ps);
   const logoFile = document.getElementById('ph-logo').files[0];
   if(logoFile) form.append('logo', logoFile);
-  
   const d=await apiFetch(API+'/admin/pharmacies',{method:'POST',body:form}).then(r=>r.json());
   if(d.error) toast(d.error,'error'); else { toast('تمت الإضافة'); closeModal(); loadPharmacies(); }
+}
+
+async function editPharmacy(id) {
+  const pharmacies = await apiFetch(API+'/admin/pharmacies').then(r=>r.json());
+  const p = pharmacies.find(p => p.id === id);
+  if (!p) return;
+  openModal('تعديل صيدلية', `
+    <div class="field"><label>اسم الصيدلية</label><input id="edit-ph-name" value="${p.name||''}"></div>
+    <div class="field"><label>هاتف المالك</label><input id="edit-ph-phone" value="${p.ownerPhone||''}"></div>
+  `, `
+    <button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>
+    <button class="btn btn-primary" onclick="savePharmacyEdit('${id}')">حفظ</button>
+  `);
+}
+async function savePharmacyEdit(id) {
+  const name = document.getElementById('edit-ph-name').value.trim();
+  const phone = document.getElementById('edit-ph-phone').value.trim();
+  if (!name || !phone) return alert('الاسم والهاتف مطلوبان');
+  const d = await apiFetch(API+'/admin/pharmacies/'+id, {method:'PATCH', body:JSON.stringify({name, ownerPhone:phone})}).then(r=>r.json());
+  if(d.error) toast(d.error,'error'); else { toast('تم التعديل'); closeModal(); loadPharmacies(); }
+}
+async function deletePharmacy(id) {
+  if (!confirm('هل أنت متأكد من حذف هذه الصيدلية؟')) return;
+  const d = await apiFetch(API+'/admin/pharmacies/'+id, {method:'DELETE'}).then(r=>r.json());
+  if(d.error) toast(d.error,'error'); else { toast('تم الحذف'); loadPharmacies(); }
 }
 
 // ========== DRIVERS ==========
@@ -553,10 +656,12 @@ async function loadDrivers(){
       <td style="color:var(--orange)">${d.earnings||0} ج</td>
       <td>${d.activeOrdersCount||0}</td>
       <td><span class="badge ${d.isAvailable?'badge-green':'badge-gray'}">${d.isAvailable?'متاح':'مشغول'}</span></td>
-      <td><div style="display:flex;gap:6px;flex-wrap:wrap">
+      <td><div style="display:flex;gap:4px;flex-wrap:wrap">
         <button class="btn btn-sm ${d.isAvailable?'btn-danger':'btn-success'}" onclick="toggleDriver('${d.id}')">${d.isAvailable?'إيقاف':'تشغيل'}</button>
         <button class="btn btn-sm ${d.isActive?'btn-danger':'btn-ghost'}" onclick="blockDriver('${d.id}')">${d.isActive?'حظر':'تفعيل'}</button>
-        <button class="btn btn-sm btn-ghost" onclick="viewDriverDetails('${d.id}')">📋 تفاصيل</button>
+        <button class="btn btn-sm btn-ghost" onclick="editDriver('${d.id}')">✏️</button>
+        <button class="btn btn-sm btn-ghost" onclick="viewDriverDetails('${d.id}')">📋</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteDriver('${d.id}')">🗑️</button>
       </div></td>
     </tr>`).join(''):`<tr><td colspan="6"><div class="empty-state"><div class="icon">👨‍✈️</div><div class="msg">لا يوجد طيارين</div></div></td></tr>`}
     </tbody></table></div></div>`;
@@ -596,6 +701,34 @@ async function viewDriverDetails(id) {
         </div>
       </div>`, '');
   } catch { toast('فشل تحميل التفاصيل', 'error'); }
+}
+
+async function editDriver(id) {
+  const driver = allDriversCache.find(d => d.id === id);
+  if (!driver) return;
+  openModal('تعديل طيار', `
+    <div class="field"><label>الاسم</label><input id="edit-d-name" value="${driver.name||''}"></div>
+    <div class="field"><label>الهاتف</label><input id="edit-d-phone" value="${driver.phone||''}"></div>
+    <div class="field"><label>كلمة المرور (اتركه فارغاً للاحتفاظ بالحالية)</label><input id="edit-d-pass" type="password" placeholder="كلمة جديدة"></div>
+  `, `
+    <button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>
+    <button class="btn btn-primary" onclick="saveDriverEdit('${id}')">حفظ</button>
+  `);
+}
+async function saveDriverEdit(id) {
+  const name = document.getElementById('edit-d-name').value.trim();
+  const phone = document.getElementById('edit-d-phone').value.trim();
+  const pass = document.getElementById('edit-d-pass').value.trim();
+  if (!name || !phone) return alert('الاسم والهاتف مطلوبان');
+  const body = { name, phone };
+  if (pass) body.password = pass;
+  const d = await apiFetch(API+'/admin/drivers/'+id, {method:'PATCH', body:JSON.stringify(body)}).then(r=>r.json());
+  if(d.error) toast(d.error,'error'); else { toast('تم التعديل'); closeModal(); loadDrivers(); }
+}
+async function deleteDriver(id) {
+  if (!confirm('هل أنت متأكد من حذف هذا الطيار؟')) return;
+  const d = await apiFetch(API+'/admin/drivers/'+id, {method:'DELETE'}).then(r=>r.json());
+  if(d.error) toast(d.error,'error'); else { toast('تم الحذف'); loadDrivers(); }
 }
 
 // ========== PRODUCTS ==========
