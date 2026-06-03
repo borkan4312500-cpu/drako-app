@@ -284,7 +284,16 @@ window._trackingOrderId = null;
 window._currentQty = 1;
 window._currentUnitPrice = 0;
 
- 
+markets = [
+  { id: 'market1', name: 'كارفور ماركت', logo: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200', type: 'market' },
+  { id: 'market2', name: 'المانيا سوبر ماركت', logo: 'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=200', type: 'market' },
+  { id: 'market3', name: 'هايبر وان', logo: 'https://images.unsplash.com/photo-1534452203293-494d7ddbf7e0?w=200', type: 'market' }
+];
+pharmacies = [
+  { id: 'pharm1', name: 'صيدليات العزبي', logo: 'https://images.unsplash.com/photo-1584308666744-24d5c6dee668?w=200', type: 'pharmacy' },
+  { id: 'pharm2', name: 'صيدليات دواء', logo: 'https://images.unsplash.com/photo-1631549916768-4119b2e5f926?w=200', type: 'pharmacy' },
+  { id: 'pharm3', name: 'صيدليات نوبل', logo: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e0dd?w=200', type: 'pharmacy' }
+];
 
 // ========== Swipe to Go Back ==========
 document.getElementById('swipeOverlay').addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; });
@@ -364,25 +373,7 @@ async function apiFetch(url, options = {}) {
   const res = await fetch(url, { ...options, credentials: 'include', headers: { ...(options.headers||{}), 'Content-Type': options.body instanceof FormData ? undefined : 'application/json' } });
   return res;
 }
-// ========== Load Real Markets & Pharmacies ==========
-async function loadMarketsAndPharmacies() {
-  try {
-    const [mRes, pRes] = await Promise.all([
-      apiFetch(API + '/markets'),
-      apiFetch(API + '/pharmacies')
-    ]);
-    markets = await mRes.json();
-    pharmacies = await pRes.json();
-  } catch (e) {
-    console.log(e);
-    markets = [];
-    pharmacies = [];
-  }
-  // تحديث العرض إذا كان التصنيف الحالي سوقاً أو صيدلية
-  if (currentCategory === 'markets' || currentCategory === 'pharmacies') {
-    renderHomeItems();
-  }
-}
+
 // ========== Auth Navigation ==========
 function goToRegister() { document.getElementById('loginScreen').classList.replace('visible','hidden-right'); document.getElementById('registerScreen').classList.replace('hidden-left','visible'); loadRegionsForSelect(); }
 function goToLogin() { document.getElementById('registerScreen').classList.replace('visible','hidden-left'); document.getElementById('loginScreen').classList.replace('hidden-right','visible'); resetRegisterSteps(); }
@@ -426,17 +417,7 @@ function initCategoryFilters() {
       else if(currentCategory==='pharmacies') title='💊 الصيدليات';
       else if(currentCategory==='special') title='✨ طلب خاص';
       document.getElementById('homeSectionTitle').innerHTML=title;
-      renderHomeItems();// داخل renderHomeItems، قسم الأسواق:
-container.innerHTML = markets.map(m => {
-  const imgSrc = (m.logo && m.logo.startsWith('/uploads')) ? m.logo : (m.logo || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200');
-  return `<div class="restaurant-card" onclick="openSpecialOrder('market','${m.id}')"><img src="${imgSrc}" onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=200'"><div class="restaurant-content"><h3>${m.name}</h3><div class="meta"><span>⭐ 4.5</span><span>⏱ توصيل سريع</span></div><div class="minimum">🛒 أضف طلبك بالتفاصيل والصور</div><button class="btn menu-btn" onclick="event.stopPropagation(); openSpecialOrder('market','${m.id}')">📝 طلب الآن</button></div></div>`;
-}).join('');
-
-// قسم الصيدليات بنفس الطريقة
-container.innerHTML = pharmacies.map(p => {
-  const imgSrc = (p.logo && p.logo.startsWith('/uploads')) ? p.logo : (p.logo || 'https://images.unsplash.com/photo-1584308666744-24d5c6dee668?w=200');
-  return `<div class="restaurant-card" onclick="openSpecialOrder('pharmacy','${p.id}')"><img src="${imgSrc}" onerror="this.src='https://images.unsplash.com/photo-1584308666744-24d5c6dee668?w=200'"><div class="restaurant-content"><h3>${p.name}</h3><div class="meta"><span>⭐ 4.7</span><span>⏱ توصيل فوري</span></div><div class="minimum">💊 اطلب أدويتك ومستلزماتك</div><button class="btn menu-btn" onclick="event.stopPropagation(); openSpecialOrder('pharmacy','${p.id}')">📝 طلب الآن</button></div></div>`;
-}).join('');
+      renderHomeItems();
     });
   });
 }
@@ -454,6 +435,7 @@ function renderHomeItems() {
   } else if(currentCategory==='special') {
     container.innerHTML=`<div class="restaurant-card" onclick="openSpecialOrder('custom',null)"><img src="https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=200"><div class="restaurant-content"><h3>طلب خاص</h3><div class="meta"><span>✨ مخصص</span><span>📝 اكتب طلبك</span></div><div class="minimum">أي طلب غير موجود في القوائم - أرفق الصور والتفاصيل</div><button class="btn menu-btn" onclick="event.stopPropagation(); openSpecialOrder('custom',null)">📝 تقديم طلب</button></div></div>`;
   }
+  const imgSrc = (m.logo && m.logo.startsWith('/uploads')) ? m.logo : (m.logo || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200');
 }
 function filterHomeItems() {
   let q=document.getElementById('searchInput').value.trim().toLowerCase();
@@ -644,12 +626,6 @@ if(currentUser){
   document.getElementById('authWrapper').classList.remove('hide');
   document.getElementById('mainAppWrapper').classList.remove('active');
   loadRegionsForSelect();
-}
-if(currentUser){
-  // ...existing code...
-  loadRestaurants();
-  loadMarketsAndPharmacies();   // <-- أضف هذا السطر
-  // ...
 }
 saveCart();
 window.addEventListener('beforeunload',()=>{ if(currentUser) localStorage.setItem('drako_current_screen',currentScreen); });
