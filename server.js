@@ -1092,8 +1092,13 @@ app.get('/api/admin/markets', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   res.json(data.markets || []);
 });
-app.post('/api/admin/markets', requireAuth, adminOnly, upload.single('logo'), (req, res) => {
-  console.log('📦 Market body:', req.body); // ← تشخيص مؤقت
+app.post('/api/admin/markets', requireAuth, adminOnly, (req, res, next) => {
+  if (req.is('multipart/form-data')) {
+    upload.single('logo')(req, res, next);
+  } else {
+    next();
+  }
+}, (req, res) => {
   const data = readData();
   const { name, ownerPhone, ownerPassword } = req.body;
   if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
@@ -1106,14 +1111,6 @@ app.post('/api/admin/markets', requireAuth, adminOnly, upload.single('logo'), (r
   data.markets.push({ id: marketId, userId, name, logo: logoPath, isOpen: true });
   writeData(data);
   res.json({ id: marketId, name });
-});
-app.patch('/api/admin/markets/:id/toggle', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const market = data.markets.find(m => m.id === req.params.id);
-  if (!market) return res.status(404).json({ error: 'غير موجود' });
-  market.isOpen = !market.isOpen;
-  writeData(data);
-  res.json({ success: true });
 });
 app.patch('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
@@ -1145,8 +1142,13 @@ app.get('/api/admin/pharmacies', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   res.json(data.pharmacies || []);
 });
-app.post('/api/admin/pharmacies', requireAuth, adminOnly, upload.single('logo'), (req, res) => {
-  console.log('📦 Pharmacy body:', req.body); // ← تشخيص مؤقت
+app.post('/api/admin/pharmacies', requireAuth, adminOnly, (req, res, next) => {
+  if (req.is('multipart/form-data')) {
+    upload.single('logo')(req, res, next);
+  } else {
+    next();
+  }
+}, (req, res) => {
   const data = readData();
   const { name, ownerPhone, ownerPassword } = req.body;
   if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
