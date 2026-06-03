@@ -435,7 +435,7 @@ function renderHomeItems() {
   } else if(currentCategory==='special') {
     container.innerHTML=`<div class="restaurant-card" onclick="openSpecialOrder('custom',null)"><img src="https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=200"><div class="restaurant-content"><h3>طلب خاص</h3><div class="meta"><span>✨ مخصص</span><span>📝 اكتب طلبك</span></div><div class="minimum">أي طلب غير موجود في القوائم - أرفق الصور والتفاصيل</div><button class="btn menu-btn" onclick="event.stopPropagation(); openSpecialOrder('custom',null)">📝 تقديم طلب</button></div></div>`;
   }
-  
+}
 function filterHomeItems() {
   let q=document.getElementById('searchInput').value.trim().toLowerCase();
   if(currentCategory==='restaurants') {
