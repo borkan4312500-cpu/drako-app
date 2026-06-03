@@ -14,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
   <style>
-    /* ========== جميع التنسيقات الأصلية ========== */
+    /* جميع التنسيقات الأصلية دون تغيير */
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
     html, body { overflow: hidden; height: 100%; overscroll-behavior: none; }
     body { background: #F7F7F7; color: #1A1A1A; max-width: 430px; margin: auto; height: 100%; position: relative; }
@@ -213,7 +213,6 @@
         <div class="section-title" id="homeSectionTitle">🍔 المطاعم</div>
         <div id="restaurantsContainer"></div>
       </section>
-      <!-- باقي الأقسام (restaurantScreen, specialOrderScreen, cartScreen, ...) بدون تغيير -->
       <section class="screen" id="restaurantScreen">
         <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;"><button class="icon-btn" onclick="showScreen('homeScreen')">←</button><div class="logo"><span id="restaurantTitleHeader">المطعم</span></div><button class="icon-btn">♡</button></div>
         <img id="restaurantHero" class="hero-image" src="">
@@ -392,7 +391,23 @@ async function loadRegions() { try { const res=await apiFetch(API+'/regions'); a
 function renderAreas() { const container=document.getElementById('areasContainer'); if(!allRegions.length) return; container.innerHTML=allRegions.map(a=>`<div class="area-item ${selectedArea?.id===a.id?'active':''}" onclick="selectArea('${a.id}')"><div><strong>${a.name}</strong></div><div style="display:flex;align-items:center;gap:12px;"><strong>${a.fee} ج</strong><div class="radio"></div></div></div>`).join(''); }
 function preselectArea() { if(currentUser&&currentUser.regionId&&!selectedArea){ selectedArea=allRegions.find(r=>r.id===currentUser.regionId)||null; renderAreas(); } }
 function selectArea(id) { selectedArea=allRegions.find(a=>a.id===id); renderAreas(); }
-function confirmArea() { if(!selectedArea){ showToast('⚠️ اختر منطقة'); return; } document.getElementById('selectedAreaName').innerText=selectedArea.name+' - '+selectedArea.fee+' ج'; updateTotals(); showScreen('checkoutScreen'); }
+function confirmArea() {
+  if(!selectedArea){ showToast('⚠️ اختر منطقة'); return; }
+  if (pendingSpecialOrderData) {
+    // استئناف الطلب الخاص بعد اختيار المنطقة
+    const { type, storeId, details } = pendingSpecialOrderData;
+    specialOrderType = type;
+    specialOrderStoreId = storeId;
+    document.getElementById('specialOrderDetails').value = details;
+    pendingSpecialOrderData = null;
+    submitSpecialOrder();
+    return;
+  }
+  // الطلب العادي (مطاعم)
+  document.getElementById('selectedAreaName').innerText = selectedArea.name + ' - ' + selectedArea.fee + ' ج';
+  updateTotals();
+  showScreen('checkoutScreen');
+}
 function selectPayment(el,method) { document.querySelectorAll('.payment-item').forEach(i=>i.classList.remove('active')); el.classList.add('active'); paymentMethod=method; }
 
 // ========== Home Screen Category Logic ==========
@@ -427,7 +442,6 @@ async function loadMarketsAndPharmacies() {
     markets = [];
     pharmacies = [];
   }
-  // إعادة عرض القسم الحالي إن كان يتعلق بهما
   if (currentCategory === 'markets' || currentCategory === 'pharmacies') {
     renderHomeItems();
   }
@@ -542,6 +556,7 @@ async function submitSpecialOrder() {
     loadMyOrders();
   } catch(e) { showToast('❌ فشل الاتصال'); }
 }
+
 // ========== Restaurants (original menu) ==========
 async function loadRestaurants() { try { const res=await apiFetch(API+'/restaurants'); restaurants=await res.json(); renderHomeItems(); } catch(e){ console.log(e); } }
 async function openRestaurant(id) {
@@ -656,13 +671,11 @@ function renderCart() {
 function updateCartItem(i,d){ let nq=cart[i].quantity+d; if(nq<=0) cart.splice(i,1); else cart[i].quantity=nq; saveCart(); renderCart(); }
 function removeCartItem(i){ cart.splice(i,1); saveCart(); renderCart(); }
 function updateTotals() { const itemsTotal=cart.reduce((a,b)=>a+(b.price*(b.quantity||1)),0); const fee=selectedArea?selectedArea.fee:0; const final=itemsTotal+fee; document.getElementById('itemsTotal').innerText=itemsTotal+' ج'; document.getElementById('deliveryFee').innerText=fee+' ج'; document.getElementById('finalTotal').innerText=final+' ج'; document.getElementById('checkoutItemsTotal').innerText=itemsTotal+' ج'; document.getElementById('checkoutDelivery').innerText=fee+' ج'; document.getElementById('checkoutFinal').innerText=final+' ج'; }
-function proceedToCheckout() { if(!cart.length) return showToast('⚠️ السلة فارغة'); if(currentUser&&currentUser.regionId&&allRegions.length){ const region=allRegions.find(r=>r.id===currentUser.regionId); if(region){ selectedArea=region; updateTotals(); document.getElementById('selectedAreaName').innerText=region.name+' - '+region.fee+' ج'; renderCheckoutUserInfo(); showScreen('checkoutScreen'); return; } } showScreen('areaScreen'); }if (currentUser && currentUser.regionId && allRegions.length) {
-  selectedArea = allRegions.find(r => r.id === currentUser.regionId) || null;
-}
+function proceedToCheckout() { if(!cart.length) return showToast('⚠️ السلة فارغة'); if(currentUser&&currentUser.regionId&&allRegions.length){ const region=allRegions.find(r=>r.id===currentUser.regionId); if(region){ selectedArea=region; updateTotals(); document.getElementById('selectedAreaName').innerText=region.name+' - '+region.fee+' ج'; renderCheckoutUserInfo(); showScreen('checkoutScreen'); return; } } showScreen('areaScreen'); }
 
 // ========== Order Functions ==========
 async function submitOrder() { if(!selectedArea){ showToast('⚠️ يرجى اختيار المنطقة أولاً'); showScreen('areaScreen'); return; } let name,phone,address; if(currentUser){ name=currentUser.name; phone=currentUser.phone; address=currentUser.address; } else { name=document.getElementById('customerName')?.value.trim(); phone=document.getElementById('customerPhone')?.value.trim(); if(!name||!phone){ showToast('⚠️ اكمل البيانات'); return; } } const itemsTotal=cart.reduce((a,b)=>a+(b.price*(b.quantity||1)),0); const total=itemsTotal+(selectedArea.fee||0); const orderData={ restaurantId:selectedRestaurant?.id, items:cart.map(i=>({ productId:i.productId, name:i.name, price:i.price, quantity:i.quantity||1, selectedOptions:i.selectedOptions||[], notes:i.notes||'' })), total, customerName:name, customerPhone:phone, address:address||selectedArea.name, regionName:selectedArea.name, paymentMethod, deliveryFee:selectedArea.fee||0 }; try{ const res=await apiFetch(API+'/orders',{method:'POST',body:JSON.stringify(orderData)}); const data=await res.json(); if(data.error){ showToast('❌ '+data.error); return; } cart=[]; saveCart(); renderCart(); trackOrder(data.orderId); showToast('✅ تم إرسال الطلب بنجاح'); } catch(e){ console.error(e); showToast('❌ فشل في الاتصال بالسيرفر'); } }
-async function trackOrder(orderId) { window._trackingOrderId=orderId; document.getElementById('trackOrderId').innerText='#'+orderId.slice(-6).toUpperCase(); showScreen('trackScreen'); const updateTrack=async()=>{ try{ const res=await apiFetch(API+'/orders/'+orderId+'/track'); const order=await res.json(); const steps=['PENDING','ACCEPTED','PREPARING','INVOICE_ADDED','READY','DRIVER_ASSIGNED','ON_THE_WAY','DELIVERED']; const currentIdx=steps.indexOf(order.status); let html=''; steps.forEach((s,i)=>{ if(i<=currentIdx) html+=`<div class="status-step"><div class="status-dot done"></div><div class="status-text">${i===currentIdx?'<span class="active">'+getStatusText(s)+'</span>':getStatusText(s)}</div></div>`; else html+=`<div class="status-step"><div class="status-dot"></div><div class="status-text">${getStatusText(s)}</div></div>`; }); document.getElementById('trackStatusContainer').innerHTML=html; let invoiceHtml=''; if(order.invoiceAmount){ invoiceHtml=`<div class="detail-row"><span>💰 قيمة الفاتورة</span><strong>${order.invoiceAmount} ج</strong></div>`; } document.getElementById('trackDetails').innerHTML=`<div class="detail-row"><span>المطعم/المتجر</span><strong>${order.restaurantName||order.storeName||'طلب خاص'}</strong></div><div class="detail-row"><span>العميل</span><strong>${order.customerName}</strong></div><div class="detail-row"><span>المنطقة</span><strong>${order.regionName||'—'}</strong></div><div class="detail-row"><span>العنوان</span><strong>${order.address||'—'}</strong></div>${invoiceHtml}<div class="detail-row"><span>الإجمالي النهائي</span><strong>${order.total} ج</strong></div><div class="detail-row"><span>رسوم التوصيل</span><strong>${order.deliveryFee} ج</strong></div><div class="detail-row"><span>وقت الطلب</span><strong>${new Date(order.createdAt).toLocaleString('ar-EG')}</strong></div>`; if(order.status!=='DELIVERED'&&order.status!=='CANCELLED') setTimeout(updateTrack,10000); } catch(e){ console.log(e); } }; updateTrack(); }
+async function trackOrder(orderId) { window._trackingOrderId=orderId; document.getElementById('trackOrderId').innerText='#'+orderId.slice(-6).toUpperCase(); showScreen('trackScreen'); const updateTrack=async()=>{ try{ const res=await apiFetch(API+'/orders/'+orderId+'/track'); const order=await res.json(); const steps=['PENDING','ACCEPTED','PREPARING','INVOICE_ADDED','READY','DRIVER_ASSIGNED','ON_THE_WAY','DELIVERED']; const currentIdx=steps.indexOf(order.status); let html=''; steps.forEach((s,i)=>{ if(i<=currentIdx) html+=`<div class="status-step"><div class="status-dot done"></div><div class="status-text">${i===currentIdx?'<span class="active">'+getStatusText(s)+'</span>':getStatusText(s)}</div></div>`; else html+=`<div class="status-step"><div class="status-dot"></div><div class="status-text">${getStatusText(s)}</div></div>`; }); document.getElementById('trackStatusContainer').innerHTML=html; let invoiceHtml=''; if(order.invoiceAmount){ invoiceHtml=`<div class="detail-row"><span>💰 قيمة الفاتورة</span><strong>${order.invoiceAmount} ج</strong></div>`; } document.getElementById('trackDetails').innerHTML=`<div class="detail-row"><span>المطعم/المتجر</span><strong>${order.restaurantName||order.storeName||'طلب خاص'}</strong></div><div class="detail-row"><span>العميل</span><strong>${order.customerName}</strong></div><div class="detail-row"><span>المنطقة</span><strong>${order.regionName||'—'}</strong></div><div class="detail-row"><span>العنوان</span><strong>${order.address||'—'}</strong></div>${invoiceHtml}<div class="detail-row"><span>الإجمالي النهائي</span><strong>${order.total} ج</strong></div><div class="detail-row"><span>رسوم التوصيل</span><strong>${order.deliveryFee} ج</strong></div><div class="detail-row"><span>وقت الطلب</strong>${new Date(order.createdAt).toLocaleString('ar-EG')}</div>`; if(order.status!=='DELIVERED'&&order.status!=='CANCELLED') setTimeout(updateTrack,10000); } catch(e){ console.log(e); } }; updateTrack(); }
 function getStatusText(s) { const map={ PENDING:'في الانتظار', ACCEPTED:'مقبول', PREPARING:'قيد التحضير', INVOICE_ADDED:'تم إضافة الفاتورة', READY:'جاهز للتوصيل', DRIVER_ASSIGNED:'مع طيار', ON_THE_WAY:'في الطريق', DELIVERED:'تم التوصيل', CANCELLED:'ملغي' }; return map[s]||s; }
 
 // ========== My Orders ==========
@@ -674,6 +687,11 @@ if(currentUser){
   document.getElementById('authWrapper').classList.add('hide');
   document.getElementById('mainAppWrapper').classList.add('active');
   initSocket(); loadRestaurants(); loadMarketsAndPharmacies(); renderCart(); loadRegionsForSelect();
+  loadRegions().then(() => {
+    if (currentUser.regionId && allRegions.length) {
+      selectedArea = allRegions.find(r => r.id === currentUser.regionId) || null;
+    }
+  });
   if(!restoreCurrentScreen()) showScreen('homeScreen');
   initCategoryFilters();
 } else {
