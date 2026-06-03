@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
 <style>
-/* نفس التنسيقات السابقة (لم تتغير) */
+/* جميع التنسيقات الأصلية كما هي، مع إضافة تنسيقات الملف الشخصي */
 :root{
   --bg:#0D0F14; --surface:#161B24; --surface2:#1E2535; --surface3:#252D40;
   --border:#2A3348; --orange:#FF6B00; --orange2:#FF8C3A;
@@ -21,6 +21,7 @@
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px;}
 body{background:var(--bg);color:var(--text);display:flex;min-height:100vh;overflow:hidden;}
+
 .sidebar{ width:260px;flex-shrink:0;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;overflow-y:auto; }
 .sb-logo{padding:20px 18px 12px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);}
 .sb-logo-mark{width:42px;height:42px;border-radius:13px;flex-shrink:0;background:linear-gradient(135deg,var(--orange),var(--orange2));display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;box-shadow:0 4px 16px var(--orange-glow);}
@@ -38,11 +39,13 @@ body{background:var(--bg);color:var(--text);display:flex;min-height:100vh;overfl
 .sb-user-name{font-size:13px;font-weight:700;}
 .sb-user-role{font-size:11px;color:var(--text3);}
 .sb-logout{color:var(--text3);font-size:18px;cursor:pointer;text-decoration:none;}
+
 .main-wrap{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;}
 .topbar{height:64px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;flex-shrink:0;}
 .topbar-title{font-size:20px;font-weight:800;}
 .topbar-sub{font-size:12px;color:var(--text3);}
 .content{flex:1;overflow-y:auto;padding:24px;}
+
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
 .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;cursor:pointer;transition:all .2s;}
 .stat-card:hover{border-color:rgba(255,107,0,.3);transform:translateY(-2px);}
@@ -71,6 +74,7 @@ tbody tr:hover{background:var(--surface2);}
 .btn-danger{background:rgba(240,82,82,.12);color:var(--red);border:1px solid rgba(240,82,82,.2);}
 .btn-success{background:rgba(0,214,143,.12);color:var(--green);border:1px solid rgba(0,214,143,.2);}
 .btn-sm{padding:5px 10px;font-size:12px;border-radius:8px;}
+
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;display:none;align-items:center;justify-content:center;padding:16px;}
 .modal-overlay.open{display:flex;}
 .modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:0;width:100%;max-width:600px;max-height:85vh;overflow-y:auto;}
@@ -80,26 +84,33 @@ tbody tr:hover{background:var(--surface2);}
 .modal-body{padding:20px;max-height:60vh;overflow-y:auto;}
 .modal-foot{display:flex;gap:10px;padding:16px 20px;border-top:1px solid var(--border);}
 .modal-foot .btn{flex:1;height:42px;justify-content:center;}
+
 .field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
 .field label{font-size:12px;font-weight:700;color:var(--text3);}
 .field input,.field select,.field textarea{background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 13px;font-size:13px;color:var(--text);outline:none;}
+
 .filter-bar{display:flex;gap:8px;margin-bottom:16px;align-items:center;}
 .filter-bar input[type="date"]{flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text);outline:none;}
+
 .empty-state{text-align:center;padding:48px;color:var(--text3);}
 .empty-state .icon{font-size:40px;margin-bottom:12px;}
+
 .btn-add-row{background:var(--surface2);border:1px dashed var(--border);color:var(--text2);padding:5px 10px;border-radius:8px;cursor:pointer;font-size:12px;margin-top:4px;}
 .group-box{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;}
 .option-row{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
 .option-row input{flex:1;}
+
 .tab-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
 .tab-btn{padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text2);transition:all .2s;}
 .tab-btn.active{background:var(--orange);color:#fff;border-color:var(--orange);}
+
 .templates-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:8px;background:var(--surface2);border-radius:12px;}
-.btn-template{background:var(--surface3);border:1px solid var(--border);padding:6px 12px;border-radius:20px;font-size:12px;cursor:pointer;}
+.btn-template{background:var(--surface3);border:1px solid var(--border);padding:6px 12px;border-radius:20px;font-size:12px;cursor:pointer;transition:all .2s;}
 .btn-template:hover{background:var(--orange);color:#0C0E13;}
 .product-type-selector{display:flex;gap:12px;margin-bottom:20px;}
 .type-option{flex:1;text-align:center;padding:10px;border-radius:12px;background:var(--surface2);cursor:pointer;border:2px solid transparent;}
 .type-option.selected{border-color:var(--orange);background:var(--orange-dim);}
+
 .profile-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;display:flex;flex-wrap:wrap;align-items:center;gap:24px;margin-bottom:20px;}
 .profile-image{width:100px;height:100px;border-radius:20px;object-fit:cover;border:3px solid var(--orange);}
 .profile-info{flex:1;}
@@ -110,6 +121,7 @@ tbody tr:hover{background:var(--surface2);}
 </style>
 </head>
 <body>
+
 <div class="sidebar">
   <div class="sb-logo"><div class="sb-logo-mark">س</div><div class="sb-logo-text"><div class="sb-logo-name">سفرة برو</div><div class="sb-logo-sub">لوحة المطعم</div></div></div>
   <div class="sb-nav">
@@ -121,14 +133,17 @@ tbody tr:hover{background:var(--surface2);}
   </div>
   <div class="sb-footer"><div class="sb-user"><div class="sb-avatar">🍽️</div><div><div class="sb-user-name" id="rest-name-side">مطعمي</div></div><a href="/logout" class="sb-logout">⏻</a></div></div>
 </div>
+
 <div class="main-wrap">
   <div class="topbar"><div><div class="topbar-title" id="topbar-title">لوحة التحكم</div><div class="topbar-sub">مرحباً بك</div></div></div>
   <div class="content" id="content"></div>
 </div>
+
 <div class="modal-overlay" id="modal"><div class="modal"><div class="modal-head"><div class="modal-title" id="modal-title"></div><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body" id="modal-body"></div><div class="modal-foot" id="modal-foot"></div></div></div>
+
 <script src="/socket.io/socket.io.js"></script>
 <script>
-// ========== الأصوات والإعدادات (نفس الكود السابق) ==========
+// ========== أصوات وإعدادات ==========
 async function checkAuth() {
   try {
     const res = await fetch('/api/restaurant/profile', { credentials: 'include' });
@@ -310,7 +325,7 @@ async function uploadLogo(input) {
   else toast('فشل الرفع', 'error');
 }
 
-// ========== لوحة التحكم ==========
+// ========== لوحة التحكم (الأصلية) ==========
 async function loadDashboard() {
   const [profile, stats, reports] = await Promise.all([
     apiFetch(API + '/restaurant/profile').then(r => r.json()).catch(() => ({ name: 'مطعمي', logo: '' })),
@@ -336,7 +351,7 @@ async function loadDashboard() {
     </div>`;
 }
 
-// ========== الطلبات (كاملة) ==========
+// ========== الطلبات (الأصلية) ==========
 let ordersSelectedDate = new Date().toISOString().slice(0, 10);
 let currentOrderTab = 'all';
 function setOrdersTab(tab) { currentOrderTab = tab; }
@@ -380,7 +395,7 @@ async function loadOrdersData(){
   const orders = await res.json();
   const filtered = getFilteredOrders(orders);
   if(!filtered.length){ container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><div>لا توجد طلبات</div></div>`; return; }
-  let html = `<div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>العميل</th><th>الهاتف</th><th>الأصناف</th><th>الإجمالي</th><th>الحالة</th><th>الوقت</th><th>إجراء</th></td></thead><tbody>`;
+  let html = `<div class="section"><div class="table-wrap"></table><thead><tr><th>#</th><th>العميل</th><th>الهاتف</th><th>الأصناف</th><th>الإجمالي</th><th>الحالة</th><th>الوقت</th><th>إجراء</th></tr></thead><tbody>`;
   filtered.forEach(o => {
     const itemsStr = (o.items||[]).map(i=>`<strong>${i.name}</strong> ×${i.qty||1}`).join('<br>')||'—';
     const productTotal = (o.total||0)-(o.deliveryFee||0);
@@ -389,7 +404,15 @@ async function loadOrdersData(){
       const rem = calculateRemainingTime(o.preparingAt);
       if(rem && !rem.isOver) statusHTML += `<br><span style="color:var(--orange);font-size:11px">⏱ ${String(rem.minutes).padStart(2,'0')}:${String(rem.seconds).padStart(2,'0')}</span>`;
     }
-    html += `<tr><td style="color:var(--orange);font-weight:800">#${(o.id||'').slice(-6)}</td><td>${o.customerName||'—'}</td><td><a href="tel:${o.customerPhone}" style="color:var(--orange);text-decoration:none">${o.customerPhone||'—'}</a></td><td style="max-width:200px;white-space:normal">${itemsStr}</td><td style="color:var(--orange)">${productTotal} ج</td><td>${statusHTML}</td><td>${new Date(o.createdAt).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})}</td><td>${getOrderActions(o)}</td></tr>`;
+    html += `<tr><td style="color:var(--orange);font-weight:800">#${(o.id||'').slice(-6)}</td>
+      <td>${o.customerName||'—'}</td>
+      <td><a href="tel:${o.customerPhone}" style="color:var(--orange);text-decoration:none">${o.customerPhone||'—'}</a></td>
+      <td style="max-width:200px;white-space:normal">${itemsStr}</td>
+      <td style="color:var(--orange)">${productTotal} ج</td>
+      <td>${statusHTML}</td>
+      <td>${new Date(o.createdAt).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})}</td>
+      <td>${getOrderActions(o)}</td>
+    </tr>`;
   });
   html += `</tbody></table></div></div>`;
   container.innerHTML = html;
@@ -409,7 +432,7 @@ function applyOrderFilter(){ const inp = document.getElementById('order-date-inp
 function setTodayOrders(){ ordersSelectedDate = new Date().toISOString().slice(0,10); document.getElementById('order-date-input').value = ordersSelectedDate; loadOrdersData(); }
 function clearOrderFilter(){ ordersSelectedDate = ''; document.getElementById('order-date-input').value = ''; loadOrdersData(); }
 
-// ========== التصنيفات ==========
+// ========== التصنيفات (كما كانت) ==========
 async function loadCategories() {
   const res = await apiFetch(API + '/restaurant/categories');
   const cats = await res.json();
@@ -421,7 +444,11 @@ async function loadCategories() {
     </div>
     <div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>إجراءات</th></tr></thead><tbody>
       ${cats.map((c,i) => `
-        <tr><td>${i+1}</td><td style="font-weight:600;cursor:pointer" onclick="editCategory('${c.id}','${c.name}')">${c.name}</td><td><button class="btn btn-danger btn-sm" onclick="deleteCategory('${c.id}')">🗑️</button></td></tr>
+        <tr>
+          <td>${i+1} </td>
+          <td style="font-weight:600;cursor:pointer" onclick="editCategory('${c.id}','${c.name}')">${c.name}</td>
+          <td><button class="btn btn-danger btn-sm" onclick="deleteCategory('${c.id}')">🗑️</button></td>
+        </tr>
       `).join('')}
     </tbody></table></div></div>`;
   document.getElementById('content').innerHTML = html;
@@ -447,7 +474,7 @@ async function deleteCategory(id) {
   loadCategories(); toast('تم الحذف');
 }
 
-// ========== المنتجات (مع تعديل متكامل) ==========
+// ========== المنتجات (مع القوالب السريعة ورفع الصور وحساب أقل سعر) ==========
 async function loadProducts() {
   await loadCategoriesOptions();
   const prodRes = await apiFetch(API + '/restaurant/products');
@@ -608,18 +635,13 @@ function addQuickGroup(templateKey) {
   const tpl = templates[templateKey];
   if(tpl) addGroupRow(tpl.name, tpl.type, tpl.required, tpl.options);
 }
-
-// ========== تعديل المنتج (عرض جميع المجموعات والخيارات) ==========
 async function editProduct(id) {
   const p = productsList.find(x => x.id === id);
   if(!p) return toast('المنتج غير موجود','error');
   const catOptions = window._catOptions;
-  
-  // بناء واجهة التعديل مع عرض المجموعات الحالية
-  let groupsHtml = '<div id="groupsContainer"></div><button type="button" class="btn-add-row" onclick="addGroupRow()">+ إضافة مجموعة مخصصة</button>';
-  
+  // بناء واجهة تعديل تعرض المجموعات الحالية
   openModal('تعديل منتج', `
-    <div class="field"><label>اسم المنتج</label><input id="eName" value="${p.name.replace(/"/g, '&quot;')}"></div>
+    <div class="field"><label>الاسم</label><input id="eName" value="${p.name.replace(/"/g, '&quot;')}"></div>
     <div class="field"><label>الوصف</label><input id="eDesc" value="${(p.description||'').replace(/"/g, '&quot;')}"></div>
     <div class="field"><label>التصنيف</label><select id="eCat">${catOptions}</select></div>
     <div class="product-type-selector">
@@ -634,26 +656,23 @@ async function editProduct(id) {
     </div>
     <div class="templates-bar">
       <span>قوالب سريعة:</span>
-      <button type="button" class="btn-template" onclick="addGroupFromTemplateEdit('sizes')">📏 أحجام</button>
-      <button type="button" class="btn-template" onclick="addGroupFromTemplateEdit('chicken')">🍗 قطع دجاج</button>
-      <button type="button" class="btn-template" onclick="addGroupFromTemplateEdit('hotcold')">🌡️ حار/بارد</button>
-      <button type="button" class="btn-template" onclick="addGroupFromTemplateEdit('spicy')">🌶️ حرارة</button>
-      <button type="button" class="btn-template" onclick="addGroupFromTemplateEdit('extras')">➕ إضافات</button>
+      <button type="button" class="btn-template" onclick="addQuickGroupEdit('sizes')">📏 أحجام</button>
+      <button type="button" class="btn-template" onclick="addQuickGroupEdit('chicken')">🍗 قطع دجاج</button>
+      <button type="button" class="btn-template" onclick="addQuickGroupEdit('hotcold')">🌡️ حار/بارد</button>
+      <button type="button" class="btn-template" onclick="addQuickGroupEdit('spicy')">🌶️ حرارة</button>
+      <button type="button" class="btn-template" onclick="addQuickGroupEdit('extras')">➕ إضافات</button>
     </div>
-    ${groupsHtml}
-    <div class="field" style="margin-top:16px;"><label>صورة جديدة (اختياري)</label><input type="file" id="eImage" accept="image/*"></div>
+    <div id="groupsContainerEdit"></div>
+    <button type="button" class="btn-add-row" onclick="addGroupRowEdit()">+ إضافة مجموعة مخصصة</button>
+    <div class="field" style="margin-top:16px;"><label>صورة جديدة</label><input type="file" id="eImage" accept="image/*"></div>
     <div class="field"><label>متاح</label><select id="eAvail"><option ${p.isAvailable?'selected':''} value="true">نعم</option><option ${!p.isAvailable?'selected':''} value="false">لا</option></select></div>
   `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveEditProduct('${id}')">حفظ</button>`);
-  
-  // تعيين قيمة التصنيف الحالي
   setTimeout(() => {
     document.getElementById('eCat').value = p.category || '';
-    // إعادة بناء المجموعات الحالية داخل groupsContainer
-    const container = document.getElementById('groupsContainer');
+    const container = document.getElementById('groupsContainerEdit');
     container.innerHTML = '';
-    if(p.groups && p.groups.length) {
+    if(p.groups && p.groups.length){
       p.groups.forEach(g => {
-        // إضافة مجموعة مع خياراتها
         const div = document.createElement('div'); div.className = 'group-box';
         div.innerHTML = `
           <div style="display:flex;gap:8px;margin-bottom:10px">
@@ -674,10 +693,8 @@ async function editProduct(id) {
         });
       });
     } else {
-      // إذا لم توجد مجموعات، نضيف مجموعة فارغة واحدة
       addGroupRowEdit();
     }
-    // تبديل النوع
     document.querySelectorAll('#modal .type-option').forEach(opt => {
       opt.onclick = () => {
         document.querySelectorAll('#modal .type-option').forEach(o=>o.classList.remove('selected'));
@@ -689,10 +706,8 @@ async function editProduct(id) {
     });
   }, 100);
 }
-
-// دوال مساعدة للتعديل (استخدام نفس دوال الإضافة مع مسار مختلف)
 function addGroupRowEdit() {
-  const container = document.getElementById('groupsContainer');
+  const container = document.getElementById('groupsContainerEdit');
   if (!container) return;
   const div = document.createElement('div'); div.className = 'group-box';
   div.innerHTML = `
@@ -715,7 +730,7 @@ function addOptionToGroupEdit(btn) {
   row.innerHTML = `<input placeholder="القيمة" class="opt-value"><input placeholder="السعر" type="number" value="0" class="opt-price"><button type="button" class="btn-ghost btn-sm" onclick="this.parentElement.remove()">✕</button>`;
   container.appendChild(row);
 }
-function addGroupFromTemplateEdit(templateKey) {
+function addQuickGroupEdit(templateKey) {
   const templates = {
     sizes: { name: 'الأحجام', type: 'single', required: true, options: [{ value: 'صغير', price: 0 }, { value: 'وسط', price: 5 }, { value: 'كبير', price: 10 }] },
     chicken: { name: 'عدد القطع', type: 'single', required: true, options: [{ value: '5 قطع', price: 35 }, { value: '8 قطع', price: 55 }, { value: '12 قطعة', price: 75 }] },
@@ -726,7 +741,7 @@ function addGroupFromTemplateEdit(templateKey) {
   const tpl = templates[templateKey];
   if(!tpl) return;
   addGroupRowEdit();
-  const container = document.getElementById('groupsContainer');
+  const container = document.getElementById('groupsContainerEdit');
   const lastGroup = container.lastChild;
   lastGroup.querySelector('.grp-name').value = tpl.name;
   lastGroup.querySelector('.grp-type').value = tpl.type;
@@ -739,7 +754,6 @@ function addGroupFromTemplateEdit(templateKey) {
     optsDiv.appendChild(row);
   });
 }
-
 async function saveEditProduct(id) {
   const name = document.getElementById('eName').value.trim();
   if(!name) return toast('اسم المنتج مطلوب','error');
@@ -748,9 +762,8 @@ async function saveEditProduct(id) {
   const description = document.getElementById('eDesc').value;
   const isAvailable = document.getElementById('eAvail').value === 'true';
   let basePrice = 0;
-  // جمع المجموعات من الـ groupsContainer
   const groups = [];
-  document.querySelectorAll('#modal .group-box').forEach(box => {
+  document.querySelectorAll('#groupsContainerEdit .group-box').forEach(box => {
     const grpName = box.querySelector('.grp-name')?.value.trim();
     if(!grpName) return;
     const grpType = box.querySelector('.grp-type')?.value;
@@ -810,10 +823,9 @@ window.addQuickGroup = addQuickGroup;
 window.openEditProfile = openEditProfile;
 window.saveProfileEdit = saveProfileEdit;
 window.uploadLogo = uploadLogo;
-// ربط دوال التعديل الإضافية
-window.addGroupFromTemplateEdit = addGroupFromTemplateEdit;
 window.addGroupRowEdit = addGroupRowEdit;
 window.addOptionToGroupEdit = addOptionToGroupEdit;
+window.addQuickGroupEdit = addQuickGroupEdit;
 
 // Socket.IO
 const socket = io();
