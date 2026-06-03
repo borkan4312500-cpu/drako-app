@@ -314,15 +314,7 @@ async function loadDashboard(){
       <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${(stats.totalRevenue||0).toLocaleString()}</div><div class="sc-label">إجمالي الإيرادات</div></div><div class="sc-icon" style="background:rgba(0,214,143,.12)">💰</div></div></div>
     </div>
     <div class="section"><div class="sec-head"><div class="sec-title">⚡ آخر الطلبات</div></div>
-    ${orders.slice(-6).reverse().map(o=>`<div style="display:flex;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border);cursor:pointer" onclick=
-    "viewOrder('${o.id}')">${o.invoiceAmount ? `<div><strong>💰 قيمة الفاتورة:</strong> ${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div>` : ''}<div>${o.invoiceAmount ? `<div><strong>💰 قيمة الفاتورة:</strong> ${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div>` : ''}
-${o.attachments && o.attachments.length ? `
-  <div style="margin-top:12px"><strong>📎 المرفقات:</strong></div>
-  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px">
-    ${o.attachments.map(url => `<img src="${url}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;cursor:pointer" onclick="window.open('${url}')">`).join('')}
-  </div>
-` : ''}<div style="color:var(--orange);font-weight:700">#${(o.id||'').slice(-6)}</div><div style="font-size:12px;color:var(--text2)">${o.customerName||'—'} • ${o.regionName || o.address||'—'}</div></div><div>${statusBadge(o.status)}</div></div>`).join('')}</div>`;
-    {o.invoiceAmount ? `<div><strong>💰 قيمة الفاتورة:</strong> ${o.invoiceAmount} ج ${o.invoiceBy ? ' (من ' + o.invoiceBy + ')' : ''}</div>` : ''}
+    ${orders.slice(-6).reverse().map(o=>`<div style="display:flex;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border);cursor:pointer" onclick="viewOrder('${o.id}')"><div><div style="color:var(--orange);font-weight:700">#${(o.id||'').slice(-6)}</div><div style="font-size:12px;color:var(--text2)">${o.customerName||'—'} • ${o.regionName || o.address||'—'}</div></div><div>${statusBadge(o.status)}</div></div>`).join('')}</div>`;
 }
 
 // ========== ORDERS ==========
@@ -388,6 +380,9 @@ function renderOrderRows(list){
         return itemHtml;
       }).join('<div style="margin:4px 0; border-top:1px dotted var(--border);"></div>');
 
+    // إظهار الفاتورة في عمود المبلغ
+    const totalCell = (o.invoiceAmount ? `<div>فاتورة: ${o.invoiceAmount} ج ${o.invoiceBy ? '(' + o.invoiceBy + ')' : ''}</div>` : '') + `<div style="font-weight:700;color:var(--orange)">${o.total||0} ج</div>`;
+
     return `<tr>
       <td style="color:var(--orange);font-weight:800">#${(o.id||'').slice(-6)}</td>
       <td><div style="font-weight:600">${o.customerName||'—'}</div><div style="font-size:11px;color:var(--text3)">${o.customerPhone||''}</div></td>
@@ -395,7 +390,7 @@ function renderOrderRows(list){
       <td style="color:var(--text2)">${o.address||'—'}</td>
       <td>${o.restaurantName||'—'}</td>
       <td style="max-width:200px;white-space:normal">${itemsDetail}</td>
-      <td style="font-weight:700;color:var(--orange)">${o.total||0} ج</td>
+      <td>${totalCell}</td>
       <td>${statusBadge(o.status)}</td>
       <td>${o.driverName||'—'}</td>
       <td style="font-size:12px;color:var(--text3)">${fmtTime(o.createdAt)}<br>${fmtDate(o.createdAt)}</td>
@@ -983,11 +978,11 @@ async function saveOrderEdit(id) {
   try {
     const items = JSON.parse(document.getElementById('edit-items').value);
     const total = Number(document.getElementById('edit-total').value);
-    const orderNotes = document.getElementById('edit-order-notes').value;
     const adminNotes = document.getElementById('edit-notes').value;
+    const orderNotes = document.getElementById('edit-order-notes').value;
     await apiFetch(API + '/admin/orders/' + id, {
       method: 'PATCH',
-      body: JSON.stringify({ items, total, adminNotes })
+      body: JSON.stringify({ items, total, adminNotes, orderNotes })
     });
     toast('تم تعديل الطلب');
     closeModal();
