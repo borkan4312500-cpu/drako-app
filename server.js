@@ -1093,25 +1093,21 @@ app.get('/api/admin/markets', requireAuth, adminOnly, (req, res) => {
   res.json(data.markets || []);
 });
 
-app.post('/api/admin/markets', requireAuth, adminOnly, (req, res, next) => {
-  // إذا الطلب يحتوي على ملف، استخدم multer
-  if (req.is('multipart/form-data')) {
-    upload.single('logo')(req, res, next);
-  } else {
-    next();
-  }
-}, (req, res) => {
+app.post('/api/admin/markets', requireAuth, adminOnly, (req, res) => {
+  console.log('📦 Market body:', req.body);
   const data = readData();
   const { name, ownerPhone, ownerPassword } = req.body;
-  console.log('📦 Market body:', req.body); // للتأكيد
-  if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
-  if (data.users.find(u => u.phone === ownerPhone)) return res.status(400).json({ error: 'الهاتف مستخدم' });
+  if (!name || !ownerPhone || !ownerPassword) {
+    return res.status(400).json({ error: 'بيانات ناقصة' });
+  }
+  if (data.users.find(u => u.phone === ownerPhone)) {
+    return res.status(400).json({ error: 'الهاتف مستخدم' });
+  }
   const userId = 'usr_' + Date.now();
   const marketId = 'market_' + Date.now();
   const hashed = bcrypt.hashSync(ownerPassword, 10);
   data.users.push({ id: userId, name, phone: ownerPhone, password: hashed, role: 'MARKET' });
-  const logoPath = req.file ? '/uploads/' + req.file.filename : '';
-  data.markets.push({ id: marketId, userId, name, logo: logoPath, isOpen: true });
+  data.markets.push({ id: marketId, userId, name, logo: '', isOpen: true });
   writeData(data);
   res.json({ id: marketId, name });
 });
@@ -1146,24 +1142,21 @@ app.get('/api/admin/pharmacies', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   res.json(data.pharmacies || []);
 });
-app.post('/api/admin/pharmacies', requireAuth, adminOnly, (req, res, next) => {
-  if (req.is('multipart/form-data')) {
-    upload.single('logo')(req, res, next);
-  } else {
-    next();
-  }
-}, (req, res) => {
+app.post('/api/admin/pharmacies', requireAuth, adminOnly, (req, res) => {
+  console.log('📦 Pharmacy body:', req.body);
   const data = readData();
   const { name, ownerPhone, ownerPassword } = req.body;
-  console.log('📦 Pharmacy body:', req.body);
-  if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
-  if (data.users.find(u => u.phone === ownerPhone)) return res.status(400).json({ error: 'الهاتف مستخدم' });
+  if (!name || !ownerPhone || !ownerPassword) {
+    return res.status(400).json({ error: 'بيانات ناقصة' });
+  }
+  if (data.users.find(u => u.phone === ownerPhone)) {
+    return res.status(400).json({ error: 'الهاتف مستخدم' });
+  }
   const userId = 'usr_' + Date.now();
   const pharmacyId = 'pharm_' + Date.now();
   const hashed = bcrypt.hashSync(ownerPassword, 10);
   data.users.push({ id: userId, name, phone: ownerPhone, password: hashed, role: 'PHARMACY' });
-  const logoPath = req.file ? '/uploads/' + req.file.filename : '';
-  data.pharmacies.push({ id: pharmacyId, userId, name, logo: logoPath, isOpen: true });
+  data.pharmacies.push({ id: pharmacyId, userId, name, logo: '', isOpen: true });
   writeData(data);
   res.json({ id: pharmacyId, name });
 });
