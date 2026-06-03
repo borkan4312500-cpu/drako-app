@@ -44,14 +44,8 @@ function readData() {
     const initial = {
       users: [],
       restaurants: [],
-      markets: [
-        { id: 'market1', name: 'كارفور ماركت', logo: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200', isOpen: true, deliveryFee: 10 },
-        { id: 'market2', name: 'المانيا سوبر ماركت', logo: 'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=200', isOpen: true, deliveryFee: 10 }
-      ],
-      pharmacies: [
-        { id: 'pharm1', name: 'صيدليات العزبي', logo: 'https://images.unsplash.com/photo-1584308666744-24d5c6dee668?w=200', isOpen: true, deliveryFee: 10 },
-        { id: 'pharm2', name: 'صيدليات دواء', logo: 'https://images.unsplash.com/photo-1631549916768-4119b2e5f926?w=200', isOpen: true, deliveryFee: 10 }
-      ],
+      markets: [],
+      pharmacies: [],
       drivers: [],
       orders: [],
       products: [],
@@ -124,6 +118,7 @@ app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, 'login.ht
 app.get('/admin', rolePageAuth('ADMIN'), (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 app.get('/restaurant', rolePageAuth('RESTAURANT'), (req, res) => res.sendFile(path.join(__dirname, 'restaurant.html')));
 app.get('/driver', rolePageAuth('DRIVER'), (req, res) => res.sendFile(path.join(__dirname, 'driver.html')));
+app.get('/market', rolePageAuth('MARKET'), (req, res) => res.sendFile(path.join(__dirname, 'market.html')));
 
 // تسجيل الدخول (يدعم إعادة التوجيه)
 app.post('/login', (req, res) => {
@@ -140,6 +135,7 @@ app.post('/login', (req, res) => {
     case 'ADMIN': target = '/admin'; break;
     case 'RESTAURANT': target = '/restaurant'; break;
     case 'DRIVER': target = '/driver'; break;
+    case 'MARKET': target = '/market'; break;
     default: return res.send('تم الدخول');
   }
   if (redirect) {
@@ -792,31 +788,21 @@ app.get('/api/restaurants', (req, res) => {
   res.json(list);
 });
 
-// ==================== التعديل المهم هنا ====================
 app.get('/api/restaurants/:id/menu', (req, res) => {
   const data = readData();
   const restaurant = data.restaurants.find(r => r.id === req.params.id);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-
-  // جلب تصنيفات هذا المطعم لتحويل المعرف إلى اسم
   const restaurantCategories = data.categories.filter(c => c.restaurantId === restaurant.id);
   const categoryMap = new Map();
-  restaurantCategories.forEach(cat => {
-    categoryMap.set(cat.id, cat.name);
-  });
-
+  restaurantCategories.forEach(cat => categoryMap.set(cat.id, cat.name));
   let products = data.products.filter(p => p.restaurantId === restaurant.id && p.isAvailable);
   products = products.map(p => {
     let categoryName = p.category || 'عام';
-    // إذا كان المعرف موجوداً في الخريطة، استبدله بالاسم
-    if (categoryMap.has(categoryName)) {
-      categoryName = categoryMap.get(categoryName);
-    }
+    if (categoryMap.has(categoryName)) categoryName = categoryMap.get(categoryName);
     return { ...p, category: categoryName };
   });
   res.json(products);
 });
-// ========================================================
 
 app.get('/api/markets', (req, res) => {
   const data = readData();
@@ -843,7 +829,7 @@ app.post('/api/orders/special', upload.array('files', 10), async (req, res) => {
     type: 'special',
     orderType,
     storeId: storeId || null,
-    items: items || [],          // تخزين المنتجات
+    items: items || [],
     orderNotes: orderNotes || '',
     attachments: filePaths,
     customerName,
@@ -857,13 +843,14 @@ app.post('/api/orders/special', upload.array('files', 10), async (req, res) => {
     adminApproved: false,
     createdAt: new Date().toISOString(),
     deliveredAt: null,
-    invoiceAmount: null         // سيتم إضافته من لوحة الماركت
+    invoiceAmount: null
   };
   data.orders.push(newOrder);
   writeData(data);
   io.emit('newSpecialOrder', { orderId: newOrder.id, orderType, storeId });
   res.json({ success: true, orderId: newOrder.id });
 });
+
 // طلب عادي
 function customerAuth(req, res, next) {
   const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
@@ -1014,46 +1001,151 @@ app.get('/api/admin/platform-revenue', requireAuth, adminOnly, (req, res) => {
   const todayPlatform = orders.filter(o => o.deliveredAt?.startsWith(today)).reduce((s, o) => s + (o.platformFee || 0), 0);
   res.json({ total: totalPlatform, today: todayPlatform });
 });
-// ========== MARKETS & PHARMACIES API (مثل المطاعم) ==========
+
+// ==================== MARKETS & PHARMACIES ADMIN ====================
 app.get('/api/admin/markets', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   res.json(data.markets || []);
 });
 app.post('/api/admin/markets', requireAuth, adminOnly, upload.single('logo'), (req, res) => {
   const data = readData();
-  const { name } = req.body;
-  if (!name) return res.status(400).json({ error: 'الاسم مطلوب' });
+  const { name, ownerPhone, ownerPassword } = req.body;
+  if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
+  if (data.users.find(u => u.phone === ownerPhone)) return res.status(400).json({ error: 'الهاتف مستخدم' });
+  const userId = 'usr_' + Date.now();
+  const marketId = 'market_' + Date.now();
+  const hashed = bcrypt.hashSync(ownerPassword, 10);
+  data.users.push({ id: userId, name, phone: ownerPhone, password: hashed, role: 'MARKET' });
   const logoPath = req.file ? '/uploads/' + req.file.filename : '';
-  const newMarket = { id: 'market_' + Date.now(), name, logo: logoPath, isOpen: true, products: [] };
-  if (!data.markets) data.markets = [];
-  data.markets.push(newMarket);
+  data.markets.push({ id: marketId, userId, name, logo: logoPath, isOpen: true });
   writeData(data);
-  res.json(newMarket);
+  res.json({ id: marketId, name });
 });
-// دوال مماثلة للتعديل والحذف والتبديل...
+app.patch('/api/admin/markets/:id/toggle', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const market = data.markets.find(m => m.id === req.params.id);
+  if (!market) return res.status(404).json({ error: 'غير موجود' });
+  market.isOpen = !market.isOpen;
+  writeData(data);
+  res.json({ success: true });
+});
+app.delete('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const idx = data.markets.findIndex(m => m.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'غير موجود' });
+  const market = data.markets[idx];
+  const userIndex = data.users.findIndex(u => u.id === market.userId);
+  if (userIndex !== -1) data.users.splice(userIndex, 1);
+  data.markets.splice(idx, 1);
+  writeData(data);
+  res.json({ success: true });
+});
+// نفس المسارات للصيدليات (يمكنك تكرارها)
+app.get('/api/admin/pharmacies', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  res.json(data.pharmacies || []);
+});
+app.post('/api/admin/pharmacies', requireAuth, adminOnly, upload.single('logo'), (req, res) => {
+  const data = readData();
+  const { name, ownerPhone, ownerPassword } = req.body;
+  if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
+  if (data.users.find(u => u.phone === ownerPhone)) return res.status(400).json({ error: 'الهاتف مستخدم' });
+  const userId = 'usr_' + Date.now();
+  const pharmacyId = 'pharm_' + Date.now();
+  const hashed = bcrypt.hashSync(ownerPassword, 10);
+  data.users.push({ id: userId, name, phone: ownerPhone, password: hashed, role: 'PHARMACY' });
+  const logoPath = req.file ? '/uploads/' + req.file.filename : '';
+  data.pharmacies.push({ id: pharmacyId, userId, name, logo: logoPath, isOpen: true });
+  writeData(data);
+  res.json({ id: pharmacyId, name });
+});
+app.patch('/api/admin/pharmacies/:id/toggle', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const pharmacy = data.pharmacies.find(p => p.id === req.params.id);
+  if (!pharmacy) return res.status(404).json({ error: 'غير موجود' });
+  pharmacy.isOpen = !pharmacy.isOpen;
+  writeData(data);
+  res.json({ success: true });
+});
+app.delete('/api/admin/pharmacies/:id', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const idx = data.pharmacies.findIndex(p => p.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'غير موجود' });
+  const pharm = data.pharmacies[idx];
+  const userIndex = data.users.findIndex(u => u.id === pharm.userId);
+  if (userIndex !== -1) data.users.splice(userIndex, 1);
+  data.pharmacies.splice(idx, 1);
+  writeData(data);
+  res.json({ success: true });
+});
 
-// مسارات مماثلة للصيدليات
-
-// لوحة تحكم السوق (بنفس طريقة المطعم)
+// ==================== MARKET ORDERS API ====================
 app.get('/api/market/orders', requireAuth, (req, res) => {
   if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
-  // نبحث عن السوق الذي يملك userId === req.user.id
-  const market = (data.markets || []).find(m => m.userId === req.user.id);
+  const market = data.markets.find(m => m.userId === req.user.id);
   if (!market) return res.status(404).json({ error: 'السوق غير موجود' });
-  let orders = data.orders.filter(o => o.type === 'special' && o.storeId === market.id);
-  // إضافة تفاصيل العميل...
+  const orders = data.orders.filter(o => o.type === 'special' && o.storeId === market.id);
   res.json(orders);
 });
 
-app.patch('/api/market/orders/:id/invoice', requireAuth, (req, res) => {
-  // يضيف invoiceAmount ويغير الحالة إلى INVOICE_ADDED
-});
-app.patch('/api/market/orders/:id/ready', requireAuth, (req, res) => {
-  // يغير الحالة إلى READY
+app.patch('/api/market/orders/:id/items', requireAuth, (req, res) => {
+  if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
+  const data = readData();
+  const order = data.orders.find(o => o.id === req.params.id);
+  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
+  const market = data.markets.find(m => m.userId === req.user.id);
+  if (!market || order.storeId !== market.id) return res.status(403).json({ error: 'ليس طلبك' });
+  const { items, total } = req.body;
+  if (items) order.items = items;
+  if (total !== undefined) order.total = total;
+  writeData(data);
+  io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
+  res.json({ success: true });
 });
 
-// تحويل الطلبات من PREPARING إلى READY بعد 25 دقيقة تلقائياً
+app.patch('/api/market/orders/:id/accept', requireAuth, (req, res) => {
+  if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
+  const data = readData();
+  const order = data.orders.find(o => o.id === req.params.id);
+  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
+  const market = data.markets.find(m => m.userId === req.user.id);
+  if (!market || order.storeId !== market.id) return res.status(403).json({ error: 'ليس طلبك' });
+  order.status = 'ACCEPTED';
+  writeData(data);
+  io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
+  res.json({ success: true });
+});
+
+app.patch('/api/market/orders/:id/invoice', requireAuth, (req, res) => {
+  if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
+  const data = readData();
+  const order = data.orders.find(o => o.id === req.params.id);
+  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
+  const market = data.markets.find(m => m.userId === req.user.id);
+  if (!market || order.storeId !== market.id) return res.status(403).json({ error: 'ليس طلبك' });
+  const { invoiceAmount } = req.body;
+  order.invoiceAmount = invoiceAmount;
+  order.status = 'INVOICE_ADDED';
+  writeData(data);
+  io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
+  res.json({ success: true });
+});
+
+app.patch('/api/market/orders/:id/ready', requireAuth, (req, res) => {
+  if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
+  const data = readData();
+  const order = data.orders.find(o => o.id === req.params.id);
+  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
+  const market = data.markets.find(m => m.userId === req.user.id);
+  if (!market || order.storeId !== market.id) return res.status(403).json({ error: 'ليس طلبك' });
+  order.status = 'READY';
+  writeData(data);
+  io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
+  res.json({ success: true });
+});
+
+// ==================== AUTOMATIC STATUS UPDATE ====================
 setInterval(() => {
   const data = readData();
   const now = new Date();
