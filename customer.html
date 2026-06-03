@@ -14,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
   <style>
-    /* (جميع التنسيقات كما هي، لم تتغير) */
+    /* ========== جميع التنسيقات الأصلية ========== */
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
     html, body { overflow: hidden; height: 100%; overscroll-behavior: none; }
     body { background: #F7F7F7; color: #1A1A1A; max-width: 430px; margin: auto; height: 100%; position: relative; }
@@ -180,9 +180,6 @@
     .file-attachment label { display: inline-block; padding: 8px 16px; background: var(--brand); color: white; border-radius: 30px; font-size: 13px; cursor: pointer; }
     .preview-images { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
     .preview-images img { width: 70px; height: 70px; object-fit: cover; border-radius: 10px; border: 1px solid #ddd; }
-    .special-product-row { margin-bottom: 16px; border-bottom: 1px solid #eee; padding-bottom: 12px; }
-    .row-2 { display: flex; gap: 8px; margin-bottom: 8px; }
-    .row-2 input { flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 8px; }
   </style>
 </head>
 <body>
@@ -223,25 +220,7 @@
       </section>
       <section class="screen" id="specialOrderScreen">
         <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;"><button class="icon-btn" onclick="showScreen('homeScreen')">←</button><div class="logo"><span id="specialOrderTitle">طلب ماركت</span></div><div></div></div>
-        <div class="special-order-card">
-          <div id="specialProductsList"></div>
-          <button class="btn outline-btn" style="margin-bottom:16px;" onclick="addProductRow()">+ إضافة منتج آخر</button>
-          <div class="field-group">
-            <label>📝 ملاحظات عامة على الطلب</label>
-            <textarea id="specialOrderNotes" rows="3" placeholder="أي ملاحظات إضافية..."></textarea>
-          </div>
-          <div class="file-attachment">
-            <label for="attachFiles">📎 إرفاق ملفات (اختياري)</label>
-            <input type="file" id="attachFiles" multiple accept="image/*" onchange="previewFiles(this)">
-            <div class="preview-images" id="filePreview"></div>
-          </div>
-          <div class="summary">
-            <div class="summary-row"><span>مجموع المنتجات</span><span id="specialProductsTotal">0 ج</span></div>
-            <div class="summary-row"><span>🚚 رسوم التوصيل</span><span id="specialDeliveryFee">0 ج</span></div>
-            <div class="summary-row"><strong>الإجمالي النهائي</strong><strong class="summary-total" id="specialTotal">0 ج</strong></div>
-          </div>
-          <button class="btn" onclick="submitSpecialOrder()">📦 إرسال الطلب</button>
-        </div>
+        <div class="special-order-card"><div class="field-group"><label class="field-label">📝 تفاصيل الطلب</label><div class="field-wrap"><textarea id="specialOrderDetails" rows="5" placeholder="اكتب طلبك بالتفصيل (أسماء المنتجات، الكميات، ملاحظات...)"></textarea></div></div><div class="file-attachment"><label for="attachFiles">📎 إرفاق ملفات (صور)</label><input type="file" id="attachFiles" multiple accept="image/*" onchange="previewFiles(this)"><div class="preview-images" id="filePreview"></div></div><div class="summary"><div class="summary-row"><span>🚚 رسوم التوصيل</span><span id="specialDeliveryFee">0 ج</span></div><div class="summary-row"><strong>الإجمالي</strong><strong class="summary-total" id="specialTotal">0 ج</strong></div></div><button class="btn" onclick="submitSpecialOrder()">📦 إرسال الطلب</button></div>
       </section>
       <section class="screen" id="cartScreen">
         <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;"><button class="icon-btn" onclick="showScreen('homeScreen')">←</button><div class="logo">السلة</div><div></div></div>
@@ -299,7 +278,6 @@ let currentCategory = 'restaurants';
 let selectedFiles = [];
 let specialOrderType = null;
 let specialOrderStoreId = null;
-let specialProducts = [];
 
 window._ordersTab = 'active';
 window._trackingOrderId = null;
@@ -393,7 +371,6 @@ createSound('orderCancelled', generateToneWAV(400,0.3,'triangle'));
 // ========== API Helper ==========
 async function apiFetch(url, options = {}) {
   const res = await fetch(url, { ...options, credentials: 'include', headers: { ...(options.headers||{}), 'Content-Type': options.body instanceof FormData ? undefined : 'application/json' } });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res;
 }
 
@@ -405,49 +382,8 @@ function goStep2() { let n=document.getElementById('regName').value.trim(), p=do
 async function loadRegionsForSelect() { try { const res=await apiFetch(API+'/regions'); allRegions=await res.json(); } catch(e) { allRegions=[{id:'reg_1',name:'مساكن جمصة',fee:10},{id:'reg_2',name:'15 مايو',fee:15},{id:'reg_3',name:'المنصورة الجديدة',fee:20},{id:'reg_4',name:'الدلتا',fee:25},{id:'reg_5',name:'الشيخ زايد',fee:30}]; } let sel=document.getElementById('regRegion'); if(sel) sel.innerHTML='<option value="">اختر منطقتك</option>'+allRegions.map(r=>`<option value="${r.id}">${r.name} — ${r.fee} ج توصيل</option>`).join(''); let editSel=document.getElementById('editRegion'); if(editSel) editSel.innerHTML=allRegions.map(r=>`<option value="${r.id}">${r.name} — ${r.fee} ج</option>`).join(''); }
 
 // ========== Auth Functions ==========
-async function customerLogin() { 
-  let phone = document.getElementById('loginPhone').value.trim(); 
-  let pass = document.getElementById('loginPass').value; 
-  if (!phone || !pass) return showToast('⚠️ أكمل الحقول');
-  try { 
-    const res = await apiFetch(API+'/customer/login', { method: 'POST', body: JSON.stringify({ phone, password: pass }) });
-    const data = await res.json(); 
-    if (data.error) return showToast('❌ '+data.error); 
-    currentUser = { id: data.id, name: data.name, phone: data.phone, regionId: data.regionId, address: data.address, token: data.token }; 
-    localStorage.setItem('drako_user', JSON.stringify(currentUser)); 
-    document.getElementById('authWrapper').classList.add('hide'); 
-    document.getElementById('mainAppWrapper').classList.add('active'); 
-    initSocket(); 
-    await loadRestaurants(); 
-    renderCart(); 
-    if (!restoreCurrentScreen()) showScreen('homeScreen'); 
-    showToast('✅ مرحباً '+data.name); 
-  } catch(e) { showToast('❌ فشل الاتصال: '+e.message); console.error(e); } 
-}
-async function customerRegister() { 
-  let name = document.getElementById('regName').value.trim(); 
-  let phone = document.getElementById('regPhone').value.trim(); 
-  let pass = document.getElementById('regPass').value; 
-  let regionId = document.getElementById('regRegion').value; 
-  let address = document.getElementById('regAddress').value.trim(); 
-  if (!name || !phone || !pass) return showToast('⚠️ أكمل الحقول'); 
-  if (!regionId) return showToast('⚠️ اختر المنطقة'); 
-  if (!address) return showToast('⚠️ أدخل العنوان التفصيلي'); 
-  try { 
-    const res = await apiFetch(API+'/customer/register', { method: 'POST', body: JSON.stringify({ name, phone, password: pass, regionId, address }) });
-    const data = await res.json(); 
-    if (data.error) return showToast('❌ '+data.error); 
-    currentUser = { id: data.id, name: data.name, phone: data.phone, regionId: data.regionId, address: data.address, token: data.token }; 
-    localStorage.setItem('drako_user', JSON.stringify(currentUser)); 
-    document.getElementById('authWrapper').classList.add('hide'); 
-    document.getElementById('mainAppWrapper').classList.add('active'); 
-    initSocket(); 
-    await loadRestaurants(); 
-    renderCart(); 
-    showScreen('homeScreen'); 
-    showToast('🎉 تم إنشاء حسابك بنجاح'); 
-  } catch(e) { showToast('❌ فشل الاتصال: '+e.message); console.error(e); } 
-}
+async function customerLogin() { let phone=document.getElementById('loginPhone').value.trim(), pass=document.getElementById('loginPass').value; if(!phone||!pass) return showToast('⚠️ أكمل الحقول'); try { const res=await apiFetch(API+'/customer/login',{method:'POST',body:JSON.stringify({phone,password:pass})}); const data=await res.json(); if(data.error) return showToast('❌ '+data.error); currentUser={id:data.id,name:data.name,phone:data.phone,regionId:data.regionId,address:data.address,token:data.token}; localStorage.setItem('drako_user',JSON.stringify(currentUser)); document.getElementById('authWrapper').classList.add('hide'); document.getElementById('mainAppWrapper').classList.add('active'); initSocket(); loadRestaurants(); renderCart(); if(!restoreCurrentScreen()) showScreen('homeScreen'); showToast('✅ مرحباً '+data.name); } catch(e){ showToast('❌ فشل الاتصال'); } }
+async function customerRegister() { let name=document.getElementById('regName').value.trim(), phone=document.getElementById('regPhone').value.trim(), pass=document.getElementById('regPass').value, regionId=document.getElementById('regRegion').value, address=document.getElementById('regAddress').value.trim(); if(!name||!phone||!pass) return showToast('⚠️ أكمل الحقول'); if(!regionId) return showToast('⚠️ اختر المنطقة'); if(!address) return showToast('⚠️ أدخل العنوان التفصيلي'); try { const res=await apiFetch(API+'/customer/register',{method:'POST',body:JSON.stringify({name,phone,password:pass,regionId,address})}); const data=await res.json(); if(data.error) return showToast('❌ '+data.error); currentUser={id:data.id,name:data.name,phone:data.phone,regionId:data.regionId,address:data.address,token:data.token}; localStorage.setItem('drako_user',JSON.stringify(currentUser)); document.getElementById('authWrapper').classList.add('hide'); document.getElementById('mainAppWrapper').classList.add('active'); initSocket(); loadRestaurants(); renderCart(); showScreen('homeScreen'); showToast('🎉 تم إنشاء حسابك بنجاح'); } catch(e){ showToast('❌ فشل الاتصال'); } }
 function openEditModal() { document.getElementById('editName').value=currentUser?.name||''; document.getElementById('editPhone').value=currentUser?.phone||''; document.getElementById('editAddress').value=currentUser?.address||''; let er=document.getElementById('editRegion'); if(er&&currentUser?.regionId) er.value=currentUser.regionId; document.getElementById('editModal').classList.add('open'); }
 function closeEditModal() { document.getElementById('editModal').classList.remove('open'); }
 async function updateProfile() { let n=document.getElementById('editName').value.trim(), p=document.getElementById('editPhone').value.trim(), a=document.getElementById('editAddress').value.trim(), r=document.getElementById('editRegion').value; if(!n||p.length<11||!a||!r) return showToast('⚠️ بيانات ناقصة'); currentUser.name=n; currentUser.phone=p; currentUser.address=a; currentUser.regionId=r; localStorage.setItem('drako_user',JSON.stringify(currentUser)); renderAccountScreen(); closeEditModal(); showToast('✅ تم تحديث البيانات'); }
@@ -455,7 +391,7 @@ function initSocket() { if(socket) return; socket=io(); socket.on('orderStatusUp
 
 // ========== Main App Functions ==========
 function navigateTo(screenId) { if((screenId==='ordersScreen'||screenId==='accountScreen')&&!currentUser) { showScreen('loginScreen'); return; } showScreen(screenId); }
-function showScreen(id) { document.querySelectorAll('#mainAppWrapper .screen').forEach(s=>s.classList.remove('active')); const target=document.getElementById(id); if(target) target.classList.add('active'); document.querySelectorAll('.nav-item').forEach((n,i)=>{ const navIds=['homeScreen','cartScreen','ordersScreen','accountScreen']; if(navIds[i]===id) n.classList.add('active'); else n.classList.remove('active'); }); if(id==='accountScreen') renderAccountScreen(); if(id==='areaScreen'){ loadRegions(); preselectArea(); } if(id==='checkoutScreen') renderCheckoutUserInfo(); if(id==='ordersScreen') loadMyOrders(); if(id==='specialOrderScreen') updateSpecialTotals(); pushToHistory(id); saveCurrentScreen(id); }
+function showScreen(id) { document.querySelectorAll('#mainAppWrapper .screen').forEach(s=>s.classList.remove('active')); const target=document.getElementById(id); if(target) target.classList.add('active'); document.querySelectorAll('.nav-item').forEach((n,i)=>{ const navIds=['homeScreen','cartScreen','ordersScreen','accountScreen']; if(navIds[i]===id) n.classList.add('active'); else n.classList.remove('active'); }); if(id==='accountScreen') renderAccountScreen(); if(id==='areaScreen'){ loadRegions(); preselectArea(); } if(id==='checkoutScreen') renderCheckoutUserInfo(); if(id==='ordersScreen') loadMyOrders(); pushToHistory(id); saveCurrentScreen(id); }
 function renderCheckoutUserInfo() { const div=document.getElementById('checkoutUserInfo'); if(currentUser) div.innerHTML=`<p style="color:#888">مرحباً، ${currentUser.name}</p>`; else div.innerHTML=`<div class="input-group"><label>الاسم</label><input id="customerName" placeholder="اكتب اسمك" /></div><div class="input-group"><label>رقم الهاتف</label><input id="customerPhone" placeholder="01xxxxxxxxx" /></div>`; }
 function renderAccountScreen() { const cont=document.getElementById('accountInfo'); if(currentUser){ const rn=allRegions.find(r=>r.id===currentUser.regionId)?.name||'غير محدد'; cont.innerHTML=`<div class="profile-card"><div class="profile-avatar">👤</div><div class="info-row"><span class="info-label">الاسم</span><span class="info-value">${currentUser.name}</span></div><div class="info-row"><span class="info-label">رقم الهاتف</span><span class="info-value">${currentUser.phone}</span></div><div class="info-row"><span class="info-label">المنطقة</span><span class="info-value">${rn}</span></div><div class="info-row"><span class="info-label">العنوان</span><span class="info-value">${currentUser.address||'—'}</span></div><button class="btn-primary" style="margin-top:16px;" onclick="openEditModal()">✏️ تعديل البيانات</button><button class="btn-ghost" style="margin-top:12px;" onclick="logout()">🚪 تسجيل الخروج</button></div>`; } else cont.innerHTML=`<div class="profile-card"><button class="btn" onclick="location.reload()">تسجيل الدخول</button><button class="btn-ghost" style="margin-top:10px;" onclick="location.reload()">إنشاء حساب</button></div>`; }
 function logout() { currentUser=null; localStorage.removeItem('drako_user'); localStorage.removeItem('drako_current_screen'); localStorage.removeItem('drako_screen_history'); if(socket) socket.disconnect(); socket=null; document.getElementById('mainAppWrapper').classList.remove('active'); document.getElementById('authWrapper').classList.remove('hide'); cart=[]; saveCart(); goToLogin(); }
@@ -464,7 +400,7 @@ function logout() { currentUser=null; localStorage.removeItem('drako_user'); loc
 async function loadRegions() { try { const res=await apiFetch(API+'/regions'); allRegions=await res.json(); } catch(e){} renderAreas(); }
 function renderAreas() { const container=document.getElementById('areasContainer'); if(!allRegions.length) return; container.innerHTML=allRegions.map(a=>`<div class="area-item ${selectedArea?.id===a.id?'active':''}" onclick="selectArea('${a.id}')"><div><strong>${a.name}</strong></div><div style="display:flex;align-items:center;gap:12px;"><strong>${a.fee} ج</strong><div class="radio"></div></div></div>`).join(''); }
 function preselectArea() { if(currentUser&&currentUser.regionId&&!selectedArea){ selectedArea=allRegions.find(r=>r.id===currentUser.regionId)||null; renderAreas(); } }
-function selectArea(id) { selectedArea=allRegions.find(a=>a.id===id); renderAreas(); updateSpecialTotals(); }
+function selectArea(id) { selectedArea=allRegions.find(a=>a.id===id); renderAreas(); }
 function confirmArea() { if(!selectedArea){ showToast('⚠️ اختر منطقة'); return; } document.getElementById('selectedAreaName').innerText=selectedArea.name+' - '+selectedArea.fee+' ج'; updateTotals(); showScreen('checkoutScreen'); }
 function selectPayment(el,method) { document.querySelectorAll('.payment-item').forEach(i=>i.classList.remove('active')); el.classList.add('active'); paymentMethod=method; }
 
@@ -512,90 +448,45 @@ function filterHomeItems() {
 
 // ========== Special Order ==========
 function openSpecialOrder(type, id) {
-  specialOrderType = type;
-  specialOrderStoreId = id;
-  let title = type === 'market' ? 'طلب ماركت' : (type === 'pharmacy' ? 'طلب صيدلية' : 'طلب خاص');
-  document.getElementById('specialOrderTitle').innerText = title;
-  specialProducts = [{ name: '', price: 0, quantity: 1, notes: '' }];
-  renderSpecialProducts();
-  document.getElementById('specialOrderNotes').value = '';
-  document.getElementById('filePreview').innerHTML = '';
-  selectedFiles = [];
-  document.getElementById('attachFiles').value = '';
-  updateSpecialTotals();
+  specialOrderType=type; specialOrderStoreId=id;
+  let title=type==='market'?'طلب ماركت':(type==='pharmacy'?'طلب صيدلية':'طلب خاص');
+  document.getElementById('specialOrderTitle').innerText=title;
+  document.getElementById('specialOrderDetails').value='';
+  document.getElementById('filePreview').innerHTML='';
+  selectedFiles=[];
+  document.getElementById('attachFiles').value='';
+  updateSpecialDeliveryFee();
   showScreen('specialOrderScreen');
 }
-function renderSpecialProducts() {
-  const container = document.getElementById('specialProductsList');
-  container.innerHTML = specialProducts.map((p, idx) => `
-    <div class="special-product-row">
-      <div class="row-2">
-        <input type="text" placeholder="اسم المنتج" value="${p.name}" onchange="updateSpecialProduct(${idx}, 'name', this.value)">
-        <input type="number" placeholder="سعر الوحدة" value="${p.price}" onchange="updateSpecialProduct(${idx}, 'price', parseFloat(this.value)||0)">
-        <input type="number" placeholder="الكمية" value="${p.quantity}" min="1" onchange="updateSpecialProduct(${idx}, 'quantity', parseInt(this.value)||1)">
-        <button class="icon-btn" onclick="removeSpecialProduct(${idx})" style="background:#ffebee; color:red;">🗑</button>
-      </div>
-      <textarea placeholder="ملاحظات على هذا المنتج (اختياري)" rows="1" onchange="updateSpecialProduct(${idx}, 'notes', this.value)">${p.notes}</textarea>
-    </div>
-  `).join('');
-}
-function addProductRow() { specialProducts.push({ name: '', price: 0, quantity: 1, notes: '' }); renderSpecialProducts(); }
-function removeSpecialProduct(index) { specialProducts.splice(index, 1); if (specialProducts.length === 0) specialProducts.push({ name: '', price: 0, quantity: 1, notes: '' }); renderSpecialProducts(); updateSpecialTotals(); }
-function updateSpecialProduct(index, field, value) { specialProducts[index][field] = value; updateSpecialTotals(); }
-function updateSpecialTotals() {
-  let productsTotal = specialProducts.reduce((sum, p) => sum + (p.price * p.quantity), 0);
-  let fee = selectedArea ? selectedArea.fee : 10;
-  document.getElementById('specialProductsTotal').innerText = productsTotal + ' ج';
-  document.getElementById('specialDeliveryFee').innerText = fee + ' ج';
-  document.getElementById('specialTotal').innerText = (productsTotal + fee) + ' ج';
+function updateSpecialDeliveryFee() {
+  let fee=selectedArea?selectedArea.fee:10;
+  document.getElementById('specialDeliveryFee').innerText=fee+' ج';
+  document.getElementById('specialTotal').innerText=fee+' ج';
 }
 function previewFiles(input) {
-  let preview = document.getElementById('filePreview');
-  preview.innerHTML = '';
-  selectedFiles = Array.from(input.files);
-  selectedFiles.forEach(file => {
-    let reader = new FileReader();
-    reader.onload = e => {
-      let img = document.createElement('img');
-      img.src = e.target.result;
-      preview.appendChild(img);
-    };
-    reader.readAsDataURL(file);
-  });
+  let preview=document.getElementById('filePreview');
+  preview.innerHTML='';
+  selectedFiles=Array.from(input.files);
+  selectedFiles.forEach(file=>{ let reader=new FileReader(); reader.onload=e=>{ let img=document.createElement('img'); img.src=e.target.result; preview.appendChild(img); }; reader.readAsDataURL(file); });
 }
 async function submitSpecialOrder() {
-  if (!currentUser) return showToast('يرجى تسجيل الدخول أولاً');
-  const validProducts = specialProducts.filter(p => p.name.trim() !== '' && p.price > 0);
-  if (validProducts.length === 0) return showToast('أضف منتجاً واحداً على الأقل');
-  let fee = selectedArea ? selectedArea.fee : 10;
-  let productsTotal = validProducts.reduce((sum, p) => sum + (p.price * p.quantity), 0);
-  let total = productsTotal + fee;
-  let orderData = {
-    restaurantId: null,
-    items: validProducts.map(p => ({ productId: null, name: p.name, price: p.price, quantity: p.quantity, notes: p.notes })),
-    total: total,
-    customerName: currentUser.name,
-    customerPhone: currentUser.phone,
-    address: currentUser.address || (selectedArea ? selectedArea.name : ''),
-    regionName: selectedArea ? selectedArea.name : '',
-    paymentMethod: paymentMethod,
-    deliveryFee: fee,
-    specialOrder: true,
-    orderType: specialOrderType,
-    storeId: specialOrderStoreId,
-    orderNotes: document.getElementById('specialOrderNotes').value
-  };
-  let formData = new FormData();
-  formData.append('orderData', JSON.stringify(orderData));
-  for (let file of selectedFiles) formData.append('files', file);
-  try {
-    let res = await fetch(API + '/orders/special', { method: 'POST', body: formData, credentials: 'include' });
-    let data = await res.json();
-    if (data.error) return showToast(data.error);
-    showToast('تم إرسال الطلب بنجاح');
+  if(!currentUser){ showToast('⚠️ يرجى تسجيل الدخول أولاً'); return; }
+  let details=document.getElementById('specialOrderDetails').value.trim();
+  if(!details && specialOrderType!=='custom'){ showToast('⚠️ اكتب تفاصيل طلبك'); return; }
+  let fee=selectedArea?selectedArea.fee:10;
+  let total=fee;
+  let orderData={ restaurantId:null, items:[], total, customerName:currentUser.name, customerPhone:currentUser.phone, address:currentUser.address||(selectedArea?selectedArea.name:''), regionName:selectedArea?selectedArea.name:'', paymentMethod:paymentMethod, deliveryFee:fee, specialOrder:true, orderType:specialOrderType, storeId:specialOrderStoreId, orderDetails:details };
+  try{
+    let formData=new FormData();
+    formData.append('orderData',JSON.stringify(orderData));
+    for(let file of selectedFiles) formData.append('files',file);
+    const res=await fetch(API+'/orders/special',{method:'POST',body:formData,credentials:'include'});
+    const data=await res.json();
+    if(data.error) return showToast('❌ '+data.error);
+    showToast('✅ تم إرسال الطلب بنجاح');
     showScreen('homeScreen');
     loadMyOrders();
-  } catch(e) { showToast('فشل الاتصال'); }
+  } catch(e){ showToast('❌ فشل الاتصال'); }
 }
 
 // ========== Restaurants (original menu) ==========
@@ -609,123 +500,94 @@ async function openRestaurant(id) {
 }
 function renderTabs() { const categories=[...new Set(products.map(p=>p.category||'عام'))]; const tabs=document.getElementById('tabsContainer'); tabs.innerHTML=categories.map((c,i)=>`<div class="tab ${i===0?'active':''}" onclick="filterProducts('${c}', this)">${c}</div>`).join(''); filterProducts(categories[0],document.querySelector('.tab')); }
 function filterProducts(category,el) { document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); if(el) el.classList.add('active'); const filtered=category?products.filter(p=>(p.category||'عام')===category):products; renderProducts(filtered); }
-
-// ========== FIXED: عرض المنتجات مع معالجة صحيحة للمتعدد والمنفرد ==========
 function renderProducts(list=products) {
   const container=document.getElementById('productsContainer');
   if(!list.length){ container.innerHTML='<div class="empty">لا توجد منتجات</div>'; return; }
   container.innerHTML=list.map(p=>{
-    let displayPrice = 0;
-    let priceText = '';
-    if(p.type === 'multi') {
-      // منتج متعدد: السعر المعروض هو أقل سعر من basePrice (الذي يرسله السيرفر كأقل سعر للخيارات)
-      let minPrice = p.basePrice || 0;
-      priceText = minPrice > 0 ? `يبدأ من ${minPrice} ج` : 'متعدد';
+    const hasGroups=p.groups&&p.groups.length>0;
+    let displayPrice=0;
+    let priceDisplay='';
+    if(hasGroups){
+      let minPrice=p.basePrice||0;
+      p.groups.forEach(g=>{ if(g.required&&g.options.length) minPrice+=Math.min(...g.options.map(o=>o.price)); });
+      displayPrice=minPrice;
+      priceDisplay='يبدأ من '+displayPrice+' ج';
     } else {
-      // منتج منفرد: السعر الثابت
-      let price = p.basePrice || p.price || 0;
-      priceText = `${price} ج`;
+      const price=p.price||p.basePrice||0;
+      displayPrice=price;
+      priceDisplay=displayPrice+' ج';
     }
-    const escapedProduct = JSON.stringify(p).replace(/'/g,"\\'").replace(/"/g,'&quot;');
-    return `<div class="product-card"><img src="${(p.image&&p.image.startsWith('/uploads'))?p.image:(p.image||'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500')}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'"><div class="product-content"><h4>${p.name}</h4><p>${p.description||'وجبة لذيذة من دراكو'}</p><div class="price">${priceText}</div></div><button class="plus-btn" onclick='openProductSheet(${escapedProduct})'>+</button></div>`;
+    const escapedProduct=JSON.stringify(p).replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    return `<div class="product-card"><img src="${(p.image&&p.image.startsWith('/uploads'))?p.image:(p.image||'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500')}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'"><div class="product-content"><h4>${p.name}</h4><p>${p.description||'وجبة لذيذة من دراكو'}</p><div class="price">${priceDisplay}</div></div><button class="plus-btn" onclick='openProductSheet(${escapedProduct})'>+</button></div>`;
   }).join('');
 }
 
-// ========== FIXED: Product Sheet و حساب السعر النهائي (بدون مضاعفة) ==========
+// ========== Product Sheet (fixed price calculation) ==========
 function openProductSheet(product) {
-  currentProduct = product;
-  const hasGroups = product.groups && product.groups.length > 0;
-  if(!hasGroups){
-    addToCartSimple(product);
-    return;
-  }
-  const isMulti = (product.type === 'multi');
-  const basePrice = product.basePrice || 0;
-  let html = `<div style="display:flex;gap:16px;margin-bottom:20px"><img src="${product.image||'placeholder.jpg'}" style="width:100px;height:100px;border-radius:16px;object-fit:cover"><div><h3>${product.name}</h3><p style="color:#666">${product.description||''}</p>${!isMulti?`<div style="color:#FF6B00;">السعر الأساسي: ${basePrice} ج</div>`:''}</div></div>`;
+  currentProduct=product;
+  const hasGroups=product.groups&&product.groups.length>0;
+  if(!hasGroups){ addToCartSimple(product); return; }
+  const basePrice=product.basePrice||0;
+  let html=`<div style="display:flex;gap:16px;margin-bottom:20px"><img src="${product.image||'placeholder.jpg'}" style="width:100px;height:100px;border-radius:16px;object-fit:cover"><div><h3>${product.name}</h3><p style="color:#666">${product.description||''}</p><div style="color:#FF6B00;">السعر الأساسي: ${basePrice} ج</div></div></div>`;
   product.groups.forEach(group=>{
     html+=`<div style="margin-top:16px"><strong>${group.name} ${group.required?'*':''}</strong>`;
     if(group.type==='single'){
-      group.options.forEach(opt=>{
-        const checkedAttr = (group.required && opt.price === 0) ? 'checked' : '';
-        html+=`<label class="option-label"><input type="radio" name="${group.id}" value="${opt.price}" data-extra="${opt.price}" ${checkedAttr}><span style="flex:1">${opt.value}</span><span style="color:#FF6B00;font-weight:bold">${opt.price>0?'+'+opt.price+' ج':'مجاني'}</span></label>`;
-      });
+      group.options.forEach(opt=>{ html+=`<label class="option-label"><input type="radio" name="${group.id}" value="${opt.price}" data-extra="${opt.price}" ${opt.price===0&&group.required?'checked':''}><span style="flex:1">${opt.value}</span><span style="color:#FF6B00;font-weight:bold">${opt.price>0?'+'+opt.price+' ج':'مجاني'}</span></label>`; });
     } else {
-      group.options.forEach(opt=>{
-        html+=`<label class="option-label"><input type="checkbox" name="${group.id}" value="${opt.price}" data-extra="${opt.price}"><span style="flex:1">${opt.value}</span><span style="color:#FF6B00;font-weight:bold">+${opt.price} ج</span></label>`;
-      });
+      group.options.forEach(opt=>{ html+=`<label class="option-label"><input type="checkbox" name="${group.id}" value="${opt.price}" data-extra="${opt.price}"><span style="flex:1">${opt.value}</span><span style="color:#FF6B00;font-weight:bold">+${opt.price} ج</span></label>`; });
     }
     if(group.maxSelection) html+=`<small style="color:#888">الحد الأقصى ${group.maxSelection} اختيارات</small>`;
     html+=`</div>`;
   });
-  html+=`<div style="margin-top:20px;display:flex;gap:12px;align-items:center"><span>الكمية:</span><button class="qty-btn qty-minus" onclick="changeQty(-1)">-</button><strong id="item-qty">1</strong><button class="qty-btn qty-plus" onclick="changeQty(1)">+</button></div><div style="margin-top:16px"><label style="font-size:13px;color:#666">ملاحظات للطلب</label><textarea id="item-notes" style="width:100%;height:60px;border:1px solid #ddd;border-radius:10px;padding:8px;margin-top:4px" placeholder="مثلاً: بدون بصل، زيادة صوص..."></textarea></div><div id="sheet-error" style="color:red; font-size:12px; margin-top:8px; display:none;">⚠️ يرجى اختيار جميع الخيارات الإجبارية</div><div style="font-size:20px;font-weight:900;margin-top:16px;color:#FF6B00">الإجمالي: <span id="sheet-total">0</span> ج</div><button class="btn" style="margin-top:16px" onclick="confirmAddToCart()">🛒 أضف للطلب</button>`;
+  html+=`<div style="margin-top:20px;display:flex;gap:12px;align-items:center"><span>الكمية:</span><button class="qty-btn qty-minus" onclick="changeQty(-1)">-</button><strong id="item-qty">1</strong><button class="qty-btn qty-plus" onclick="changeQty(1)">+</button></div><div style="margin-top:16px"><label style="font-size:13px;color:#666">ملاحظات للطلب</label><textarea id="item-notes" style="width:100%;height:60px;border:1px solid #ddd;border-radius:10px;padding:8px;margin-top:4px" placeholder="مثلاً: بدون بصل، زيادة صوص..."></textarea></div><div id="sheet-error" style="color:red; font-size:12px; margin-top:8px; display:none;">⚠️ يرجى اختيار جميع الخيارات الإجبارية</div><div style="font-size:20px;font-weight:900;margin-top:16px;color:#FF6B00">الإجمالي: <span id="sheet-total">${basePrice}</span> ج</div><button class="btn" style="margin-top:16px" onclick="confirmAddToCart()">🛒 أضف للطلب</button>`;
   document.getElementById('sheetContent').innerHTML=html;
   document.getElementById('productSheet').classList.add('open');
-
-  window._requiredGroups = [];
+  window._requiredGroups=[];
   product.groups.forEach(g=>{ if(g.required) window._requiredGroups.push(g.id); });
-  window._isMultiProduct = isMulti;
-  window._productBasePrice = basePrice;
-
-  const updateTotal = () => {
-    let extra = 0;
-    let allRequired = true;
+  const updateTotal=()=>{
+    let total=basePrice;
+    document.querySelectorAll('#sheetContent input:checked').forEach(inp=>total+=Number(inp.value)||0);
+    window._currentUnitPrice=total;
+    document.getElementById('sheet-total').textContent=total*(window._currentQty||1);
+    let allRequired=true;
     window._requiredGroups.forEach(grpId=>{ if(!document.querySelector(`#sheetContent input[name="${grpId}"]:checked`)) allRequired=false; });
-    document.querySelectorAll('#sheetContent input:checked').forEach(inp=>{ extra += Number(inp.value)||0; });
-    let unitPrice = window._isMultiProduct ? extra : (window._productBasePrice + extra);
-    let total = unitPrice * (window._currentQty||1);
-    document.getElementById('sheet-total').textContent = total;
-    document.getElementById('sheet-error').style.display = allRequired ? 'none' : 'block';
-    window._currentUnitPrice = unitPrice;
+    document.getElementById('sheet-error').style.display=allRequired?'none':'block';
   };
   document.querySelectorAll('#sheetContent input').forEach(inp=>inp.addEventListener('change',updateTotal));
-  window._currentQty = 1;
+  window._currentQty=1;
   updateTotal();
 }
-function changeQty(delta) { window._currentQty = Math.max(1, (window._currentQty||1)+delta); document.getElementById('item-qty').textContent = window._currentQty; const unitPrice = window._currentUnitPrice||0; document.getElementById('sheet-total').textContent = unitPrice * window._currentQty; }
+function changeQty(delta) { window._currentQty=Math.max(1,(window._currentQty||1)+delta); document.getElementById('item-qty').textContent=window._currentQty; const unitPrice=window._currentUnitPrice||0; document.getElementById('sheet-total').textContent=unitPrice*window._currentQty; }
 function closeProductSheet() { document.getElementById('productSheet').classList.remove('open'); currentProduct=null; }
 function confirmAddToCart() {
   if(!currentProduct) return;
   let allRequired=true;
   window._requiredGroups.forEach(grpId=>{ if(!document.querySelector(`#sheetContent input[name="${grpId}"]:checked`)) allRequired=false; });
   if(!allRequired){ showToast('⚠️ يرجى اختيار جميع الخيارات الإجبارية'); return; }
-  const product = currentProduct;
-  const qty = window._currentQty || 1;
-  const notes = document.getElementById('item-notes')?.value || '';
-  const groups = product.groups || [];
-  const selectedOptions = [];
-  let finalPrice = 0;
-  if(window._isMultiProduct) {
-    // منتج متعدد: السعر = مجموع أسعار الخيارات المختارة (بدون إضافة basePrice)
-    finalPrice = 0;
-    groups.forEach(group=>{
-      if(group.type==='single'){
-        const radio = document.querySelector(`#sheetContent input[name="${group.id}"]:checked`);
-        if(radio){ const price = Number(radio.value)||0; finalPrice += price; selectedOptions.push({ groupId:group.id, groupName:group.name, value:radio.parentElement.textContent.trim().split('(')[0].trim(), price }); }
-      } else {
-        document.querySelectorAll(`#sheetContent input[name="${group.id}"]:checked`).forEach(cb=>{ const price = Number(cb.value)||0; finalPrice += price; selectedOptions.push({ groupId:group.id, groupName:group.name, value:cb.parentElement.textContent.trim().split('(')[0].trim(), price }); });
-      }
-    });
-  } else {
-    // منتج منفرد: السعر = basePrice + أسعار الخيارات
-    finalPrice = window._productBasePrice;
-    groups.forEach(group=>{
-      if(group.type==='single'){
-        const radio = document.querySelector(`#sheetContent input[name="${group.id}"]:checked`);
-        if(radio){ const price = Number(radio.value)||0; finalPrice += price; selectedOptions.push({ groupId:group.id, groupName:group.name, value:radio.parentElement.textContent.trim().split('(')[0].trim(), price }); }
-      } else {
-        document.querySelectorAll(`#sheetContent input[name="${group.id}"]:checked`).forEach(cb=>{ const price = Number(cb.value)||0; finalPrice += price; selectedOptions.push({ groupId:group.id, groupName:group.name, value:cb.parentElement.textContent.trim().split('(')[0].trim(), price }); });
-      }
-    });
-  }
-  const uniqueId = product.id+'_'+JSON.stringify(selectedOptions);
-  const existing = cart.find(i=>i.id===uniqueId);
-  if(existing){ existing.quantity = (existing.quantity||1) + qty; }
+  const product=currentProduct;
+  const qty=window._currentQty||1;
+  const notes=document.getElementById('item-notes')?.value||'';
+  const basePrice=product.basePrice||0;
+  const groups=product.groups||[];
+  const selectedOptions=[];
+  let finalPrice=basePrice;
+  groups.forEach(group=>{
+    if(group.type==='single'){
+      const radio=document.querySelector(`#sheetContent input[name="${group.id}"]:checked`);
+      if(radio){ const price=Number(radio.value)||0; finalPrice+=price; selectedOptions.push({ groupId:group.id, groupName:group.name, value:radio.parentElement.textContent.trim().split('(')[0].trim(), price }); }
+    } else {
+      document.querySelectorAll(`#sheetContent input[name="${group.id}"]:checked`).forEach(cb=>{ const price=Number(cb.value)||0; finalPrice+=price; selectedOptions.push({ groupId:group.id, groupName:group.name, value:cb.parentElement.textContent.trim().split('(')[0].trim(), price }); });
+    }
+  });
+  const uniqueId=product.id+'_'+JSON.stringify(selectedOptions);
+  const existing=cart.find(i=>i.id===uniqueId);
+  if(existing){ existing.quantity=(existing.quantity||1)+qty; }
   else { cart.push({ id:uniqueId, productId:product.id, name:product.name, price:finalPrice, image:product.image, selectedOptions, quantity:qty, notes }); }
   saveCart(); renderCart(); closeProductSheet(); showToast('✅ تمت إضافة المنتج');
 }
 function addToCartSimple(product) {
-  const existing = cart.find(i=>i.id===product.id);
-  if(existing){ existing.quantity = (existing.quantity||1)+1; }
+  const existing=cart.find(i=>i.id===product.id);
+  if(existing){ existing.quantity=(existing.quantity||1)+1; }
   else { cart.push({ id:product.id, productId:product.id, name:product.name, price:product.price||product.basePrice||0, image:product.image, selectedOptions:[], quantity:1, notes:'' }); }
   saveCart(); renderCart(); showToast('✅ تمت إضافة المنتج');
 }
