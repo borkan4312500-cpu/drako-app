@@ -481,7 +481,7 @@ async function addRestaurant(){
   if(d.error) toast(d.error,'error'); else { toast('تمت الإضافة'); closeModal(); loadRestaurants(); }
 }
 
-// ========== MARKETS (جديد) ==========
+// ========== MARKETS ==========
 async function loadMarkets(){
   const res=await apiFetch(API+'/admin/markets').then(r=>r.json()).catch(()=>[]);
   document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">🛒 الأسواق</div><div class="page-sub">${res.length} سوق</div></div><button class="btn btn-primary" onclick="showAddMarket()">+ إضافة</button></div>
@@ -491,17 +491,27 @@ async function loadMarkets(){
 }
 async function toggleMarket(id){ await apiFetch(API+'/admin/markets/'+id+'/toggle',{method:'PATCH'}); loadMarkets(); }
 function showAddMarket(){
-  openModal('إضافة سوق',`<div class="field"><label>اسم السوق</label><input id="m-name"></div><div class="field"><label>هاتف المالك</label><input id="m-phone"></div><div class="field"><label>كلمة المرور</label><input id="m-pass" type="password"></div>`,
+  openModal('إضافة سوق',`<div class="field"><label>اسم السوق</label><input id="m-name"></div><div class="field"><label>هاتف المالك</label><input id="m-phone"></div><div class="field"><label>كلمة المرور</label><input id="m-pass" type="password"></div><div class="field"><label>الشعار</label><input type="file" id="m-logo"></div>`,
   `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addMarket()">إضافة</button>`);
 }
 async function addMarket(){
-  const n=document.getElementById('m-name').value,p=document.getElementById('m-phone').value,ps=document.getElementById('m-pass').value;
+  const n=document.getElementById('m-name').value.trim();
+  const p=document.getElementById('m-phone').value.trim();
+  const ps=document.getElementById('m-pass').value.trim();
   if(!n||!p||!ps) return toast('أكمل الحقول','error');
-  const d=await apiFetch(API+'/admin/markets',{method:'POST',body:JSON.stringify({name:n,ownerPhone:p,ownerPassword:ps})}).then(r=>r.json());
+  
+  const form = new FormData();
+  form.append('name', n);
+  form.append('ownerPhone', p);
+  form.append('ownerPassword', ps);
+  const logoFile = document.getElementById('m-logo').files[0];
+  if(logoFile) form.append('logo', logoFile);
+  
+  const d=await apiFetch(API+'/admin/markets',{method:'POST',body:form}).then(r=>r.json());
   if(d.error) toast(d.error,'error'); else { toast('تمت الإضافة'); closeModal(); loadMarkets(); }
 }
 
-// ========== PHARMACIES (جديد) ==========
+// ========== PHARMACIES ==========
 async function loadPharmacies(){
   const res=await apiFetch(API+'/admin/pharmacies').then(r=>r.json()).catch(()=>[]);
   document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">💊 الصيدليات</div><div class="page-sub">${res.length} صيدلية</div></div><button class="btn btn-primary" onclick="showAddPharmacy()">+ إضافة</button></div>
@@ -511,13 +521,23 @@ async function loadPharmacies(){
 }
 async function togglePharmacy(id){ await apiFetch(API+'/admin/pharmacies/'+id+'/toggle',{method:'PATCH'}); loadPharmacies(); }
 function showAddPharmacy(){
-  openModal('إضافة صيدلية',`<div class="field"><label>اسم الصيدلية</label><input id="ph-name"></div><div class="field"><label>هاتف المالك</label><input id="ph-phone"></div><div class="field"><label>كلمة المرور</label><input id="ph-pass" type="password"></div>`,
+  openModal('إضافة صيدلية',`<div class="field"><label>اسم الصيدلية</label><input id="ph-name"></div><div class="field"><label>هاتف المالك</label><input id="ph-phone"></div><div class="field"><label>كلمة المرور</label><input id="ph-pass" type="password"></div><div class="field"><label>الشعار</label><input type="file" id="ph-logo"></div>`,
   `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addPharmacy()">إضافة</button>`);
 }
 async function addPharmacy(){
-  const n=document.getElementById('ph-name').value,p=document.getElementById('ph-phone').value,ps=document.getElementById('ph-pass').value;
+  const n=document.getElementById('ph-name').value.trim();
+  const p=document.getElementById('ph-phone').value.trim();
+  const ps=document.getElementById('ph-pass').value.trim();
   if(!n||!p||!ps) return toast('أكمل الحقول','error');
-  const d=await apiFetch(API+'/admin/pharmacies',{method:'POST',body:JSON.stringify({name:n,ownerPhone:p,ownerPassword:ps})}).then(r=>r.json());
+  
+  const form = new FormData();
+  form.append('name', n);
+  form.append('ownerPhone', p);
+  form.append('ownerPassword', ps);
+  const logoFile = document.getElementById('ph-logo').files[0];
+  if(logoFile) form.append('logo', logoFile);
+  
+  const d=await apiFetch(API+'/admin/pharmacies',{method:'POST',body:form}).then(r=>r.json());
   if(d.error) toast(d.error,'error'); else { toast('تمت الإضافة'); closeModal(); loadPharmacies(); }
 }
 
