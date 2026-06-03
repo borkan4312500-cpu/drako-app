@@ -1267,7 +1267,7 @@ app.patch('/api/market/orders/:id/invoice', requireAuth, (req, res) => {
   if (!market || order.storeId !== market.id) return res.status(403).json({ error: 'ليس طلبك' });
   const { invoiceAmount } = req.body;
   order.invoiceAmount = invoiceAmount;
-  // تحديث السعر الإجمالي = قيمة الفاتورة + رسوم التوصيل
+  order.invoiceBy = market.name;   // ✅ إضافة اسم الماركت
   order.total = parseFloat(invoiceAmount) + (order.deliveryFee || 0);
   order.status = 'INVOICE_ADDED';
   writeData(data);
