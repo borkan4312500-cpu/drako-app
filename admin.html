@@ -426,7 +426,9 @@ function viewOrder(id){
       <div><strong>العميل:</strong> ${o.customerName||'—'} (${o.customerPhone||'—'})</div>
       <div><strong>المنطقة:</strong> ${o.regionName || '—'}</div>
       <div><strong>العنوان:</strong> ${o.address||'—'}</div>
-      <div><strong>المطعم:</strong> ${o.restaurantName||'—'}</div>
+      ${o.type === 'special' ? `<div><strong>المتجر:</strong> ${o.restaurantName || '—'}</div>` : `<div><strong>المطعم:</strong> ${o.restaurantName||'—'}</div>`}
+      ${o.orderNotes ? `<div style="background:#252D40; padding:12px; border-radius:8px; margin:8px 0"><strong>📝 نص الطلب:</strong><br>${o.orderNotes}</div>` : ''}
+      ${o.invoiceAmount ? `<div><strong>💰 قيمة الفاتورة:</strong> ${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div>` : ''}
       ${o.adminApproved ? '<div><strong>حالة الموافقة:</strong> ✅ معتمد من الأدمن</div>' : (o.status === 'CANCELLED' ? '<div><strong>حالة الموافقة:</strong> ❌ مرفوض (' + (o.cancelReason || '—') + ')</div>' : '<div><strong>حالة الموافقة:</strong> ⏳ في انتظار الموافقة</div>')}
       ${o.adminNotes ? `<div><strong>ملاحظات الأدمن:</strong> ${o.adminNotes}</div>` : ''}
       <div><strong>الأصناف:</strong> 
@@ -443,6 +445,12 @@ function viewOrder(id){
           return itemHtml;
         }).join('') || '—'}
       </div>
+      ${o.attachments && o.attachments.length ? `
+        <div style="margin-top:12px"><strong>📎 المرفقات:</strong></div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px">
+          ${o.attachments.map(url => `<img src="${url}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;cursor:pointer" onclick="window.open('${url}')">`).join('')}
+        </div>
+      ` : ''}
       <div><strong>الإجمالي:</strong> <span style="color:var(--orange)">${o.total||0} ج</span></div>
       <div><strong>طريقة الدفع:</strong> ${o.paymentMethod==='CASH'?'كاش':'فودافون كاش'}</div>
       <div><strong>الحالة:</strong> ${STATUS_AR[o.status]||o.status}</div>
@@ -964,6 +972,7 @@ async function editOrder(id) {
     <div class="field"><label>الأصناف (JSON)</label><textarea id="edit-items" style="height:100px">${JSON.stringify(o.items, null, 2)}</textarea></div>
     <div class="field"><label>الإجمالي</label><input id="edit-total" type="number" value="${o.total}"></div>
     <div class="field"><label>ملاحظات الأدمن</label><input id="edit-notes" value="${o.adminNotes || ''}"></div>
+    <div class="field"><label>نص الطلب (الفاتورة النصية)</label><textarea id="edit-order-notes" style="height:80px">${o.orderNotes || ''}</textarea></div>
   `, `
     <button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>
     <button class="btn btn-primary" onclick="saveOrderEdit('${id}')">حفظ</button>
@@ -974,6 +983,7 @@ async function saveOrderEdit(id) {
   try {
     const items = JSON.parse(document.getElementById('edit-items').value);
     const total = Number(document.getElementById('edit-total').value);
+    const orderNotes = document.getElementById('edit-order-notes').value;
     const adminNotes = document.getElementById('edit-notes').value;
     await apiFetch(API + '/admin/orders/' + id, {
       method: 'PATCH',
