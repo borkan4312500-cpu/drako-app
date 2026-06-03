@@ -546,24 +546,17 @@ async function addMarket() {
   const ps = document.getElementById('m-pass').value.trim();
   if (!n || !p || !ps) return toast('أكمل الحقول', 'error');
 
+  const form = new FormData();
+  form.append('name', n);
+  form.append('ownerPhone', p);
+  form.append('ownerPassword', ps);
   const logoFile = document.getElementById('m-logo').files[0];
-  let body;
-  if (logoFile) {
-    const form = new FormData();
-    form.append('name', n);
-    form.append('ownerPhone', p);
-    form.append('ownerPassword', ps);
-    form.append('logo', logoFile);
-    body = form;
-  } else {
-    body = JSON.stringify({ name: n, ownerPhone: p, ownerPassword: ps });
-  }
+  if (logoFile) form.append('logo', logoFile);
 
-  const d = await apiFetch(API + '/admin/markets', { method: 'POST', body }).then(r => r.json());
+  const d = await apiFetch(API + '/admin/markets', { method: 'POST', body: form }).then(r => r.json());
   if (d.error) toast(d.error, 'error');
   else { toast('تمت الإضافة'); closeModal(); loadMarkets(); }
 }
-
 async function editMarket(id) {
   const markets = await apiFetch(API+'/admin/markets').then(r=>r.json());
   const m = markets.find(m => m.id === id);
@@ -619,20 +612,14 @@ async function addPharmacy() {
   const ps = document.getElementById('ph-pass').value.trim();
   if (!n || !p || !ps) return toast('أكمل الحقول', 'error');
 
+  const form = new FormData();
+  form.append('name', n);
+  form.append('ownerPhone', p);
+  form.append('ownerPassword', ps);
   const logoFile = document.getElementById('ph-logo').files[0];
-  let body;
-  if (logoFile) {
-    const form = new FormData();
-    form.append('name', n);
-    form.append('ownerPhone', p);
-    form.append('ownerPassword', ps);
-    form.append('logo', logoFile);
-    body = form;
-  } else {
-    body = JSON.stringify({ name: n, ownerPhone: p, ownerPassword: ps });
-  }
+  if (logoFile) form.append('logo', logoFile);
 
-  const d = await apiFetch(API + '/admin/pharmacies', { method: 'POST', body }).then(r => r.json());
+  const d = await apiFetch(API + '/admin/pharmacies', { method: 'POST', body: form }).then(r => r.json());
   if (d.error) toast(d.error, 'error');
   else { toast('تمت الإضافة'); closeModal(); loadPharmacies(); }
 }
