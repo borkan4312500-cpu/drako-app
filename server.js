@@ -1093,15 +1093,8 @@ app.get('/api/admin/markets', requireAuth, adminOnly, (req, res) => {
   res.json(data.markets || []);
 });
 
-// ========== إضافة / تعديل سوق ==========
-// ========== إضافة / تعديل سوق ==========
-app.post('/api/admin/markets', requireAuth, adminOnly, (req, res, next) => {
-  if (req.is('multipart/form-data')) {
-    upload.single('logo')(req, res, next);
-  } else {
-    next();
-  }
-}, (req, res) => {
+// ========== إضافة سوق (يعمل مع شعار وبدونه) ==========
+app.post('/api/admin/markets', requireAuth, adminOnly, upload.single('logo'), (req, res) => {
   const data = readData();
   const { name, ownerPhone, ownerPassword } = req.body;
   if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
@@ -1115,7 +1108,6 @@ app.post('/api/admin/markets', requireAuth, adminOnly, (req, res, next) => {
   writeData(data);
   res.json({ id: marketId, name });
 });
-
 app.patch('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const market = data.markets.find(m => m.id === req.params.id);
@@ -1146,14 +1138,8 @@ app.get('/api/admin/pharmacies', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   res.json(data.pharmacies || []);
 });
-// ========== إضافة / تعديل صيدلية ==========
-app.post('/api/admin/pharmacies', requireAuth, adminOnly, (req, res, next) => {
-  if (req.is('multipart/form-data')) {
-    upload.single('logo')(req, res, next);
-  } else {
-    next();
-  }
-}, (req, res) => {
+// ========== إضافة صيدلية ==========
+app.post('/api/admin/pharmacies', requireAuth, adminOnly, upload.single('logo'), (req, res) => {
   const data = readData();
   const { name, ownerPhone, ownerPassword } = req.body;
   if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
@@ -1167,6 +1153,7 @@ app.post('/api/admin/pharmacies', requireAuth, adminOnly, (req, res, next) => {
   writeData(data);
   res.json({ id: pharmacyId, name });
 });
+
 app.patch('/api/admin/pharmacies/:id/toggle', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const pharmacy = data.pharmacies.find(p => p.id === req.params.id);
