@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
 <style>
+/* جميع التنسيقات كما هي بدون تغيير */
 :root{
   --bg:#0D0F14; --surface:#161B24; --surface2:#1E2535; --surface3:#252D40;
   --border:#2A3348; --orange:#FF6B00; --orange2:#FF8C3A;
@@ -182,7 +183,7 @@ tbody tr:hover{background:var(--surface2);}
   gap: 8px;
 }
 
-/* تنسيقات بطاقات الطلبات الجديدة */
+/* تنسيقات بطاقات الطلبات */
 .orders-filter-bar {
   display: flex;
   flex-wrap: wrap;
@@ -337,35 +338,40 @@ tbody tr:hover{background:var(--surface2);}
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-// ========== إصلاح apiFetch للتعامل مع 403 والـ credentials ==========
+// ========== آلية المصادقة الجديدة ==========
+const TOKEN_KEY = 'auth_token';
+function getToken() { return localStorage.getItem(TOKEN_KEY); }
+
 async function apiFetch(url, options = {}) {
-  const res = await fetch(url, { ...options, credentials: 'include', headers: { ...(options.headers || {}), ...(typeof options.body === 'string' ? { 'Content-Type': 'application/json' } : {}) } });
-  if (res.status === 401 || res.status === 403) {
-    localStorage.setItem('redirectAfterLogin', window.location.pathname);
-    window.location.href = '/login.html';
-    throw new Error('غير مصرح');
+  let token = getToken();
+  if (!token) {
+    document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;color:white;background:#0D0F14;height:100vh;padding-top:80px">
+      <h2>الجلسة منتهية</h2>
+      <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
+    </div>`;
+    throw new Error('NO_TOKEN');
+  }
+  let res = await fetch(url, {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      'Authorization': 'Bearer ' + token,
+      'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
+    }
+  });
+  if (res.status === 401) {
+    localStorage.removeItem(TOKEN_KEY);
+    document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;color:white;background:#0D0F14;height:100vh;padding-top:80px">
+      <h2>انتهت صلاحية الجلسة</h2>
+      <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
+    </div>`;
+    throw new Error('TOKEN_EXPIRED');
   }
   return res;
 }
 
-// ========== دالة التحقق من المصادقة ==========
-async function checkAuth() {
-  try {
-    const res = await apiFetch('/api/restaurant/profile');
-    const data = await res.json();
-    window.myRestaurantId = data.id;
-    localStorage.setItem('restaurantId', data.id);
-    localStorage.setItem('restaurantName', data.name);
-    if (data.logo) localStorage.setItem('restaurantLogo', data.logo);
-    return true;
-  } catch(e) {
-    console.error('Auth error:', e);
-    return false;
-  }
-}
-
 // ========== SOUND ENGINE ==========
-function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) { /* full function - kept as is */ 
+function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
   const sampleRate = 44100;
   const numSamples = Math.floor(sampleRate * duration);
   const buffer = new Float32Array(numSamples);
@@ -590,7 +596,7 @@ async function uploadLogoDashboard() {
   } else toast('فشل الرفع', 'error');
 }
 
-// ========== ORDERS (تصميم جديد ببطاقات + فاتورة) ==========
+// ========== ORDERS ==========
 let ordersSelectedDate = new Date().toISOString().slice(0, 10);
 let currentOrderTab = 'all';
 function setOrdersTab(tab) { currentOrderTab = tab; }
@@ -662,7 +668,6 @@ async function loadOrdersData() {
     }
     let itemsHtml = '';
     (order.items || []).forEach(item => {
-      // تفاصيل المنتج مع الخيارات إن وجدت
       let optionsText = '';
       if (item.selectedOptions && item.selectedOptions.length) {
         optionsText = `<div style="font-size:11px;color:var(--text2);margin-top:2px;">${item.selectedOptions.map(opt => opt.value).join('، ')}</div>`;
@@ -688,7 +693,6 @@ async function loadOrdersData() {
         <div class="order-body">
           <div class="customer-info">
             <div class="customer-name"><i class="fas fa-user"></i> ${order.customerName || '—'}</div>
-
           </div>
           <div class="items-list">
             <div class="items-title"><i class="fas fa-receipt"></i> المنتجات</div>
@@ -698,7 +702,6 @@ async function loadOrdersData() {
             <span class="total-label">إجمالي المنتجات</span>
             <span class="total-value">${productTotal} ج</span>
           </div>
-         
           <div class="order-total" style="margin-top:4px;">
             <span class="total-label">الإجمالي النهائي</span>
             <span class="total-value">${order.total} ج</span>
@@ -893,7 +896,7 @@ function showAddProduct() {
   `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveProduct()">حفظ</button>`);
   addGroupRow();
 }
-function addGroupRow() { /* kept as in original */ 
+function addGroupRow() {
   const container = document.getElementById('groups-container');
   const div = document.createElement('div');
   div.className = 'group-box';
@@ -1048,8 +1051,7 @@ function addQuickGroup(type) {
 
 // ========== بدء التشغيل ==========
 (async function init() {
-  const isAuth = await checkAuth();
-  if (!isAuth) return;
+  if (!getToken()) return; // سيظهر رابط تسجيل الدخول
   await loadCategoriesOptions();
   navigate('profile');
 })();
