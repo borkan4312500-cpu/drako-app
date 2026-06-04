@@ -469,6 +469,10 @@
       await loadProfile();
       navigate('dashboard');
     })();
+    // تجديد الجلسة بصمت
+setInterval(async () => {
+  try { await fetch(API + '/market/orders', { credentials: 'include' }); } catch(e) {}
+}, 10 * 60 * 1000);
 
     const socket = io();
     socket.on('orderStatusUpdate', () => { if (currentPage === 'orders') loadOrderList(); });
