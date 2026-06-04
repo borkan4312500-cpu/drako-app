@@ -1465,8 +1465,17 @@ app.post('/api/login', (req, res) => {
 
 // ========== TEST TOKEN (للاختبار فقط) ==========
 app.get('/api/get-test-token', (req, res) => {
-  const token = jwt.sign({ id: 'admin1', role: 'ADMIN' }, JWT_SECRET, { expiresIn: '365d' });
-  res.json({ token });
+  const role = req.query.role || 'ADMIN';
+  const data = readData();
+  let user = data.users.find(u => u.role === role);
+  if (!user) {
+    const id = 'test_' + role.toLowerCase() + '_' + Date.now();
+    user = { id, name: 'مستخدم ' + role, phone: '0100000000', password: '', role };
+    data.users.push(user);
+    writeData(data);
+  }
+  const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '365d' });
+  res.json({ token, user: { id: user.id, name: user.name, role: user.role } });
 });
 
 // معالج أخطاء multer
