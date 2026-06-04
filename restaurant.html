@@ -338,7 +338,18 @@ tbody tr:hover{background:var(--surface2);}
 <script>
 // ========== apiFetch (معدلة: لا إعادة توجيه) ==========
 async function apiFetch(url, options = {}) {
-  const res = await fetch(url, { ...options, credentials: 'include', headers: { ...(options.headers || {}), ...(typeof options.body === 'string' ? { 'Content-Type': 'application/json' } : {}) } });
+  const res = await fetch(url, {
+    ...options,
+    credentials: 'include',
+    headers: {
+      ...(options.headers || {}),
+      // لو بتبعت JSON بس، ومش FormData
+      'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
+    }
+  });
+  // لا نقوم بتحويل لأي مكان عند أي خطأ
+  return res;
+}
   if (res.status === 401 || res.status === 403) {
     document.body.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0D0F14;color:#F0F2F8;flex-direction:column;gap:20px">
@@ -349,7 +360,7 @@ async function apiFetch(url, options = {}) {
     throw new Error('SESSION_EXPIRED');
   }
   return res;
-}
+
 
 // ========== checkAuth (معدلة: لا إعادة توجيه) ==========
 async function checkAuth() {
