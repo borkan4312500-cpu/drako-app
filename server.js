@@ -1457,6 +1457,17 @@ function setTokenCookie(res, token) {
     maxAge: 365 * 24 * 60 * 60 * 1000
   });
 }
+app.post('/api/login', (req, res) => {
+  const { phone, password } = req.body;
+  const data = readData();
+  const user = data.users.find(u => u.phone === phone);
+  if (!user || !bcrypt.compareSync(password, user.password)) {
+    return res.status(401).json({ error: 'بيانات خاطئة' });
+  }
+  const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '365d' });
+  res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 365 * 24 * 60 * 60 * 1000 });
+  res.json({ token, user: { id: user.id, name: user.name, role: user.role } });
+});
 
 // معالج أخطاء multer
 app.use((err, req, res, next) => {
