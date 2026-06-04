@@ -197,10 +197,11 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;m
 <!-- Socket.IO & Sound Engine -->
 <script src="/socket.io/socket.io.js"></script>
 <script>
+/* ========== SESSION CHECK (رسالة فقط، لا إعادة توجيه) ========== */
 async function checkAuth() {
   try {
-    const res = await fetch('/api/admin/stats', { credentials: 'include' });
-    if (res.status === 401) {
+    const res = await fetch('/api/driver/profile', { credentials: 'include' });
+    if (res.status === 401 || res.status === 403) {
       document.body.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:var(--bg);color:var(--text);flex-direction:column;gap:20px">
           <div style="font-size:22px;font-weight:800">انتهت الجلسة</div>
@@ -211,11 +212,17 @@ async function checkAuth() {
     }
     return true;
   } catch(e) {
-    document.body.innerHTML = `<div style="display:flex;...">فشل الاتصال</div>`;
+    document.body.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:var(--bg);color:var(--text);flex-direction:column;gap:20px">
+        <div style="font-size:18px;">فشل الاتصال</div>
+        <button onclick="location.reload()" style="background:var(--orange);border:none;color:#fff;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">إعادة المحاولة</button>
+      </div>
+    `;
     return false;
   }
 }
 checkAuth();
+
 /* ========== SOUND ENGINE (Howler + base64 WAV) ========== */
 function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
   const sampleRate = 44100;
@@ -284,7 +291,7 @@ let availableOrders = [];
 let myOrders = [];
 let historySelectedDate = new Date().toISOString().slice(0, 10);
 
-/* ── API FETCH ───────────────── */
+/* ── API FETCH (معدلة: لا إعادة توجيه تلقائي) ───────────────── */
 async function apiFetch(path, opts = {}) {
   const res = await fetch(path, {
     ...opts,
@@ -294,12 +301,20 @@ async function apiFetch(path, opts = {}) {
       'Content-Type': opts.body instanceof FormData ? undefined : 'application/json'
     }
   });
-  if (res.status === 401) {
-    toast('انتهت الجلسة — جاري إعادة التوجيه', 'error');
-    setTimeout(() => location.href = '/', 2000);
-    throw new Error('401');
+  if (res.status === 401 || res.status === 403) {
+    // عرض رسالة انتهاء الجلسة في الشاشة
+    document.getElementById('scroll-content').innerHTML = `
+      <div class="empty-state">
+        <div class="icon">🔒</div>
+        <div class="title">انتهت الجلسة</div>
+        <div class="sub">يرجى تسجيل الدخول مجدداً</div>
+        <button class="btn btn-primary" style="margin-top:16px" onclick="window.location.href='/login.html'">تسجيل الدخول</button>
+      </div>
+    `;
+    throw new Error('SESSION_EXPIRED');
   }
-  return res.json();
+  const data = await res.json();
+  return data;
 }
 
 /* ── TOAST ──────────────────────── */
@@ -368,7 +383,9 @@ async function toggleOnlineStatus() {
     if (d.error) { toast(d.error, 'error'); return; }
     setOnlineUI(d.isAvailable);
     toast(d.isAvailable ? 'أنت الآن متاح للطلبات' : 'أنت الآن غير متاح', 'success', 2000);
-  } catch (e) { toast('حدث خطأ', 'error'); }
+  } catch (e) {
+    if (e.message !== 'SESSION_EXPIRED') toast('حدث خطأ', 'error');
+  }
 }
 
 /* ── EARNINGS ───────────────────── */
@@ -414,38 +431,45 @@ async function renderTab(tab) {
 
 /* ── TAB: AVAILABLE ORDERS ──────── */
 async function tabAvailable() {
-  const orders = await apiFetch('/api/driver/available-orders');
-  availableOrders = orders;
-  const badge = document.getElementById('badge-available');
-  if (orders.length) { badge.textContent = orders.length; badge.classList.add('show'); } else badge.classList.remove('show');
+  try {
+    const orders = await apiFetch('/api/driver/available-orders');
+    availableOrders = orders;
+    const badge = document.getElementById('badge-available');
+    if (orders.length) { badge.textContent = orders.length; badge.classList.add('show'); } else badge.classList.remove('show');
 
-  const c = document.getElementById('scroll-content');
-  if (!orders.length) {
-    c.innerHTML = `<div class="empty-state"><div class="icon">🏍️</div><div class="title">لا توجد طلبات متاحة</div><div class="sub">بنتحقق تلقائياً كل 10 ثواني</div></div>`;
-  } else {
-    c.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-size:14px;font-weight:700">${orders.length} طلب متاح</div><div style="display:flex;align-items:center;gap:6px"><span class="live-dot"></span><span style="font-size:12px;color:var(--text3)">مباشر</span></div></div>` +
-      orders.map(o => buildAvailableCard(o)).join('');
-  }
-
-  autoTimer = setInterval(async () => {
-    const fresh = await apiFetch('/api/driver/available-orders').catch(() => []);
-    availableOrders = fresh;
-    const badge2 = document.getElementById('badge-available');
-    if (fresh.length) { badge2.textContent = fresh.length; badge2.classList.add('show'); } else badge2.classList.remove('show');
-    if (currentTab === 'available') {
-      const c2 = document.getElementById('scroll-content');
-      if (!fresh.length) {
-        c2.innerHTML = `<div class="empty-state"><div class="icon">🏍️</div><div class="title">لا توجد طلبات متاحة</div><div class="sub">بنتحقق تلقائياً كل 10 ثواني</div></div>`;
-      } else {
-        c2.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-size:14px;font-weight:700">${fresh.length} طلب متاح</div><div style="display:flex;align-items:center;gap:6px"><span class="live-dot"></span><span style="font-size:12px;color:var(--text3)">مباشر</span></div></div>` + fresh.map(o => buildAvailableCard(o)).join('');
-      }
+    const c = document.getElementById('scroll-content');
+    if (!orders.length) {
+      c.innerHTML = `<div class="empty-state"><div class="icon">🏍️</div><div class="title">لا توجد طلبات متاحة</div><div class="sub">بنتحقق تلقائياً كل 10 ثواني</div></div>`;
+    } else {
+      c.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-size:14px;font-weight:700">${orders.length} طلب متاح</div><div style="display:flex;align-items:center;gap:6px"><span class="live-dot"></span><span style="font-size:12px;color:var(--text3)">مباشر</span></div></div>` +
+        orders.map(o => buildAvailableCard(o)).join('');
     }
-  }, 10000);
+
+    autoTimer = setInterval(async () => {
+      try {
+        const fresh = await apiFetch('/api/driver/available-orders');
+        availableOrders = fresh;
+        const badge2 = document.getElementById('badge-available');
+        if (fresh.length) { badge2.textContent = fresh.length; badge2.classList.add('show'); } else badge2.classList.remove('show');
+        if (currentTab === 'available') {
+          const c2 = document.getElementById('scroll-content');
+          if (!fresh.length) {
+            c2.innerHTML = `<div class="empty-state"><div class="icon">🏍️</div><div class="title">لا توجد طلبات متاحة</div><div class="sub">بنتحقق تلقائياً كل 10 ثواني</div></div>`;
+          } else {
+            c2.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-size:14px;font-weight:700">${fresh.length} طلب متاح</div><div style="display:flex;align-items:center;gap:6px"><span class="live-dot"></span><span style="font-size:12px;color:var(--text3)">مباشر</span></div></div>` + fresh.map(o => buildAvailableCard(o)).join('');
+          }
+        }
+      } catch(e) {}
+    }, 10000);
+  } catch(e) {
+    if (e.message !== 'SESSION_EXPIRED') {
+      document.getElementById('scroll-content').innerHTML = `<div class="empty-state"><div class="icon">❌</div><div class="title">فشل التحميل</div></div>`;
+    }
+  }
 }
 
 function buildAvailableCard(o) {
   const productTotal = (o.total || 0) - (o.deliveryFee || 0);
-  // ✅ إضافة الفاتورة
   const invoiceLine = o.invoiceAmount ? 
     `<div class="oc-row"><div class="icon">💰</div><div><div class="val">${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div><div class="lbl">الفاتورة</div></div></div>` : '';
   
@@ -480,30 +504,40 @@ async function acceptOrder(id) {
     toast('تم قبول الطلب! 🎉');
     loadEarnings();
     setTimeout(() => switchTab('active'), 800);
-  } catch (e) { toast('حدث خطأ', 'error'); }
+  } catch (e) {
+    if (e.message !== 'SESSION_EXPIRED') toast('حدث خطأ', 'error');
+  }
 }
 
 /* ── TAB: MY ORDERS ──────────────── */
 async function tabActive() {
-  const orders = await apiFetch('/api/driver/my-orders');
-  myOrders = orders;
-  const badge = document.getElementById('badge-active');
-  if (orders.length) { badge.textContent = orders.length; badge.classList.add('show'); } else badge.classList.remove('show');
-  const c = document.getElementById('scroll-content');
-  if (!orders.length) {
-    c.innerHTML = `<div class="empty-state"><div class="icon">📦</div><div class="title">لا توجد طلبات نشطة</div><div class="sub">اقبل طلباً من قائمة الطلبات المتاحة</div></div>`;
-  } else {
-    c.innerHTML = orders.map(o => buildActiveCard(o)).join('');
-  }
-  autoTimer = setInterval(async () => {
-    const fresh = await apiFetch('/api/driver/my-orders').catch(() => []);
-    myOrders = fresh;
-    if (currentTab === 'active') {
-      const c2 = document.getElementById('scroll-content');
-      if (!fresh.length) c2.innerHTML = `<div class="empty-state"><div class="icon">📦</div><div class="title">لا توجد طلبات نشطة</div></div>`;
-      else c2.innerHTML = fresh.map(o => buildActiveCard(o)).join('');
+  try {
+    const orders = await apiFetch('/api/driver/my-orders');
+    myOrders = orders;
+    const badge = document.getElementById('badge-active');
+    if (orders.length) { badge.textContent = orders.length; badge.classList.add('show'); } else badge.classList.remove('show');
+    const c = document.getElementById('scroll-content');
+    if (!orders.length) {
+      c.innerHTML = `<div class="empty-state"><div class="icon">📦</div><div class="title">لا توجد طلبات نشطة</div><div class="sub">اقبل طلباً من قائمة الطلبات المتاحة</div></div>`;
+    } else {
+      c.innerHTML = orders.map(o => buildActiveCard(o)).join('');
     }
-  }, 10000);
+    autoTimer = setInterval(async () => {
+      try {
+        const fresh = await apiFetch('/api/driver/my-orders');
+        myOrders = fresh;
+        if (currentTab === 'active') {
+          const c2 = document.getElementById('scroll-content');
+          if (!fresh.length) c2.innerHTML = `<div class="empty-state"><div class="icon">📦</div><div class="title">لا توجد طلبات نشطة</div></div>`;
+          else c2.innerHTML = fresh.map(o => buildActiveCard(o)).join('');
+        }
+      } catch(e) {}
+    }, 10000);
+  } catch(e) {
+    if (e.message !== 'SESSION_EXPIRED') {
+      document.getElementById('scroll-content').innerHTML = `<div class="empty-state"><div class="icon">❌</div><div class="title">فشل التحميل</div></div>`;
+    }
+  }
 }
 
 function buildActiveCard(o) {
@@ -511,7 +545,6 @@ function buildActiveCard(o) {
   const curIdx = steps.findIndex(s => s.key === o.status);
   const stepsHTML = `<div class="steps-wrap">${steps.map((s, i) => `<div class="step-item"><div class="step-dot ${i < curIdx ? 'done' : i === curIdx ? 'active' : ''}">${i < curIdx ? '✓' : i + 1}</div><div class="step-lbl">${s.lbl}</div></div>${i < steps.length - 1 ? `<div class="step-line ${i < curIdx ? 'done' : ''}"></div>` : ''}`).join('')}</div>`;
   const productTotal = (o.total || 0) - (o.deliveryFee || 0);
-  // ✅ إضافة الفاتورة
   const invoiceLine = o.invoiceAmount ? 
     `<div class="oc-row"><div class="icon">💰</div><div><div class="val">${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div><div class="lbl">الفاتورة</div></div></div>` : '';
   
@@ -552,7 +585,9 @@ async function updateStatus(id, status) {
     toast('🏍️ أنت في الطريق!');
     loadEarnings();
     tabActive();
-  } catch (e) { toast('حدث خطأ', 'error'); }
+  } catch (e) {
+    if (e.message !== 'SESSION_EXPIRED') toast('حدث خطأ', 'error');
+  }
 }
 
 function confirmDelivery(id) {
@@ -567,7 +602,9 @@ async function doDelivery(id) {
     toast('🎉 تم التسليم بنجاح! عمولتك أُضيفت');
     loadEarnings();
     setTimeout(() => tabActive(), 600);
-  } catch (e) { toast('حدث خطأ', 'error'); }
+  } catch (e) {
+    if (e.message !== 'SESSION_EXPIRED') toast('حدث خطأ', 'error');
+  }
 }
 
 /* ── TAB: HISTORY ────────────────── */
@@ -612,7 +649,6 @@ async function loadHistoryOrders() {
 
     const cardsHTML = orders.map(o => {
       const productTotal = (o.total || 0) - (o.deliveryFee || 0);
-      // ✅ إضافة الفاتورة في السجل
       const invoiceLine = o.invoiceAmount ? 
         `<div class="oc-row"><div class="icon">💰</div><div><div class="val">${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div><div class="lbl">الفاتورة</div></div></div>` : '';
       
@@ -653,7 +689,9 @@ async function loadHistoryOrders() {
       results.appendChild(note);
     }
   } catch (e) {
-    results.innerHTML = `<div class="empty-state"><div class="icon">❌</div><div class="title">خطأ في التحميل</div></div>`;
+    if (e.message !== 'SESSION_EXPIRED') {
+      results.innerHTML = `<div class="empty-state"><div class="icon">❌</div><div class="title">خطأ في التحميل</div></div>`;
+    }
     console.error(e);
   }
 }
@@ -735,18 +773,20 @@ socket.on('orderStatusUpdate', (data) => {
     tabAvailable();
   }
 });
- 
-// تجديد الجلسة بصمت كل 10 دقائق
+
+/* ── تجديد الجلسة بصمت كل 5 دقائق ── */
 setInterval(async () => {
-  try { await fetch('/api/admin/stats', { credentials: 'include' }); } catch(e) {}
+  try { await fetch('/api/driver/profile', { credentials: 'include' }); } catch(e) {}
 }, 5 * 60 * 1000);
 
 /* ── INIT ────────────────────────── */
 async function init() {
   await loadProfile();
   await loadEarnings();
-  const profile = await apiFetch('/api/driver/profile').catch(() => ({}));
-  setOnlineUI(profile.isAvailable !== false);
+  try {
+    const profile = await apiFetch('/api/driver/profile');
+    setOnlineUI(profile.isAvailable !== false);
+  } catch(e) {}
   switchTab('available');
 }
 
