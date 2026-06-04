@@ -201,7 +201,6 @@ async function checkAuth() {
   try {
     const res = await fetch('/api/admin/stats', { credentials: 'include' });
     if (res.status === 401) {
-      // عرض رسالة انتهاء الجلسة مع زر تسجيل الدخول
       document.body.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:var(--bg);color:var(--text);flex-direction:column;gap:20px">
           <div style="font-size:22px;font-weight:800">انتهت الجلسة</div>
@@ -736,6 +735,10 @@ socket.on('orderStatusUpdate', (data) => {
     tabAvailable();
   }
 });
+// تجديد الجلسة بصمت
+setInterval(async () => {
+  try { await fetch('/api/admin/stats', { credentials: 'include' }); } catch(e) {}
+}, 10 * 60 * 1000);
 // تجديد الجلسة بصمت كل 10 دقائق
 setInterval(async () => {
   try {
