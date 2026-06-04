@@ -37,50 +37,34 @@
     <div class="error" id="error"></div>
   </div>
   <script>
-    async function login() {
-      const phone = document.getElementById('phone').value.trim();
-      const password = document.getElementById('password').value;
-      const btn = document.getElementById('loginBtn');
-      const errorEl = document.getElementById('error');
-      errorEl.style.display = 'none';
-      if (!phone || !password) {
-        errorEl.textContent = 'يرجى ملء جميع الحقول';
-        errorEl.style.display = 'block';
-        return;
-      }
-      btn.disabled = true;
-      btn.textContent = 'جاري الدخول...';
-      try {
-        const res = await fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone, password })
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.error || 'فشل تسجيل الدخول');
-        }
-        // تخزين التوكن والمستخدم
-        localStorage.setItem('auth_token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        // توجيه إلى اللوحة المناسبة
-        let target = '/';
-        switch (data.user.role) {
-          case 'ADMIN': target = '/admin'; break;
-          case 'RESTAURANT': target = '/restaurant'; break;
-          case 'DRIVER': target = '/driver'; break;
-          case 'MARKET': target = '/market'; break;
-          case 'PHARMACY': target = '/pharmacy'; break;
-        }
-        window.location.href = target;
-      } catch (e) {
-        errorEl.textContent = e.message;
-        errorEl.style.display = 'block';
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'دخول';
-      }
-    }
+   async function login() {
+  const phone = document.getElementById('phone').value.trim();
+  const password = document.getElementById('password').value;
+  // ...
+  const res = await fetch('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone, password })
+  });
+  const data = await res.json();
+  if (!res.ok) { /* خطأ */ return; }
+
+  // تخزين التوكن
+  localStorage.setItem('auth_token', data.token);
+  localStorage.setItem('user', JSON.stringify(data.user));
+
+  // توجيه إلى اللوحة المناسبة
+  let target = '/';
+  switch (data.user.role) {
+    case 'ADMIN': target = '/admin'; break;
+    case 'RESTAURANT': target = '/restaurant'; break;
+    case 'DRIVER': target = '/driver'; break;
+    case 'MARKET': target = '/market'; break;
+    case 'PHARMACY': target = '/pharmacy'; break;
+  }
+  window.location.href = target;
+}
+       
   </script>
 </body>
 </html>
