@@ -735,16 +735,11 @@ socket.on('orderStatusUpdate', (data) => {
     tabAvailable();
   }
 });
-// تجديد الجلسة بصمت
-setInterval(async () => {
-  try { await fetch('/api/admin/stats', { credentials: 'include' }); } catch(e) {}
-}, 10 * 60 * 1000);
+ 
 // تجديد الجلسة بصمت كل 10 دقائق
 setInterval(async () => {
-  try {
-    await fetch('/api/admin/stats', { credentials: 'include' });
-  } catch(e) {}
-}, 10 * 60 * 1000);
+  try { await fetch('/api/admin/stats', { credentials: 'include' }); } catch(e) {}
+}, 5 * 60 * 1000);
 
 /* ── INIT ────────────────────────── */
 async function init() {
