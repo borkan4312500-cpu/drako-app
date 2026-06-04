@@ -1015,10 +1015,7 @@ socket.on('orderCancelled', (data) => {
   playSound('orderCancelled');
   toast('تم إلغاء طلب #' + (data.orderId || '').slice(-6), 'error');
 });
-// تجديد الجلسة بصمت
-setInterval(async () => {
-  try { await fetch('/api/admin/stats', { credentials: 'include' }); } catch(e) {}
-}, 10 * 60 * 1000);
+ 
 setInterval(async () => {
   try { await fetch('/api/admin/stats', { credentials: 'include' }); } catch(e) {}
 }, 5 * 60 * 1000);
