@@ -1442,6 +1442,21 @@ setInterval(() => {
     io.emit('driver:newJob', { count: readyCount });
   }
 }, 60000);
+// أضف هذا قبل نهاية app.use(...)
+app.get('/api/whoami', requireAuth, (req, res) => {
+  const data = readData();
+  const user = data.users.find(u => u.id === req.user.id);
+  if (!user) return res.status(404).json({ error: 'مستخدم غير موجود' });
+  res.json({ token: jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '365d' }), user: { id: user.id, name: user.name, role: user.role } });
+});
+function setTokenCookie(res, token) {
+  res.cookie('token', token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production', // true فقط في الإنتاج
+    maxAge: 365 * 24 * 60 * 60 * 1000
+  });
+}
 
 // معالج أخطاء multer
 app.use((err, req, res, next) => {
