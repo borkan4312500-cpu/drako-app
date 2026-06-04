@@ -90,37 +90,58 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    // ========== إدارة الجلسة ==========
+    // ========== إدارة الجلسة الذكية ==========
     const TOKEN_KEY = 'auth_token';
+
     function getToken() { return localStorage.getItem(TOKEN_KEY); }
+
+    async function refreshTokenFromCookie() {
+      try {
+        const res = await fetch('/api/whoami', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          localStorage.setItem(TOKEN_KEY, data.token);
+          return data.token;
+        }
+      } catch(e) {}
+      return null;
+    }
 
     async function apiFetch(url, options = {}) {
       let token = getToken();
       if (!token) {
-        document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;">
-          <h2>الجلسة منتهية</h2>
-          <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
-        </div>`;
-        throw new Error('NO_TOKEN');
-      }
-      let res = await fetch(url, {
-        ...options,
-        headers: {
-          ...(options.headers || {}),
-          'Authorization': 'Bearer ' + token,
-          'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
+        token = await refreshTokenFromCookie();
+        if (!token) {
+          document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;"><h2>الجلسة منتهية</h2><a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a></div>`;
+          throw new Error('NO_TOKEN');
         }
-      });
+      }
+
+      const headers = { ...(options.headers || {}), 'Authorization': 'Bearer ' + token };
+      if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
+
+      let res = await fetch(url, { ...options, headers });
+
       if (res.status === 401 || res.status === 403) {
-        localStorage.removeItem(TOKEN_KEY);
-        document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;">
-          <h2>انتهت صلاحية الجلسة</h2>
-          <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
-        </div>`;
-        throw new Error('AUTH_ERROR');
+        const newToken = await refreshTokenFromCookie();
+        if (newToken) {
+          headers['Authorization'] = 'Bearer ' + newToken;
+          res = await fetch(url, { ...options, headers });
+          if (res.status === 401 || res.status === 403) {
+            localStorage.removeItem(TOKEN_KEY);
+            document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;"><h2>انتهت صلاحية الجلسة</h2><a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a></div>`;
+            throw new Error('AUTH_ERROR');
+          }
+        } else {
+          localStorage.removeItem(TOKEN_KEY);
+          document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;"><h2>انتهت صلاحية الجلسة</h2><a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a></div>`;
+          throw new Error('AUTH_ERROR');
+        }
       }
       return res;
     }
+
+    setInterval(async () => { if (getToken()) await refreshTokenFromCookie(); }, 30 * 60 * 1000);
 
     const API = '/api';
     let currentPage = 'dashboard';
@@ -166,7 +187,6 @@
       } catch(e) { console.error(e); }
     }
 
-    // ---------- تحميل البروفايل ----------
     async function loadProfile() {
       try {
         const res = await apiFetch(API + '/market/profile');
@@ -439,7 +459,6 @@
       navigate('dashboard');
     })();
 
-    // ---------- Socket.IO ----------
     const socket = io();
     socket.on('orderStatusUpdate', () => { if (currentPage === 'orders') loadOrderList(); });
     socket.on('newSpecialOrder', () => { showToast('طلب جديد!'); if (currentPage === 'orders') loadOrderList(); });
