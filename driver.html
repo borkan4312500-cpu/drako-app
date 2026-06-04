@@ -115,42 +115,58 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    // ========== إدارة الجلسة ==========
+    // ========== إدارة الجلسة الذكية ==========
     const TOKEN_KEY = 'auth_token';
     function getToken() { return localStorage.getItem(TOKEN_KEY); }
+
+    async function refreshTokenFromCookie() {
+      try {
+        const res = await fetch('/api/whoami', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          localStorage.setItem(TOKEN_KEY, data.token);
+          return data.token;
+        }
+      } catch(e) {}
+      return null;
+    }
 
     async function apiFetch(url, options = {}) {
       let token = getToken();
       if (!token) {
-        document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;">
-          <h2>الجلسة منتهية</h2>
-          <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
-        </div>`;
-        throw new Error('NO_TOKEN');
-      }
-      let res = await fetch(url, {
-        ...options,
-        headers: {
-          ...(options.headers || {}),
-          'Authorization': 'Bearer ' + token,
-          'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
+        token = await refreshTokenFromCookie();
+        if (!token) {
+          document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;"><h2>الجلسة منتهية</h2><a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a></div>`;
+          throw new Error('NO_TOKEN');
         }
-      });
+      }
+      const headers = { ...(options.headers || {}), 'Authorization': 'Bearer ' + token };
+      if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
+      let res = await fetch(url, { ...options, headers });
       if (res.status === 401 || res.status === 403) {
-        localStorage.removeItem(TOKEN_KEY);
-        document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;">
-          <h2>انتهت صلاحية الجلسة</h2>
-          <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
-        </div>`;
-        throw new Error('AUTH_ERROR');
+        const newToken = await refreshTokenFromCookie();
+        if (newToken) {
+          headers['Authorization'] = 'Bearer ' + newToken;
+          res = await fetch(url, { ...options, headers });
+          if (res.status === 401 || res.status === 403) {
+            localStorage.removeItem(TOKEN_KEY);
+            document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;"><h2>انتهت صلاحية الجلسة</h2><a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a></div>`;
+            throw new Error('AUTH_ERROR');
+          }
+        } else {
+          localStorage.removeItem(TOKEN_KEY);
+          document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;"><h2>انتهت صلاحية الجلسة</h2><a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a></div>`;
+          throw new Error('AUTH_ERROR');
+        }
       }
       return res;
     }
 
+    setInterval(async () => { if (getToken()) await refreshTokenFromCookie(); }, 30 * 60 * 1000);
+
     // ========== الأصوات ==========
     function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
-      const sampleRate = 44100;
-      const numSamples = Math.floor(sampleRate * duration);
+      const sampleRate = 44100; const numSamples = Math.floor(sampleRate * duration);
       const buffer = new Float32Array(numSamples);
       for (let i = 0; i < numSamples; i++) {
         const t = i / sampleRate;
@@ -160,19 +176,14 @@
         else if (type === 'triangle') { const p = (frequency * t) % 1; sample = 4 * Math.abs(p - 0.5) - 1; }
         buffer[i] = sample * volume;
       }
-      const dataLength = buffer.length * 2;
-      const bufferArray = new ArrayBuffer(44 + dataLength);
-      const view = new DataView(bufferArray);
+      const dataLength = buffer.length * 2; const bufferArray = new ArrayBuffer(44 + dataLength); const view = new DataView(bufferArray);
       function writeString(offset, string) { for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i)); }
       writeString(0, 'RIFF'); view.setUint32(4, 36 + dataLength, true); writeString(8, 'WAVE'); writeString(12, 'fmt ');
       view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
       view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true);
       writeString(36, 'data'); view.setUint32(40, dataLength, true);
       let offset = 44;
-      for (let i = 0; i < buffer.length; i++) {
-        const s = Math.max(-1, Math.min(1, buffer[i]));
-        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true); offset += 2;
-      }
+      for (let i = 0; i < buffer.length; i++) { const s = Math.max(-1, Math.min(1, buffer[i])); view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true); offset += 2; }
       return URL.createObjectURL(new Blob([bufferArray], { type: 'audio/wav' }));
     }
     const soundInstances = {};
@@ -181,32 +192,22 @@
     createSound('newJob', generateToneWAV(800, 0.12, 'square'), generateToneWAV(1000, 0.12, 'square'));
     createSound('orderDelivered', generateToneWAV(600, 0.15, 'sine'), generateToneWAV(900, 0.15, 'sine'));
 
-    // ========== الحالة العامة ==========
+    // ========== الحالة ==========
     const API = '/api';
     let currentTab = 'available';
     let isOnline = true;
     let driverEarnings = 0;
-    let driverName = '';
     let autoTimer = null;
     let historySelectedDate = new Date().toISOString().slice(0, 10);
-    let ordersData = [];
 
     function showToast(msg, error = false) {
-      const t = document.getElementById('toast');
-      t.textContent = msg; t.style.background = error ? '#F05252' : '#1A1A1A';
+      const t = document.getElementById('toast'); t.textContent = msg; t.style.background = error ? '#F05252' : '#1A1A1A';
       t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500);
     }
-    function openModal(title, body) {
-      document.getElementById('modalTitle').textContent = title;
-      document.getElementById('modalBody').innerHTML = body;
-      document.getElementById('modal').classList.add('open');
-    }
+    function openModal(title, body) { document.getElementById('modalTitle').textContent = title; document.getElementById('modalBody').innerHTML = body; document.getElementById('modal').classList.add('open'); }
     function closeModal() { document.getElementById('modal').classList.remove('open'); }
 
-    function updateStatusUI(online) {
-      isOnline = online;
-      document.getElementById('statusDot').className = 'status-dot ' + (online ? '' : 'offline');
-    }
+    function updateStatusUI(online) { isOnline = online; document.getElementById('statusDot').className = 'status-dot ' + (online ? '' : 'offline'); }
 
     async function toggleOnlineStatus() {
       const res = await apiFetch(API + '/driver/toggle-status', { method: 'PATCH' });
@@ -228,8 +229,7 @@
       const res = await apiFetch(API + '/driver/profile');
       if (!res.ok) return;
       const data = await res.json();
-      driverName = data.name || '';
-      document.getElementById('headerName').textContent = 'Drako Rider - ' + driverName;
+      document.getElementById('headerName').textContent = 'Drako Rider - ' + (data.name || '');
       updateStatusUI(data.isAvailable !== false);
     }
 
@@ -255,63 +255,49 @@
       } catch(e) { console.error(e); }
     }
 
-    // ========== المتاحة ==========
+    // ========== المتاحة (بدون تفاصيل خاصة) ==========
     async function renderAvailable() {
       const res = await apiFetch(API + '/driver/available-orders');
       if (!res.ok) return;
       const orders = await res.json();
       const badge = document.getElementById('badgeAvailable');
-      badge.textContent = orders.length;
-      badge.style.display = orders.length ? 'inline' : 'none';
-
+      badge.textContent = orders.length; badge.style.display = orders.length ? 'inline' : 'none';
       const c = document.getElementById('mainContent');
-      if (!orders.length) {
-        c.innerHTML = '<div class="empty-state">🏍️ لا توجد طلبات متاحة</div>';
-      } else {
-        c.innerHTML = orders.map(o => buildOrderCard(o, true)).join('');
-      }
-
+      if (!orders.length) { c.innerHTML = '<div class="empty-state">🏍️ لا توجد طلبات متاحة</div>'; }
+      else { c.innerHTML = orders.map(o => buildOrderCard(o, true)).join(''); }
       autoTimer = setInterval(async () => {
         const res2 = await apiFetch(API + '/driver/available-orders');
         if (!res2.ok) return;
         const fresh = await res2.json();
-        badge.textContent = fresh.length;
-        badge.style.display = fresh.length ? 'inline' : 'none';
+        badge.textContent = fresh.length; badge.style.display = fresh.length ? 'inline' : 'none';
         if (currentTab === 'available') {
           document.getElementById('mainContent').innerHTML = fresh.length ? fresh.map(o => buildOrderCard(o, true)).join('') : '<div class="empty-state">🏍️ لا توجد طلبات متاحة</div>';
         }
       }, 10000);
     }
 
-    // ========== طلباتي ==========
+    // ========== طلباتي (مع التفاصيل الكاملة) ==========
     async function renderActive() {
       const res = await apiFetch(API + '/driver/my-orders');
       if (!res.ok) return;
       const orders = await res.json();
       const badge = document.getElementById('badgeActive');
-      badge.textContent = orders.length;
-      badge.style.display = orders.length ? 'inline' : 'none';
-
+      badge.textContent = orders.length; badge.style.display = orders.length ? 'inline' : 'none';
       const c = document.getElementById('mainContent');
-      if (!orders.length) {
-        c.innerHTML = '<div class="empty-state">📦 لا توجد طلبات نشطة</div>';
-      } else {
-        c.innerHTML = orders.map(o => buildOrderCard(o, false)).join('');
-      }
-
+      if (!orders.length) { c.innerHTML = '<div class="empty-state">📦 لا توجد طلبات نشطة</div>'; }
+      else { c.innerHTML = orders.map(o => buildOrderCard(o, false)).join(''); }
       autoTimer = setInterval(async () => {
         const res2 = await apiFetch(API + '/driver/my-orders');
         if (!res2.ok) return;
         const fresh = await res2.json();
-        badge.textContent = fresh.length;
-        badge.style.display = fresh.length ? 'inline' : 'none';
+        badge.textContent = fresh.length; badge.style.display = fresh.length ? 'inline' : 'none';
         if (currentTab === 'active') {
           document.getElementById('mainContent').innerHTML = fresh.length ? fresh.map(o => buildOrderCard(o, false)).join('') : '<div class="empty-state">📦 لا توجد طلبات نشطة</div>';
         }
       }, 10000);
     }
 
-    // ========== بطاقة الطلب ==========
+    // ========== بناء بطاقة الطلب ==========
     function buildOrderCard(o, isAvailable) {
       const productTotal = (o.total || 0) - (o.deliveryFee || 0);
       const statusText = { PENDING:'جديد', ACCEPTED:'مقبول', PREPARING:'تحضير', READY:'جاهز', DRIVER_ASSIGNED:'مع طيار', ON_THE_WAY:'في الطريق', DELIVERED:'تم', CANCELLED:'ملغي' }[o.status] || o.status;
@@ -322,6 +308,13 @@
         if (i.notes) html += `<div class="item-line" style="color:#888;font-size:11px">📝 ${i.notes}</div>`;
         return html;
       }).join('');
+
+      // التفاصيل الإضافية (تظهر فقط في التبويبات الخاصة بالطيار)
+      const extraDetails = !isAvailable ? `
+        <div class="info-row"><span class="icon">🌍</span><div><div class="value">${o.regionName || '—'}</div><div class="label">المنطقة</div></div></div>
+        <div class="info-row"><span class="icon">📍</span><div><div class="value">${o.address || o.customerAddress || '—'}</div><div class="label">العنوان</div></div></div>
+        ${o.customerPhone ? `<div class="info-row"><span class="icon">📞</span><div><div class="value"><a href="tel:${o.customerPhone}" style="color:var(--brand);text-decoration:none">${o.customerPhone}</a></div><div class="label">اتصل بالعميل</div></div></div>` : ''}
+      ` : '';
 
       const steps = !isAvailable && o.status !== 'DELIVERED' ? `
         <div class="steps-wrap">
@@ -347,7 +340,7 @@
             ${steps}
             <div class="info-row"><span class="icon">🍽️</span><div><div class="value">${o.restaurantName || '—'}</div><div class="label">المطعم / المتجر</div></div></div>
             <div class="info-row"><span class="icon">👤</span><div><div class="value">${o.customerName || '—'}</div><div class="label">العميل</div></div></div>
-            <div class="info-row"><span class="icon">📍</span><div><div class="value">${o.address || o.customerAddress || '—'}</div><div class="label">العنوان</div></div></div>
+            ${extraDetails}
             ${invoiceLine}
             <div class="items-box">${itemsHtml || '<div class="item-line">لا تفاصيل</div>'}</div>
           </div>
@@ -432,7 +425,9 @@
             <div class="order-body">
               <div class="info-row"><span class="icon">🍽️</span><div><div class="value">${o.restaurantName || '—'}</div></div></div>
               <div class="info-row"><span class="icon">👤</span><div><div class="value">${o.customerName || '—'}</div></div></div>
+              <div class="info-row"><span class="icon">🌍</span><div><div class="value">${o.regionName || '—'}</div></div></div>
               <div class="info-row"><span class="icon">📍</span><div><div class="value">${o.address || '—'}</div></div></div>
+              <div class="info-row"><span class="icon">📞</span><div><div class="value">${o.customerPhone || '—'}</div></div></div>
               ${o.invoiceAmount ? `<div class="info-row"><span class="icon">💰</span><div><div class="value">${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div></div></div>` : ''}
               <div class="items-box">${(o.items||[]).map(i => `<div class="item-line">• ${i.name} × ${i.quantity||1}</div>`).join('') || 'لا تفاصيل'}</div>
             </div>
@@ -451,7 +446,7 @@
       document.getElementById('mainContent').innerHTML = `
         <div class="order-card" style="text-align:center">
           <div style="font-size:48px;margin-bottom:12px">🛵</div>
-          <h2>${profile.name || driverName || 'الطيار'}</h2>
+          <h2>${profile.name || 'الطيار'}</h2>
           <p style="color:var(--text-muted)">${profile.phone || ''}</p>
           <div style="margin-top:12px"><span class="badge ${isOnline ? 'badge-green' : 'badge-gray'}">${isOnline ? 'متاح' : 'غير متاح'}</span></div>
         </div>
