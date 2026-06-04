@@ -11,18 +11,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-// تجديد الكوكي تلقائياً مع كل طلب (تبقى الجلسة دائمة)
-app.use((req, res, next) => {
-  const token = req.cookies?.token;
-  if (token) {
-    try {
-      jwt.verify(token, JWT_SECRET);
-      // إعادة تعيين الكوكي لمدة سنة من الآن
-      res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 365 * 24 * 60 * 60 * 1000 });
-    } catch(e) { /* منتهي، لا نفعل شيئاً */ }
-  }
-  next();
-});
+
 // إعداد multer لرفع الملفات
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -49,16 +38,16 @@ const io = new Server(server);
 const DATA_DIR = process.env.DATA_DIR || __dirname;
 const DATA_FILE = path.join(DATA_DIR, 'data.json');
 const JWT_SECRET = process.env.JWT_SECRET || 'drako_secret_key_fallback';
-// تجديد الكوكي تلقائياً مع كل طلب محمي
-// تجديد الكوكي تلقائياً مع كل طلب (يبقى الجلسة دائمة ما دام هناك نشاط)
+
+// تجديد الكوكي تلقائياً (مرة واحدة فقط، بعد تعريف JWT_SECRET)
 app.use((req, res, next) => {
   const token = req.cookies?.token;
   if (token) {
     try {
       jwt.verify(token, JWT_SECRET);
-      // إعادة تعيين الكوكي لمدة 30 يوم من الآن
-      res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000 });
-    } catch(e) { /* منتهي، لا نفعل شيئاً */ }
+      // إعادة تعيين الكوكي لمدة سنة من الآن
+      res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 365 * 24 * 60 * 60 * 1000 });
+    } catch (e) { /* منتهي، لا نفعل شيئاً */ }
   }
   next();
 });
@@ -124,7 +113,7 @@ function adminOnly(req, res, next) {
 
 function rolePageAuth(requiredRole) {
   return (req, res, next) => {
-    const token =res.cookie('token', token, { httpOnly: true, sameSite: 'lax', secure: false, maxAge: 365 * 24 * 60 * 60 * 1000 });
+    const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
     if (!token) return res.redirect('/login.html?redirect=' + encodeURIComponent(req.originalUrl));
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
@@ -154,7 +143,7 @@ app.post('/login', (req, res) => {
     return res.redirect('/login.html?error=1');
   }
   const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '365d' });
-  res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000 });
+  res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 365 * 24 * 60 * 60 * 1000 });
   let target = '/';
   switch (user.role) {
     case 'ADMIN': target = '/admin'; break;
@@ -1075,7 +1064,7 @@ app.post('/api/customer/register', (req, res) => {
   data.users.push({ id: userId, name, phone, password: hashed, role: 'CUSTOMER', regionId: regionId || '', address: address || '' });
   writeData(data);
   const token = jwt.sign({ id: userId, role: 'CUSTOMER' }, JWT_SECRET, { expiresIn: '365d' });
-  res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000 });
+  res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 365 * 24 * 60 * 60 * 1000 });
   res.json({ success: true, token, name, phone, regionId: regionId || '', address: address || '' });
 });
 app.post('/api/customer/login', (req, res) => {
@@ -1084,7 +1073,7 @@ app.post('/api/customer/login', (req, res) => {
   const user = data.users.find(u => u.phone === phone && u.role === 'CUSTOMER');
   if (!user || !bcrypt.compareSync(password, user.password)) return res.status(401).json({ error: 'رقم الهاتف أو كلمة المرور غير صحيحة' });
   const token = jwt.sign({ id: user.id, role: 'CUSTOMER' }, JWT_SECRET, { expiresIn: '365d' });
-  res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000 });
+  res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 365 * 24 * 60 * 60 * 1000 });
   res.json({ success: true, token, name: user.name, phone: user.phone, regionId: user.regionId || '', address: user.address || '' });
 });
 
@@ -1192,7 +1181,7 @@ app.delete('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
   res.json({ success: true });
 });
 
-// ========== MARKET PROFILE ==========
+// ========== MARKET PROFILE (لمالك الماركت) ==========
 app.get('/api/market/profile', requireAuth, (req, res) => {
   if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
