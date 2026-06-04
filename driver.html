@@ -197,17 +197,43 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;m
 <!-- Socket.IO & Sound Engine -->
 <script src="/socket.io/socket.io.js"></script>
 <script>
-async function checkAuth() {
-  try {
-    const res = await fetch('/api/admin/stats', { credentials: 'include' });
-    if (res.status === 401) {
-      window.location.href = '/login.html';
-    }
-  } catch(e) {
-    window.location.href = '/login.html';
-  }
+// ========== إدارة الجلسة بدون انتهاء ==========
+const TOKEN_KEY = 'auth_token';
+
+function getToken() {
+  return localStorage.getItem(TOKEN_KEY);
 }
-checkAuth();
+
+async function apiFetch(url, options = {}) {
+  let token = getToken();
+  if (!token) {
+    document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;background:#0D0F14;color:white;height:100vh;padding-top:80px">
+      <h2>الجلسة منتهية</h2>
+      <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
+    </div>`;
+    throw new Error('NO_TOKEN');
+  }
+
+  let res = await fetch(url, {
+    ...options,
+    headers: {
+      ...options.headers,
+      'Authorization': 'Bearer ' + token,
+      'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
+    }
+  });
+
+  if (res.status === 401) {
+    localStorage.removeItem(TOKEN_KEY);
+    document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;background:#0D0F14;color:white;height:100vh;padding-top:80px">
+      <h2>انتهت صلاحية الجلسة</h2>
+      <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
+    </div>`;
+    throw new Error('TOKEN_EXPIRED');
+  }
+  return res.json();
+}
+
 /* ========== SOUND ENGINE (Howler + base64 WAV) ========== */
 function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
   const sampleRate = 44100;
@@ -275,24 +301,6 @@ let autoTimer = null;
 let availableOrders = [];
 let myOrders = [];
 let historySelectedDate = new Date().toISOString().slice(0, 10);
-
-/* ── API FETCH ───────────────── */
-async function apiFetch(path, opts = {}) {
-  const res = await fetch(path, {
-    ...opts,
-    credentials: 'include',
-    headers: {
-      ...(opts.headers || {}),
-      'Content-Type': opts.body instanceof FormData ? undefined : 'application/json'
-    }
-  });
-  if (res.status === 401) {
-    toast('انتهت الجلسة — جاري إعادة التوجيه', 'error');
-    setTimeout(() => location.href = '/', 2000);
-    throw new Error('401');
-  }
-  return res.json();
-}
 
 /* ── TOAST ──────────────────────── */
 function toast(msg, type = 'success', dur = 3000) {
@@ -437,7 +445,6 @@ async function tabAvailable() {
 
 function buildAvailableCard(o) {
   const productTotal = (o.total || 0) - (o.deliveryFee || 0);
-  // ✅ إضافة الفاتورة
   const invoiceLine = o.invoiceAmount ? 
     `<div class="oc-row"><div class="icon">💰</div><div><div class="val">${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div><div class="lbl">الفاتورة</div></div></div>` : '';
   
@@ -503,7 +510,6 @@ function buildActiveCard(o) {
   const curIdx = steps.findIndex(s => s.key === o.status);
   const stepsHTML = `<div class="steps-wrap">${steps.map((s, i) => `<div class="step-item"><div class="step-dot ${i < curIdx ? 'done' : i === curIdx ? 'active' : ''}">${i < curIdx ? '✓' : i + 1}</div><div class="step-lbl">${s.lbl}</div></div>${i < steps.length - 1 ? `<div class="step-line ${i < curIdx ? 'done' : ''}"></div>` : ''}`).join('')}</div>`;
   const productTotal = (o.total || 0) - (o.deliveryFee || 0);
-  // ✅ إضافة الفاتورة
   const invoiceLine = o.invoiceAmount ? 
     `<div class="oc-row"><div class="icon">💰</div><div><div class="val">${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div><div class="lbl">الفاتورة</div></div></div>` : '';
   
@@ -604,7 +610,6 @@ async function loadHistoryOrders() {
 
     const cardsHTML = orders.map(o => {
       const productTotal = (o.total || 0) - (o.deliveryFee || 0);
-      // ✅ إضافة الفاتورة في السجل
       const invoiceLine = o.invoiceAmount ? 
         `<div class="oc-row"><div class="icon">💰</div><div><div class="val">${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div><div class="lbl">الفاتورة</div></div></div>` : '';
       
@@ -730,6 +735,7 @@ socket.on('orderStatusUpdate', (data) => {
 
 /* ── INIT ────────────────────────── */
 async function init() {
+  if (!getToken()) return;
   await loadProfile();
   await loadEarnings();
   const profile = await apiFetch('/api/driver/profile').catch(() => ({}));
