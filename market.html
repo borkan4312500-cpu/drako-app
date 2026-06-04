@@ -90,14 +90,79 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
+    // ========== الإعدادات الأساسية ==========
     const API = '/api';
-    let currentPage = 'dashboard';
+    const PAGE_ROLE = 'MARKET'; // يمكن تغييرها إلى RESTAURANT, DRIVER, ADMIN
+    let authToken = localStorage.getItem('auth_token');
     let currentMarketProfile = null;
     let ordersData = [];
+    let currentPage = 'dashboard';
     let currentOrderTab = 'active';
     let autoRefreshInterval = null;
 
-    // ---------- دوال مساعدة ----------
+    // ========== إدارة التوكن والجلسة ==========
+    async function ensureToken() {
+      if (authToken) return authToken;
+      try {
+        const res = await fetch(API + '/whoami', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          authToken = data.token;
+          localStorage.setItem('auth_token', authToken);
+          return authToken;
+        }
+      } catch(e) {}
+      // فشل تام – عرض رسالة مع رابط تسجيل الدخول (لا تحويل تلقائي)
+      document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;">
+        <h2>انتهت الجلسة</h2>
+        <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
+      </div>`;
+      return null;
+    }
+
+    async function apiFetch(url, options = {}) {
+      const token = await ensureToken();
+      if (!token) throw new Error('NO_TOKEN');
+      const res = await fetch(url, {
+        ...options,
+        headers: {
+          ...options.headers,
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
+        }
+      });
+      // إذا كان 401، نمحو التوكن ونعيد المحاولة مرة واحدة فقط
+      if (res.status === 401) {
+        localStorage.removeItem('auth_token');
+        authToken = null;
+        const newToken = await ensureToken();
+        if (!newToken) throw new Error('NO_TOKEN');
+        // إعادة الطلب الأصلي بالتوكن الجديد
+        return fetch(url, {
+          ...options,
+          headers: {
+            ...options.headers,
+            'Authorization': 'Bearer ' + newToken,
+            'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
+          }
+        });
+      }
+      return res;
+    }
+
+    // تجديد التوكن كل 30 دقيقة بصمت (يبقى localStorage محدث)
+    setInterval(async () => {
+      try {
+        const res = await fetch(API + '/whoami', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          authToken = data.token;
+          localStorage.setItem('auth_token', authToken);
+        }
+      } catch(e) {}
+    }, 30 * 60 * 1000);
+
+    // ========== دوال مساعدة ==========
     function showToast(msg, error = false) {
       const t = document.getElementById('toast');
       t.textContent = msg; t.style.background = error ? '#F05252' : '#1A1A1A';
@@ -110,65 +175,6 @@
     }
     function closeModal() { document.getElementById('modal').classList.remove('open'); }
 
-    // ---------- تجديد الجلسة بصمت (بدون أي رسائل) ----------
-    async function refreshSession() {
-      try {
-        await fetch(API + '/market/profile', { credentials: 'include' });
-        return true;
-      } catch (e) { return false; }
-    }
-
-    // ---------- apiFetch معدلة: لا ترمي أبداً عند 401/403، ولا تظهر رسائل خطأ ----------
-    async function apiFetch(url, options = {}) {
-      let res = await fetch(url, {
-        ...options,
-        credentials: 'include',
-        headers: {
-          ...(options.headers || {}),
-          'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
-        }
-      });
-
-      // إذا كان هناك خطأ في المصادقة، نحاول تجديد الجلسة بصمت مرة واحدة
-      if (res.status === 401 || res.status === 403) {
-        const refreshed = await refreshSession();
-        if (refreshed) {
-          // نعيد المحاولة مرة واحدة فقط
-          res = await fetch(url, {
-            ...options,
-            credentials: 'include',
-            headers: {
-              ...(options.headers || {}),
-              'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
-            }
-          });
-        }
-        // إذا فشل التجديد أو ظل الخطأ، نُعيد كائن استجابة وهمي آمن
-        if (res.status === 401 || res.status === 403) {
-          console.warn('Session renewal failed, ignoring.');
-          // نعيد استجابة وهمية بـ ok: false حتى لا نعطل التطبيق
-          return { ok: false, status: 401, json: async () => ({}), text: async () => '' };
-        }
-      }
-
-      return res;
-    }
-
-    // ---------- تحميل البروفايل ----------
-    async function loadProfile() {
-      const res = await apiFetch(API + '/market/profile');
-      if (res.ok) {
-        currentMarketProfile = await res.json();
-        document.getElementById('headerName').textContent = currentMarketProfile.name || 'الماركت';
-        if (currentMarketProfile.logo) {
-          document.getElementById('headerLogo').src = currentMarketProfile.logo;
-        }
-      } else {
-        console.warn('Could not load profile, ignoring.');
-      }
-    }
-
-    // ---------- التنقل ----------
     function navigate(page) {
       currentPage = page;
       if (autoRefreshInterval) { clearInterval(autoRefreshInterval); autoRefreshInterval = null; }
@@ -193,12 +199,33 @@
           }, 30000);
         }
       } catch(e) {
-        // لا نظهر أي خطأ للمستخدم
         console.error(e);
       }
     }
 
-    // ---------- Dashboard (مع تحديث صامت) ----------
+    // ---------- تحميل البروفايل ----------
+    async function loadProfile() {
+      try {
+        const res = await apiFetch(API + '/market/profile');
+        if (res.ok) {
+          currentMarketProfile = await res.json();
+          document.getElementById('headerName').textContent = currentMarketProfile.name || 'الماركت';
+          if (currentMarketProfile.logo) {
+            document.getElementById('headerLogo').src = currentMarketProfile.logo;
+          }
+        }
+      } catch(e) { /* لا شيء */ }
+    }
+
+    // ---------- Dashboard ----------
+    async function fetchOrdersSafely() {
+      try {
+        const res = await apiFetch(API + '/market/orders');
+        if (res.ok) return await res.json();
+        else return [];
+      } catch(e) { return []; }
+    }
+
     async function renderDashboard() {
       const orders = await fetchOrdersSafely();
       const pending = orders.filter(o => o.status === 'PENDING').length;
@@ -230,27 +257,14 @@
       `;
     }
 
-    // تحديث صامت للوحة التحكم (لا يغير شاشة التحميل)
     async function refreshDashboardSilent() {
       const orders = await fetchOrdersSafely();
-      // تحديث البطاقات فقط إن كانت موجودة
       const cards = document.querySelectorAll('.stat-value');
       if (cards.length >= 4) {
         cards[0].textContent = orders.filter(o => o.status === 'PENDING').length;
         cards[1].textContent = orders.filter(o => ['ACCEPTED','INVOICE_ADDED'].includes(o.status)).length;
         cards[2].textContent = orders.filter(o => o.status === 'READY').length;
         cards[3].textContent = orders.length;
-      }
-    }
-
-    // ---------- دالة مساعدة لجلب الطلبات بدون أخطاء ----------
-    async function fetchOrdersSafely() {
-      try {
-        const res = await apiFetch(API + '/market/orders');
-        if (res.ok) return await res.json();
-        else return []; // تجاهل الأخطاء
-      } catch(e) {
-        return [];
       }
     }
 
@@ -299,7 +313,14 @@
       if (!file) return;
       if (!file.type.startsWith('image/')) { showToast('⚠️ صورة فقط', true); input.value = ''; return; }
       const fd = new FormData(); fd.append('logo', file);
-      const res = await fetch(API + '/market/profile', { method: 'PATCH', credentials: 'include', body: fd });
+      // استخدم apiFetch يدويًا لإرسال Authorization header
+      const token = await ensureToken();
+      if (!token) return;
+      const res = await fetch(API + '/market/profile', {
+        method: 'PATCH',
+        headers: { 'Authorization': 'Bearer ' + token },
+        body: fd
+      });
       if (res.ok) {
         const data = await res.json();
         if (data.logo) {
@@ -314,7 +335,7 @@
       }
     }
 
-    // ---------- Orders (مع تحديث صامت) ----------
+    // ---------- Orders ----------
     async function renderOrders() {
       document.getElementById('mainContent').innerHTML = `
         <div style="display:flex; gap:10px; margin-bottom:16px;">
@@ -496,6 +517,8 @@
 
     // ---------- بدء التشغيل ----------
     (async function() {
+      const token = await ensureToken();
+      if (!token) return;
       await loadProfile();
       navigate('dashboard');
     })();
