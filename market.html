@@ -115,28 +115,28 @@
     }
 
     async function checkSession() {
-      try {
-        const res = await fetch(API + '/market/orders', { credentials: 'include' });
-        if (res.status === 401 || res.status === 403) {
-          document.getElementById('mainContent').innerHTML = `
-            <div class="error-box">
-              <p>انتهت الجلسة أو ليس لديك صلاحية.</p>
-              <button class="btn" style="margin-top:16px" onclick="window.location.href='/login.html'">تسجيل الدخول</button>
-            </div>
-          `;
-          return false;
-        }
-        return true;
-      } catch(e) {
-        document.getElementById('mainContent').innerHTML = `
-          <div class="error-box">
-            <p>فشل الاتصال بالسيرفر.</p>
-            <button class="btn" style="margin-top:16px" onclick="location.reload()">إعادة المحاولة</button>
-          </div>
-        `;
-        return false;
-      }
+  try {
+    const res = await fetch(API + '/market/orders', { credentials: 'include' });
+    if (res.status === 401 || res.status === 403) {
+      document.getElementById('mainContent').innerHTML = `
+        <div class="error-box">
+          <p>انتهت الجلسة أو ليس لديك صلاحية.</p>
+          <button class="btn" style="margin-top:16px" onclick="window.location.href='/login.html'">تسجيل الدخول</button>
+        </div>
+      `;
+      return false;
     }
+    return true;
+  } catch(e) {
+    document.getElementById('mainContent').innerHTML = `
+      <div class="error-box">
+        <p>فشل الاتصال بالسيرفر.</p>
+        <button class="btn" style="margin-top:16px" onclick="location.reload()">إعادة المحاولة</button>
+      </div>
+    `;
+    return false;
+  }
+}
 
     async function loadProfile() {
       try {
