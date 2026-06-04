@@ -116,51 +116,47 @@
   <script src="/socket.io/socket.io.js"></script>
   <script>
     // ========== إدارة الجلسة الذكية ==========
-    const TOKEN_KEY = 'auth_token';
-    function getToken() { return localStorage.getItem(TOKEN_KEY); }
+   const TOKEN_KEY = 'auth_token';
 
-    async function refreshTokenFromCookie() {
-      try {
-        const res = await fetch('/api/whoami', { credentials: 'include' });
-        if (res.ok) {
-          const data = await res.json();
-          localStorage.setItem(TOKEN_KEY, data.token);
-          return data.token;
-        }
-      } catch(e) {}
-      return null;
-    }
+function getToken() {
+  return localStorage.getItem(TOKEN_KEY);
+}
 
-    async function apiFetch(url, options = {}) {
-      let token = getToken();
-      if (!token) {
-        token = await refreshTokenFromCookie();
-        if (!token) {
-          document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;"><h2>الجلسة منتهية</h2><a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a></div>`;
-          throw new Error('NO_TOKEN');
-        }
-      }
-      const headers = { ...(options.headers || {}), 'Authorization': 'Bearer ' + token };
-      if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
-      let res = await fetch(url, { ...options, headers });
-      if (res.status === 401 || res.status === 403) {
-        const newToken = await refreshTokenFromCookie();
-        if (newToken) {
-          headers['Authorization'] = 'Bearer ' + newToken;
-          res = await fetch(url, { ...options, headers });
-          if (res.status === 401 || res.status === 403) {
-            localStorage.removeItem(TOKEN_KEY);
-            document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;"><h2>انتهت صلاحية الجلسة</h2><a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a></div>`;
-            throw new Error('AUTH_ERROR');
-          }
-        } else {
-          localStorage.removeItem(TOKEN_KEY);
-          document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;"><h2>انتهت صلاحية الجلسة</h2><a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a></div>`;
-          throw new Error('AUTH_ERROR');
-        }
-      }
-      return res;
-    }
+async function apiFetch(url, options = {}) {
+  const token = getToken();
+  if (!token) {
+    // لا يوجد توكن – عرض رسالة تسجيل الدخول (بدون إعادة توجيه تلقائي)
+    document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;">
+      <h2>الجلسة منتهية</h2>
+      <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
+    </div>`;
+    throw new Error('NO_TOKEN');
+  }
+
+  const headers = {
+    ...(options.headers || {}),
+    'Authorization': 'Bearer ' + token
+  };
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  const res = await fetch(url, { ...options, headers });
+
+  if (res.status === 401 || res.status === 403) {
+    // التوكن لم يعد صالحًا – مسحه وعرض تسجيل الدخول
+    localStorage.removeItem(TOKEN_KEY);
+    document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;">
+      <h2>انتهت صلاحية الجلسة</h2>
+      <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
+    </div>`;
+    throw new Error('AUTH_ERROR');
+  }
+
+  return res;
+}
+
+// ملاحظة: لا يوجد setInterval ولا refreshTokenFromCookie
 
     setInterval(async () => { if (getToken()) await refreshTokenFromCookie(); }, 30 * 60 * 1000);
 
