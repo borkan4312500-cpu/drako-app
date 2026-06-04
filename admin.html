@@ -251,8 +251,18 @@ const API='/api';
 let currentPage='dashboard';
 let allOrdersCache=[], allRestaurantsCache=[], allDriversCache=[];
 
-async function apiFetch(url, options={}) {
-  const res = await fetch(url, { ...options, credentials: 'include', headers: { ...(options.headers || {}), 'Content-Type': options.body instanceof FormData ? undefined : 'application/json' } });
+async function apiFetch(url, options = {}) {
+  const res = await fetch(url, { ...options, credentials: 'include', headers: { ...(options.headers||{}), 'Content-Type': options.body instanceof FormData ? undefined : 'application/json' } });
+  if (res.status === 401) {
+    // عرض رسالة انتهاء الجلسة في مكان بارز دون مسح الصفحة
+    document.body.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:var(--bg);color:var(--text);flex-direction:column;gap:20px">
+        <div style="font-size:22px;font-weight:800">انتهت الجلسة</div>
+        <button onclick="window.location.href='/login.html'" style="background:var(--orange);border:none;color:#fff;padding:12px 28px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer">تسجيل الدخول</button>
+      </div>
+    `;
+    throw new Error('SESSION_EXPIRED');
+  }
   return res;
 }
 
@@ -284,6 +294,10 @@ function navigate(page){
 }
 
 async function renderPage(page){
+  // تحقق سريع من الجلسة قبل التحميل
+  try { await apiFetch(API+'/admin/stats'); } catch(e) { return; }
+  // ... باقي الكود
+
   const c=document.getElementById('content');
   c.innerHTML='<div class="skeleton" style="height:200px"></div>';
   try{
@@ -955,18 +969,30 @@ async function testOrder(){
 
 // دوال الموافقة والرفض والتعديل
 async function approveOrder(id) {
-  await apiFetch(API + '/admin/orders/' + id + '/approve', { method: 'PATCH' });
-  toast('تمت الموافقة على الطلب');
-  loadOrders();
+  try {
+    const res = await apiFetch(API + '/admin/orders/' + id + '/approve', { method: 'PATCH' });
+    if (!res.ok) throw new Error('فشل');
+    toast('تمت الموافقة على الطلب');
+    loadOrders();
+  } catch(e) {
+    if (e.message !== 'SESSION_EXPIRED') toast('فشلت الموافقة', 'error');
+  }
 }
 
 async function rejectOrder(id) {
   const reason = prompt('سبب الرفض:');
   if (!reason) return;
-  await apiFetch(API + '/admin/orders/' + id + '/reject', { method: 'PATCH', body: JSON.stringify({ reason }) });
-  toast('تم رفض الطلب');
-  loadOrders();
+  try {
+    const res = await apiFetch(API + '/admin/orders/' + id + '/reject', { method: 'PATCH', body: JSON.stringify({ reason }) });
+    if (!res.ok) throw new Error('فشل');
+    toast('تم رفض الطلب');
+    loadOrders();
+  } catch(e) {
+    if (e.message !== 'SESSION_EXPIRED') toast('فشل الرفض', 'error');
+  }
 }
+
+// وتأكد من دالة editOrder و saveOrderEdit بنفس الطريقة
 
 async function editOrder(id) {
   const o = allOrdersCache.find(o => o.id === id);
