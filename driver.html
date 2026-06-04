@@ -115,378 +115,363 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    if (!localStorage.getItem('auth_token')) {
-  // إنشاء توكن وهمي لمستخدم بصلاحية الأدمن (للاختبار فقط)
-  const testToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFkbWluMSIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTYxNjIzOTAyMn0.dummySignature';
-  localStorage.setItem('auth_token', testToken);
-  localStorage.setItem('user', JSON.stringify({ id: 'admin1', name: 'أدمن دراكو', role: 'ADMIN' }));
-}
-    // ========== إدارة الجلسة الذكية ==========
-   const TOKEN_KEY = 'auth_token';
-
-function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-async function apiFetch(url, options = {}) {
-  const token = getToken();
-  if (!token) {
-    // لا يوجد توكن – عرض رسالة تسجيل الدخول (بدون إعادة توجيه تلقائي)
-    document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;">
-      <h2>الجلسة منتهية</h2>
-      <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
-    </div>`;
-    throw new Error('NO_TOKEN');
-  }
-
-  const headers = {
-    ...(options.headers || {}),
-    'Authorization': 'Bearer ' + token
-  };
-  if (!(options.body instanceof FormData)) {
-    headers['Content-Type'] = 'application/json';
-  }
-
-  const res = await fetch(url, { ...options, headers });
-
-  if (res.status === 401 || res.status === 403) {
-    // التوكن لم يعد صالحًا – مسحه وعرض تسجيل الدخول
-    localStorage.removeItem(TOKEN_KEY);
-    document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;">
-      <h2>انتهت صلاحية الجلسة</h2>
-      <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
-    </div>`;
-    throw new Error('AUTH_ERROR');
-  }
-
-  return res;
-}
-
-// ملاحظة: لا يوجد setInterval ولا refreshTokenFromCookie
-
-    setInterval(async () => { if (getToken()) await refreshTokenFromCookie(); }, 30 * 60 * 1000);
-
-    // ========== الأصوات ==========
-    function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
-      const sampleRate = 44100; const numSamples = Math.floor(sampleRate * duration);
-      const buffer = new Float32Array(numSamples);
-      for (let i = 0; i < numSamples; i++) {
-        const t = i / sampleRate;
-        let sample = 0;
-        if (type === 'sine') sample = Math.sin(2 * Math.PI * frequency * t);
-        else if (type === 'square') sample = Math.sign(Math.sin(2 * Math.PI * frequency * t));
-        else if (type === 'triangle') { const p = (frequency * t) % 1; sample = 4 * Math.abs(p - 0.5) - 1; }
-        buffer[i] = sample * volume;
+    // ========== الحصول التلقائي على توكن (تجربة بدون تسجيل دخول) ==========
+    (async function() {
+      if (!localStorage.getItem('auth_token')) {
+        try {
+          const res = await fetch('/api/get-test-token');
+          const data = await res.json();
+          localStorage.setItem('auth_token', data.token);
+          localStorage.setItem('user', JSON.stringify({ id: 'admin1', name: 'أدمن دراكو', role: 'ADMIN' }));
+          location.reload();
+          return; // لا نكمل باقي الكود
+        } catch(e) {
+          document.body.innerHTML = 'فشل الاتصال بالسيرفر';
+          return;
+        }
       }
-      const dataLength = buffer.length * 2; const bufferArray = new ArrayBuffer(44 + dataLength); const view = new DataView(bufferArray);
-      function writeString(offset, string) { for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i)); }
-      writeString(0, 'RIFF'); view.setUint32(4, 36 + dataLength, true); writeString(8, 'WAVE'); writeString(12, 'fmt ');
-      view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
-      view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true);
-      writeString(36, 'data'); view.setUint32(40, dataLength, true);
-      let offset = 44;
-      for (let i = 0; i < buffer.length; i++) { const s = Math.max(-1, Math.min(1, buffer[i])); view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true); offset += 2; }
-      return URL.createObjectURL(new Blob([bufferArray], { type: 'audio/wav' }));
-    }
-    const soundInstances = {};
-    function createSound(name, ...tones) { soundInstances[name] = tones.map(t => new Howl({ src: [t], format: ['wav'], volume: 0.5 })); }
-    function playSound(name) { if (soundInstances[name]) soundInstances[name].forEach(h => h.play()); }
-    createSound('newJob', generateToneWAV(800, 0.12, 'square'), generateToneWAV(1000, 0.12, 'square'));
-    createSound('orderDelivered', generateToneWAV(600, 0.15, 'sine'), generateToneWAV(900, 0.15, 'sine'));
 
-    // ========== الحالة ==========
-    const API = '/api';
-    let currentTab = 'available';
-    let isOnline = true;
-    let driverEarnings = 0;
-    let autoTimer = null;
-    let historySelectedDate = new Date().toISOString().slice(0, 10);
+      // ========== إدارة الجلسة العادية ==========
+      const TOKEN_KEY = 'auth_token';
+      function getToken() { return localStorage.getItem(TOKEN_KEY); }
 
-    function showToast(msg, error = false) {
-      const t = document.getElementById('toast'); t.textContent = msg; t.style.background = error ? '#F05252' : '#1A1A1A';
-      t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500);
-    }
-    function openModal(title, body) { document.getElementById('modalTitle').textContent = title; document.getElementById('modalBody').innerHTML = body; document.getElementById('modal').classList.add('open'); }
-    function closeModal() { document.getElementById('modal').classList.remove('open'); }
-
-    function updateStatusUI(online) { isOnline = online; document.getElementById('statusDot').className = 'status-dot ' + (online ? '' : 'offline'); }
-
-    async function toggleOnlineStatus() {
-      const res = await apiFetch(API + '/driver/toggle-status', { method: 'PATCH' });
-      if (!res.ok) return;
-      const data = await res.json();
-      updateStatusUI(data.isAvailable);
-      showToast(data.isAvailable ? 'أنت متاح الآن' : 'تم إيقاف الاستلام');
-    }
-
-    async function loadEarnings() {
-      const res = await apiFetch(API + '/driver/earnings?today=true');
-      if (!res.ok) return;
-      const data = await res.json();
-      driverEarnings = data.total || 0;
-      document.getElementById('earningsVal').textContent = driverEarnings;
-    }
-
-    async function loadProfile() {
-      const res = await apiFetch(API + '/driver/profile');
-      if (!res.ok) return;
-      const data = await res.json();
-      document.getElementById('headerName').textContent = 'Drako Rider - ' + (data.name || '');
-      updateStatusUI(data.isAvailable !== false);
-    }
-
-    // ========== التبويبات ==========
-    function switchTab(tab) {
-      currentTab = tab;
-      if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelector(`.tab-btn[data-tab="${tab}"]`).classList.add('active');
-      document.querySelectorAll('.bottom-nav .nav-item').forEach(n => n.classList.remove('active'));
-      document.getElementById('nav-' + tab).classList.add('active');
-      renderTab(tab);
-    }
-
-    async function renderTab(tab) {
-      const c = document.getElementById('mainContent');
-      c.innerHTML = '<div style="text-align:center;padding:32px;">⏳ جاري التحميل...</div>';
-      try {
-        if (tab === 'available') await renderAvailable();
-        else if (tab === 'active') await renderActive();
-        else if (tab === 'history') await renderHistory();
-        else if (tab === 'profile') await renderProfile();
-      } catch(e) { console.error(e); }
-    }
-
-    // ========== المتاحة (بدون تفاصيل خاصة) ==========
-    async function renderAvailable() {
-      const res = await apiFetch(API + '/driver/available-orders');
-      if (!res.ok) return;
-      const orders = await res.json();
-      const badge = document.getElementById('badgeAvailable');
-      badge.textContent = orders.length; badge.style.display = orders.length ? 'inline' : 'none';
-      const c = document.getElementById('mainContent');
-      if (!orders.length) { c.innerHTML = '<div class="empty-state">🏍️ لا توجد طلبات متاحة</div>'; }
-      else { c.innerHTML = orders.map(o => buildOrderCard(o, true)).join(''); }
-      autoTimer = setInterval(async () => {
-        const res2 = await apiFetch(API + '/driver/available-orders');
-        if (!res2.ok) return;
-        const fresh = await res2.json();
-        badge.textContent = fresh.length; badge.style.display = fresh.length ? 'inline' : 'none';
-        if (currentTab === 'available') {
-          document.getElementById('mainContent').innerHTML = fresh.length ? fresh.map(o => buildOrderCard(o, true)).join('') : '<div class="empty-state">🏍️ لا توجد طلبات متاحة</div>';
+      async function apiFetch(url, options = {}) {
+        let token = getToken();
+        if (!token) {
+          document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;"><h2>الجلسة منتهية</h2><a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a></div>`;
+          throw new Error('NO_TOKEN');
         }
-      }, 10000);
-    }
 
-    // ========== طلباتي (مع التفاصيل الكاملة) ==========
-    async function renderActive() {
-      const res = await apiFetch(API + '/driver/my-orders');
-      if (!res.ok) return;
-      const orders = await res.json();
-      const badge = document.getElementById('badgeActive');
-      badge.textContent = orders.length; badge.style.display = orders.length ? 'inline' : 'none';
-      const c = document.getElementById('mainContent');
-      if (!orders.length) { c.innerHTML = '<div class="empty-state">📦 لا توجد طلبات نشطة</div>'; }
-      else { c.innerHTML = orders.map(o => buildOrderCard(o, false)).join(''); }
-      autoTimer = setInterval(async () => {
-        const res2 = await apiFetch(API + '/driver/my-orders');
-        if (!res2.ok) return;
-        const fresh = await res2.json();
-        badge.textContent = fresh.length; badge.style.display = fresh.length ? 'inline' : 'none';
-        if (currentTab === 'active') {
-          document.getElementById('mainContent').innerHTML = fresh.length ? fresh.map(o => buildOrderCard(o, false)).join('') : '<div class="empty-state">📦 لا توجد طلبات نشطة</div>';
+        const headers = { ...(options.headers || {}), 'Authorization': 'Bearer ' + token };
+        if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
+
+        const res = await fetch(url, { ...options, headers });
+
+        if (res.status === 401 || res.status === 403) {
+          localStorage.removeItem(TOKEN_KEY);
+          document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;"><h2>انتهت صلاحية الجلسة</h2><a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a></div>`;
+          throw new Error('AUTH_ERROR');
         }
-      }, 10000);
-    }
+        return res;
+      }
 
-    // ========== بناء بطاقة الطلب ==========
-    function buildOrderCard(o, isAvailable) {
-      const productTotal = (o.total || 0) - (o.deliveryFee || 0);
-      const statusText = { PENDING:'جديد', ACCEPTED:'مقبول', PREPARING:'تحضير', READY:'جاهز', DRIVER_ASSIGNED:'مع طيار', ON_THE_WAY:'في الطريق', DELIVERED:'تم', CANCELLED:'ملغي' }[o.status] || o.status;
-      const invoiceLine = o.invoiceAmount ? `<div class="info-row"><span class="icon">💰</span><div><div class="value">${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div><div class="label">الفاتورة</div></div></div>` : '';
-      const itemsHtml = (o.items || []).map(i => {
-        let html = `<div class="item-line">• ${i.name} × ${i.quantity || 1}</div>`;
-        if (i.selectedOptions && i.selectedOptions.length) html += `<div class="item-line" style="color:#888;font-size:11px">${i.selectedOptions.map(opt => opt.value).join('، ')}</div>`;
-        if (i.notes) html += `<div class="item-line" style="color:#888;font-size:11px">📝 ${i.notes}</div>`;
-        return html;
-      }).join('');
+      // ========== الأصوات ==========
+      function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
+        const sampleRate = 44100; const numSamples = Math.floor(sampleRate * duration);
+        const buffer = new Float32Array(numSamples);
+        for (let i = 0; i < numSamples; i++) {
+          const t = i / sampleRate;
+          let sample = 0;
+          if (type === 'sine') sample = Math.sin(2 * Math.PI * frequency * t);
+          else if (type === 'square') sample = Math.sign(Math.sin(2 * Math.PI * frequency * t));
+          else if (type === 'triangle') { const p = (frequency * t) % 1; sample = 4 * Math.abs(p - 0.5) - 1; }
+          buffer[i] = sample * volume;
+        }
+        const dataLength = buffer.length * 2; const bufferArray = new ArrayBuffer(44 + dataLength); const view = new DataView(bufferArray);
+        function writeString(offset, string) { for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i)); }
+        writeString(0, 'RIFF'); view.setUint32(4, 36 + dataLength, true); writeString(8, 'WAVE'); writeString(12, 'fmt ');
+        view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+        view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+        writeString(36, 'data'); view.setUint32(40, dataLength, true);
+        let offset = 44;
+        for (let i = 0; i < buffer.length; i++) { const s = Math.max(-1, Math.min(1, buffer[i])); view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true); offset += 2; }
+        return URL.createObjectURL(new Blob([bufferArray], { type: 'audio/wav' }));
+      }
+      const soundInstances = {};
+      function createSound(name, ...tones) { soundInstances[name] = tones.map(t => new Howl({ src: [t], format: ['wav'], volume: 0.5 })); }
+      function playSound(name) { if (soundInstances[name]) soundInstances[name].forEach(h => h.play()); }
+      createSound('newJob', generateToneWAV(800, 0.12, 'square'), generateToneWAV(1000, 0.12, 'square'));
+      createSound('orderDelivered', generateToneWAV(600, 0.15, 'sine'), generateToneWAV(900, 0.15, 'sine'));
 
-      // التفاصيل الإضافية (تظهر فقط في التبويبات الخاصة بالطيار)
-      const extraDetails = !isAvailable ? `
-        <div class="info-row"><span class="icon">🌍</span><div><div class="value">${o.regionName || '—'}</div><div class="label">المنطقة</div></div></div>
-        <div class="info-row"><span class="icon">📍</span><div><div class="value">${o.address || o.customerAddress || '—'}</div><div class="label">العنوان</div></div></div>
-        ${o.customerPhone ? `<div class="info-row"><span class="icon">📞</span><div><div class="value"><a href="tel:${o.customerPhone}" style="color:var(--brand);text-decoration:none">${o.customerPhone}</a></div><div class="label">اتصل بالعميل</div></div></div>` : ''}
-      ` : '';
+      // ========== الحالة العامة ==========
+      const API = '/api';
+      let currentTab = 'available';
+      let isOnline = true;
+      let driverEarnings = 0;
+      let driverName = '';
+      let autoTimer = null;
+      let historySelectedDate = new Date().toISOString().slice(0, 10);
 
-      const steps = !isAvailable && o.status !== 'DELIVERED' ? `
-        <div class="steps-wrap">
-          <div class="step-item"><div class="step-dot done">✓</div><div class="step-lbl">استلمت</div></div>
-          <div class="step-line done"></div>
-          <div class="step-item"><div class="step-dot ${o.status === 'ON_THE_WAY' ? 'active' : (o.status === 'DELIVERED' ? 'done' : '')}">${o.status === 'ON_THE_WAY' ? '2' : (o.status === 'DELIVERED' ? '✓' : '2')}</div><div class="step-lbl">في الطريق</div></div>
-          <div class="step-line ${o.status === 'DELIVERED' ? 'done' : ''}"></div>
-          <div class="step-item"><div class="step-dot ${o.status === 'DELIVERED' ? 'done' : ''}">3</div><div class="step-lbl">تم</div></div>
-        </div>` : '';
+      function showToast(msg, error = false) {
+        const t = document.getElementById('toast'); t.textContent = msg; t.style.background = error ? '#F05252' : '#1A1A1A';
+        t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500);
+      }
+      function openModal(title, body) { document.getElementById('modalTitle').textContent = title; document.getElementById('modalBody').innerHTML = body; document.getElementById('modal').classList.add('open'); }
+      function closeModal() { document.getElementById('modal').classList.remove('open'); }
 
-      const actions = isAvailable ? 
-        `<button class="btn btn-sm" onclick="acceptOrder('${o.id}')">🏍️ قبول</button>` :
-        (o.status === 'DRIVER_ASSIGNED' ? `<button class="btn btn-sm" onclick="updateStatus('${o.id}','ON_THE_WAY')">🏍️ خرجت</button>` :
-         o.status === 'ON_THE_WAY' ? `<button class="btn btn-green btn-sm" onclick="confirmDelivery('${o.id}')">✅ سلّمت</button>` : '');
+      function updateStatusUI(online) { isOnline = online; document.getElementById('statusDot').className = 'status-dot ' + (online ? '' : 'offline'); }
 
-      return `
-        <div class="order-card ${isAvailable ? 'new-order' : ''}">
-          <div class="order-header">
-            <div class="order-id">#${o.id.slice(-6)}</div>
-            <span class="badge ${o.status === 'READY' ? 'badge-green' : o.status === 'DELIVERED' ? 'badge-green' : 'badge-orange'}">${statusText}</span>
-          </div>
-          <div class="order-body">
-            ${steps}
-            <div class="info-row"><span class="icon">🍽️</span><div><div class="value">${o.restaurantName || '—'}</div><div class="label">المطعم / المتجر</div></div></div>
-            <div class="info-row"><span class="icon">👤</span><div><div class="value">${o.customerName || '—'}</div><div class="label">العميل</div></div></div>
-            ${extraDetails}
-            ${invoiceLine}
-            <div class="items-box">${itemsHtml || '<div class="item-line">لا تفاصيل</div>'}</div>
-          </div>
-          <div class="order-footer">
-            <div>
-              <div class="total">${o.deliveryFee || 10} ج</div>
-              <div style="font-size:11px;color:var(--text-muted)">عمولتك • الإجمالي: ${o.total} ج</div>
+      async function toggleOnlineStatus() {
+        const res = await apiFetch(API + '/driver/toggle-status', { method: 'PATCH' });
+        if (!res.ok) return;
+        const data = await res.json();
+        updateStatusUI(data.isAvailable);
+        showToast(data.isAvailable ? 'أنت متاح الآن' : 'تم إيقاف الاستلام');
+      }
+
+      async function loadEarnings() {
+        const res = await apiFetch(API + '/driver/earnings?today=true');
+        if (!res.ok) return;
+        const data = await res.json();
+        driverEarnings = data.total || 0;
+        document.getElementById('earningsVal').textContent = driverEarnings;
+      }
+
+      async function loadProfile() {
+        const res = await apiFetch(API + '/driver/profile');
+        if (!res.ok) return;
+        const data = await res.json();
+        driverName = data.name || '';
+        document.getElementById('headerName').textContent = 'Drako Rider - ' + driverName;
+        updateStatusUI(data.isAvailable !== false);
+      }
+
+      // ========== التبويبات ==========
+      function switchTab(tab) {
+        currentTab = tab;
+        if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector(`.tab-btn[data-tab="${tab}"]`).classList.add('active');
+        document.querySelectorAll('.bottom-nav .nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById('nav-' + tab).classList.add('active');
+        renderTab(tab);
+      }
+
+      async function renderTab(tab) {
+        const c = document.getElementById('mainContent');
+        c.innerHTML = '<div style="text-align:center;padding:32px;">⏳ جاري التحميل...</div>';
+        try {
+          if (tab === 'available') await renderAvailable();
+          else if (tab === 'active') await renderActive();
+          else if (tab === 'history') await renderHistory();
+          else if (tab === 'profile') await renderProfile();
+        } catch(e) { console.error(e); }
+      }
+
+      // ========== المتاحة ==========
+      async function renderAvailable() {
+        const res = await apiFetch(API + '/driver/available-orders');
+        if (!res.ok) return;
+        const orders = await res.json();
+        const badge = document.getElementById('badgeAvailable');
+        badge.textContent = orders.length; badge.style.display = orders.length ? 'inline' : 'none';
+        const c = document.getElementById('mainContent');
+        if (!orders.length) { c.innerHTML = '<div class="empty-state">🏍️ لا توجد طلبات متاحة</div>'; }
+        else { c.innerHTML = orders.map(o => buildOrderCard(o, true)).join(''); }
+        autoTimer = setInterval(async () => {
+          const res2 = await apiFetch(API + '/driver/available-orders');
+          if (!res2.ok) return;
+          const fresh = await res2.json();
+          badge.textContent = fresh.length; badge.style.display = fresh.length ? 'inline' : 'none';
+          if (currentTab === 'available') {
+            document.getElementById('mainContent').innerHTML = fresh.length ? fresh.map(o => buildOrderCard(o, true)).join('') : '<div class="empty-state">🏍️ لا توجد طلبات متاحة</div>';
+          }
+        }, 10000);
+      }
+
+      // ========== طلباتي ==========
+      async function renderActive() {
+        const res = await apiFetch(API + '/driver/my-orders');
+        if (!res.ok) return;
+        const orders = await res.json();
+        const badge = document.getElementById('badgeActive');
+        badge.textContent = orders.length; badge.style.display = orders.length ? 'inline' : 'none';
+        const c = document.getElementById('mainContent');
+        if (!orders.length) { c.innerHTML = '<div class="empty-state">📦 لا توجد طلبات نشطة</div>'; }
+        else { c.innerHTML = orders.map(o => buildOrderCard(o, false)).join(''); }
+        autoTimer = setInterval(async () => {
+          const res2 = await apiFetch(API + '/driver/my-orders');
+          if (!res2.ok) return;
+          const fresh = await res2.json();
+          badge.textContent = fresh.length; badge.style.display = fresh.length ? 'inline' : 'none';
+          if (currentTab === 'active') {
+            document.getElementById('mainContent').innerHTML = fresh.length ? fresh.map(o => buildOrderCard(o, false)).join('') : '<div class="empty-state">📦 لا توجد طلبات نشطة</div>';
+          }
+        }, 10000);
+      }
+
+      // ========== بناء بطاقة الطلب ==========
+      function buildOrderCard(o, isAvailable) {
+        const productTotal = (o.total || 0) - (o.deliveryFee || 0);
+        const statusText = { PENDING:'جديد', ACCEPTED:'مقبول', PREPARING:'تحضير', READY:'جاهز', DRIVER_ASSIGNED:'مع طيار', ON_THE_WAY:'في الطريق', DELIVERED:'تم', CANCELLED:'ملغي' }[o.status] || o.status;
+        const invoiceLine = o.invoiceAmount ? `<div class="info-row"><span class="icon">💰</span><div><div class="value">${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div><div class="label">الفاتورة</div></div></div>` : '';
+        const itemsHtml = (o.items || []).map(i => {
+          let html = `<div class="item-line">• ${i.name} × ${i.quantity || 1}</div>`;
+          if (i.selectedOptions && i.selectedOptions.length) html += `<div class="item-line" style="color:#888;font-size:11px">${i.selectedOptions.map(opt => opt.value).join('، ')}</div>`;
+          if (i.notes) html += `<div class="item-line" style="color:#888;font-size:11px">📝 ${i.notes}</div>`;
+          return html;
+        }).join('');
+
+        const extraDetails = !isAvailable ? `
+          <div class="info-row"><span class="icon">🌍</span><div><div class="value">${o.regionName || '—'}</div><div class="label">المنطقة</div></div></div>
+          <div class="info-row"><span class="icon">📍</span><div><div class="value">${o.address || o.customerAddress || '—'}</div><div class="label">العنوان</div></div></div>
+          ${o.customerPhone ? `<div class="info-row"><span class="icon">📞</span><div><div class="value"><a href="tel:${o.customerPhone}" style="color:var(--brand);text-decoration:none">${o.customerPhone}</a></div><div class="label">اتصل بالعميل</div></div></div>` : ''}
+        ` : '';
+
+        const steps = !isAvailable && o.status !== 'DELIVERED' ? `
+          <div class="steps-wrap">
+            <div class="step-item"><div class="step-dot done">✓</div><div class="step-lbl">استلمت</div></div>
+            <div class="step-line done"></div>
+            <div class="step-item"><div class="step-dot ${o.status === 'ON_THE_WAY' ? 'active' : (o.status === 'DELIVERED' ? 'done' : '')}">${o.status === 'ON_THE_WAY' ? '2' : (o.status === 'DELIVERED' ? '✓' : '2')}</div><div class="step-lbl">في الطريق</div></div>
+            <div class="step-line ${o.status === 'DELIVERED' ? 'done' : ''}"></div>
+            <div class="step-item"><div class="step-dot ${o.status === 'DELIVERED' ? 'done' : ''}">3</div><div class="step-lbl">تم</div></div>
+          </div>` : '';
+
+        const actions = isAvailable ? 
+          `<button class="btn btn-sm" onclick="acceptOrder('${o.id}')">🏍️ قبول</button>` :
+          (o.status === 'DRIVER_ASSIGNED' ? `<button class="btn btn-sm" onclick="updateStatus('${o.id}','ON_THE_WAY')">🏍️ خرجت</button>` :
+           o.status === 'ON_THE_WAY' ? `<button class="btn btn-green btn-sm" onclick="confirmDelivery('${o.id}')">✅ سلّمت</button>` : '');
+
+        return `
+          <div class="order-card ${isAvailable ? 'new-order' : ''}">
+            <div class="order-header">
+              <div class="order-id">#${o.id.slice(-6)}</div>
+              <span class="badge ${o.status === 'READY' ? 'badge-green' : o.status === 'DELIVERED' ? 'badge-green' : 'badge-orange'}">${statusText}</span>
             </div>
-            <div>${actions}</div>
-          </div>
-        </div>`;
-    }
-
-    async function acceptOrder(id) {
-      const res = await apiFetch(API + '/driver/orders/' + id + '/accept', { method: 'PATCH' });
-      if (!res.ok) { showToast('فشل', true); return; }
-      showToast('تم قبول الطلب!');
-      loadEarnings();
-      switchTab('active');
-    }
-
-    async function updateStatus(id, status) {
-      const res = await apiFetch(API + '/driver/orders/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status }) });
-      if (!res.ok) { showToast('فشل', true); return; }
-      showToast('تم تحديث الحالة');
-      if (status === 'DELIVERED') loadEarnings();
-      renderActive();
-    }
-
-    function confirmDelivery(id) {
-      openModal('تأكيد التسليم', `<p>هل أنت متأكد من تسليم الطلب <strong>#${id.slice(-6)}</strong>؟</p>
-        <button class="btn btn-green btn-block" onclick="updateStatus('${id}','DELIVERED');closeModal();">✅ نعم، تم التسليم</button>
-        <button class="btn btn-outline btn-block" onclick="closeModal()">رجوع</button>`);
-    }
-
-    // ========== السجل ==========
-    async function renderHistory() {
-      document.getElementById('mainContent').innerHTML = `
-        <div class="filter-bar">
-          <input type="date" id="historyDate" value="${historySelectedDate}" />
-          <button class="btn btn-sm" onclick="applyHistoryFilter()">عرض</button>
-          <button class="btn btn-outline btn-sm" onclick="clearHistoryFilter()">الكل</button>
-        </div>
-        <div id="historyResults"></div>
-      `;
-      loadHistoryOrders();
-    }
-
-    function applyHistoryFilter() {
-      historySelectedDate = document.getElementById('historyDate').value;
-      loadHistoryOrders();
-    }
-    function clearHistoryFilter() {
-      historySelectedDate = '';
-      document.getElementById('historyDate').value = '';
-      loadHistoryOrders();
-    }
-
-    async function loadHistoryOrders() {
-      const container = document.getElementById('historyResults');
-      if (!container) return;
-      container.innerHTML = '<div style="text-align:center;padding:24px;">⏳ جاري التحميل...</div>';
-      let url = API + '/driver/history';
-      if (historySelectedDate) url += '?date=' + historySelectedDate;
-      const res = await apiFetch(url);
-      if (!res.ok) return;
-      const orders = await res.json();
-      const total = orders.reduce((s, o) => s + (o.deliveryFee || 10), 0);
-      if (!orders.length) {
-        container.innerHTML = '<div class="empty-state">📭 لا توجد توصيلات</div>';
-        return;
-      }
-      container.innerHTML = `
-        <div style="background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:12px;text-align:center">
-          <div style="font-size:24px;font-weight:800;color:var(--brand)">${total} ج</div>
-          <div style="color:var(--text-muted)">إجمالي الأرباح (${orders.length} طلب)</div>
-        </div>
-        ${orders.map(o => {
-          const productTotal = (o.total || 0) - (o.deliveryFee || 0);
-          return `<div class="order-card">
-            <div class="order-header"><div class="order-id">#${o.id.slice(-6)}</div><span class="badge badge-green">✓ تم</span></div>
             <div class="order-body">
-              <div class="info-row"><span class="icon">🍽️</span><div><div class="value">${o.restaurantName || '—'}</div></div></div>
-              <div class="info-row"><span class="icon">👤</span><div><div class="value">${o.customerName || '—'}</div></div></div>
-              <div class="info-row"><span class="icon">🌍</span><div><div class="value">${o.regionName || '—'}</div></div></div>
-              <div class="info-row"><span class="icon">📍</span><div><div class="value">${o.address || '—'}</div></div></div>
-              <div class="info-row"><span class="icon">📞</span><div><div class="value">${o.customerPhone || '—'}</div></div></div>
-              ${o.invoiceAmount ? `<div class="info-row"><span class="icon">💰</span><div><div class="value">${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div></div></div>` : ''}
-              <div class="items-box">${(o.items||[]).map(i => `<div class="item-line">• ${i.name} × ${i.quantity||1}</div>`).join('') || 'لا تفاصيل'}</div>
+              ${steps}
+              <div class="info-row"><span class="icon">🍽️</span><div><div class="value">${o.restaurantName || '—'}</div><div class="label">المطعم / المتجر</div></div></div>
+              <div class="info-row"><span class="icon">👤</span><div><div class="value">${o.customerName || '—'}</div><div class="label">العميل</div></div></div>
+              ${extraDetails}
+              ${invoiceLine}
+              <div class="items-box">${itemsHtml || '<div class="item-line">لا تفاصيل</div>'}</div>
             </div>
             <div class="order-footer">
-              <div><div class="total">${o.deliveryFee || 10} ج</div><div style="font-size:11px;color:var(--text-muted)">عمولتك • ${new Date(o.deliveredAt).toLocaleDateString('ar-EG')}</div></div>
+              <div>
+                <div class="total">${o.deliveryFee || 10} ج</div>
+                <div style="font-size:11px;color:var(--text-muted)">عمولتك • الإجمالي: ${o.total} ج</div>
+              </div>
+              <div>${actions}</div>
             </div>
           </div>`;
-        }).join('')}`;
-    }
+      }
 
-    // ========== حسابي ==========
-    async function renderProfile() {
-      const res = await apiFetch(API + '/driver/profile');
-      if (!res.ok) return;
-      const profile = await res.json();
-      document.getElementById('mainContent').innerHTML = `
-        <div class="order-card" style="text-align:center">
-          <div style="font-size:48px;margin-bottom:12px">🛵</div>
-          <h2>${profile.name || 'الطيار'}</h2>
-          <p style="color:var(--text-muted)">${profile.phone || ''}</p>
-          <div style="margin-top:12px"><span class="badge ${isOnline ? 'badge-green' : 'badge-gray'}">${isOnline ? 'متاح' : 'غير متاح'}</span></div>
-        </div>
-        <div class="order-card">
-          <div class="info-row"><span class="icon">💰</span><div><div class="value" style="color:var(--brand);font-size:18px">${driverEarnings} ج</div><div class="label">أرباح اليوم</div></div></div>
-        </div>
-        <a href="/logout" style="text-decoration:none"><button class="btn btn-outline btn-block" style="color:var(--red);border-color:var(--red)">⏻ تسجيل الخروج</button></a>
-      `;
-    }
+      async function acceptOrder(id) {
+        const res = await apiFetch(API + '/driver/orders/' + id + '/accept', { method: 'PATCH' });
+        if (!res.ok) { showToast('فشل', true); return; }
+        showToast('تم قبول الطلب!');
+        loadEarnings();
+        switchTab('active');
+      }
 
-    // ========== بدء التشغيل ==========
-    (async function() {
-  if (!localStorage.getItem('auth_token')) {
-    try {
-      const res = await fetch('/api/get-test-token');
-      const data = await res.json();
-      localStorage.setItem('auth_token', data.token);
-      localStorage.setItem('user', JSON.stringify({ id: 'admin1', name: 'أدمن دراكو', role: 'ADMIN' }));
-    } catch(e) {
-      document.body.innerHTML = 'فشل الاتصال بالسيرفر';
-      return;
-    }
-  }
-  // ... باقي كود التهيئة الخاص بالصفحة (navigate...)
-})();
+      async function updateStatus(id, status) {
+        const res = await apiFetch(API + '/driver/orders/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status }) });
+        if (!res.ok) { showToast('فشل', true); return; }
+        showToast('تم تحديث الحالة');
+        if (status === 'DELIVERED') loadEarnings();
+        renderActive();
+      }
 
-    // ========== Socket.IO ==========
-    const socket = io();
-    socket.on('driver:newJob', (data) => {
-      playSound('newJob');
-      showToast(`🚀 ${data.count} طلب جديد متاح!`);
-      if (currentTab === 'available') renderAvailable();
-    });
-    socket.on('orderStatusUpdate', (data) => {
-      if (data.status === 'DELIVERED') playSound('orderDelivered');
-      if (currentTab === 'active') renderActive();
-      else if (currentTab === 'available') renderAvailable();
-    });
+      function confirmDelivery(id) {
+        openModal('تأكيد التسليم', `<p>هل أنت متأكد من تسليم الطلب <strong>#${id.slice(-6)}</strong>؟</p>
+          <button class="btn btn-green btn-block" onclick="updateStatus('${id}','DELIVERED');closeModal();">✅ نعم، تم التسليم</button>
+          <button class="btn btn-outline btn-block" onclick="closeModal()">رجوع</button>`);
+      }
+
+      // ========== السجل ==========
+      async function renderHistory() {
+        document.getElementById('mainContent').innerHTML = `
+          <div class="filter-bar">
+            <input type="date" id="historyDate" value="${historySelectedDate}" />
+            <button class="btn btn-sm" onclick="applyHistoryFilter()">عرض</button>
+            <button class="btn btn-outline btn-sm" onclick="clearHistoryFilter()">الكل</button>
+          </div>
+          <div id="historyResults"></div>
+        `;
+        loadHistoryOrders();
+      }
+
+      function applyHistoryFilter() {
+        historySelectedDate = document.getElementById('historyDate').value;
+        loadHistoryOrders();
+      }
+      function clearHistoryFilter() {
+        historySelectedDate = '';
+        document.getElementById('historyDate').value = '';
+        loadHistoryOrders();
+      }
+
+      async function loadHistoryOrders() {
+        const container = document.getElementById('historyResults');
+        if (!container) return;
+        container.innerHTML = '<div style="text-align:center;padding:24px;">⏳ جاري التحميل...</div>';
+        let url = API + '/driver/history';
+        if (historySelectedDate) url += '?date=' + historySelectedDate;
+        const res = await apiFetch(url);
+        if (!res.ok) return;
+        const orders = await res.json();
+        const total = orders.reduce((s, o) => s + (o.deliveryFee || 10), 0);
+        if (!orders.length) {
+          container.innerHTML = '<div class="empty-state">📭 لا توجد توصيلات</div>';
+          return;
+        }
+        container.innerHTML = `
+          <div style="background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:12px;text-align:center">
+            <div style="font-size:24px;font-weight:800;color:var(--brand)">${total} ج</div>
+            <div style="color:var(--text-muted)">إجمالي الأرباح (${orders.length} طلب)</div>
+          </div>
+          ${orders.map(o => {
+            const productTotal = (o.total || 0) - (o.deliveryFee || 0);
+            return `<div class="order-card">
+              <div class="order-header"><div class="order-id">#${o.id.slice(-6)}</div><span class="badge badge-green">✓ تم</span></div>
+              <div class="order-body">
+                <div class="info-row"><span class="icon">🍽️</span><div><div class="value">${o.restaurantName || '—'}</div></div></div>
+                <div class="info-row"><span class="icon">👤</span><div><div class="value">${o.customerName || '—'}</div></div></div>
+                <div class="info-row"><span class="icon">🌍</span><div><div class="value">${o.regionName || '—'}</div></div></div>
+                <div class="info-row"><span class="icon">📍</span><div><div class="value">${o.address || '—'}</div></div></div>
+                <div class="info-row"><span class="icon">📞</span><div><div class="value">${o.customerPhone || '—'}</div></div></div>
+                ${o.invoiceAmount ? `<div class="info-row"><span class="icon">💰</span><div><div class="value">${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div></div></div>` : ''}
+                <div class="items-box">${(o.items||[]).map(i => `<div class="item-line">• ${i.name} × ${i.quantity||1}</div>`).join('') || 'لا تفاصيل'}</div>
+              </div>
+              <div class="order-footer">
+                <div><div class="total">${o.deliveryFee || 10} ج</div><div style="font-size:11px;color:var(--text-muted)">عمولتك • ${new Date(o.deliveredAt).toLocaleDateString('ar-EG')}</div></div>
+              </div>
+            </div>`;
+          }).join('')}`;
+      }
+
+      // ========== حسابي ==========
+      async function renderProfile() {
+        const res = await apiFetch(API + '/driver/profile');
+        if (!res.ok) return;
+        const profile = await res.json();
+        document.getElementById('mainContent').innerHTML = `
+          <div class="order-card" style="text-align:center">
+            <div style="font-size:48px;margin-bottom:12px">🛵</div>
+            <h2>${profile.name || 'الطيار'}</h2>
+            <p style="color:var(--text-muted)">${profile.phone || ''}</p>
+            <div style="margin-top:12px"><span class="badge ${isOnline ? 'badge-green' : 'badge-gray'}">${isOnline ? 'متاح' : 'غير متاح'}</span></div>
+          </div>
+          <div class="order-card">
+            <div class="info-row"><span class="icon">💰</span><div><div class="value" style="color:var(--brand);font-size:18px">${driverEarnings} ج</div><div class="label">أرباح اليوم</div></div></div>
+          </div>
+          <a href="/logout" style="text-decoration:none"><button class="btn btn-outline btn-block" style="color:var(--red);border-color:var(--red)">⏻ تسجيل الخروج</button></a>
+        `;
+      }
+
+      // ========== بدء التشغيل (بعد التأكد من وجود توكن) ==========
+      async function initApp() {
+        await loadProfile();
+        await loadEarnings();
+        switchTab('available');
+      }
+
+      initApp();
+
+      // ========== Socket.IO ==========
+      const socket = io();
+      socket.on('driver:newJob', (data) => {
+        playSound('newJob');
+        showToast(`🚀 ${data.count} طلب جديد متاح!`);
+        if (currentTab === 'available') renderAvailable();
+      });
+      socket.on('orderStatusUpdate', (data) => {
+        if (data.status === 'DELIVERED') playSound('orderDelivered');
+        if (currentTab === 'active') renderActive();
+        else if (currentTab === 'available') renderAvailable();
+      });
+
+    })(); // نهاية الدالة الذاتية الكبيرة
   </script>
 </body>
 </html>
