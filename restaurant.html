@@ -182,6 +182,7 @@ tbody tr:hover{background:var(--surface2);}
   gap: 8px;
 }
 
+/* تنسيقات بطاقات الطلبات الجديدة */
 .orders-filter-bar {
   display: flex;
   flex-wrap: wrap;
@@ -336,45 +337,21 @@ tbody tr:hover{background:var(--surface2);}
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-// ========== apiFetch (معدلة: لا إعادة توجيه) ==========
+// ========== إصلاح apiFetch للتعامل مع 403 والـ credentials ==========
 async function apiFetch(url, options = {}) {
-  const res = await fetch(url, {
-    ...options,
-    credentials: 'include',
-    headers: {
-      ...(options.headers || {}),
-      // لو بتبعت JSON بس، ومش FormData
-      'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
-    }
-  });
-  // لا نقوم بتحويل لأي مكان عند أي خطأ
-  return res;
-}
+  const res = await fetch(url, { ...options, credentials: 'include', headers: { ...(options.headers || {}), ...(typeof options.body === 'string' ? { 'Content-Type': 'application/json' } : {}) } });
   if (res.status === 401 || res.status === 403) {
-    document.body.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0D0F14;color:#F0F2F8;flex-direction:column;gap:20px">
-        <div style="font-size:22px;font-weight:800">انتهت الجلسة</div>
-        <button onclick="window.location.href='/login.html'" style="background:#FF6B00;border:none;color:#fff;padding:12px 28px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer">تسجيل الدخول</button>
-      </div>
-    `;
-    throw new Error('SESSION_EXPIRED');
+    localStorage.setItem('redirectAfterLogin', window.location.pathname);
+    window.location.href = '/login.html';
+    throw new Error('غير مصرح');
   }
   return res;
+}
 
-
-// ========== checkAuth (معدلة: لا إعادة توجيه) ==========
+// ========== دالة التحقق من المصادقة ==========
 async function checkAuth() {
   try {
-    const res = await fetch('/api/restaurant/profile', { credentials: 'include' });
-    if (res.status === 401) {
-      document.body.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0D0F14;color:#F0F2F8;flex-direction:column;gap:20px">
-          <div style="font-size:22px;font-weight:800">انتهت الجلسة</div>
-          <button onclick="window.location.href='/login.html'" style="background:#FF6B00;border:none;color:#fff;padding:12px 28px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer">تسجيل الدخول</button>
-        </div>
-      `;
-      return false;
-    }
+    const res = await apiFetch('/api/restaurant/profile');
     const data = await res.json();
     window.myRestaurantId = data.id;
     localStorage.setItem('restaurantId', data.id);
@@ -382,15 +359,13 @@ async function checkAuth() {
     if (data.logo) localStorage.setItem('restaurantLogo', data.logo);
     return true;
   } catch(e) {
-    document.body.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0D0F14;color:#F0F2F8;flex-direction:column;gap:20px"><div>فشل الاتصال</div></div>
-    `;
+    console.error('Auth error:', e);
     return false;
   }
 }
 
 // ========== SOUND ENGINE ==========
-function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
+function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) { /* full function - kept as is */ 
   const sampleRate = 44100;
   const numSamples = Math.floor(sampleRate * duration);
   const buffer = new Float32Array(numSamples);
@@ -494,17 +469,6 @@ async function renderPage(page) {
     else if (page === 'orders') await loadOrdersView();
     else if (page === 'categories') await loadCategories();
     else if (page === 'products') await loadProducts();
-    
-    // تحديث تلقائي للطلبات ولوحة التحكم كل 30 ثانية
-    if (page === 'orders' || page === 'dashboard') {
-      clearInterval(window._autoRefresh);
-      window._autoRefresh = setInterval(() => {
-        if (page === 'orders') loadOrdersData();
-        else if (page === 'dashboard') loadDashboard();
-      }, 30000);
-    } else {
-      clearInterval(window._autoRefresh);
-    }
   } catch (e) { toast('خطأ في التحميل', 'error'); console.error(e); }
 }
 
@@ -626,7 +590,7 @@ async function uploadLogoDashboard() {
   } else toast('فشل الرفع', 'error');
 }
 
-// ========== ORDERS ==========
+// ========== ORDERS (تصميم جديد ببطاقات + فاتورة) ==========
 let ordersSelectedDate = new Date().toISOString().slice(0, 10);
 let currentOrderTab = 'all';
 function setOrdersTab(tab) { currentOrderTab = tab; }
@@ -698,6 +662,7 @@ async function loadOrdersData() {
     }
     let itemsHtml = '';
     (order.items || []).forEach(item => {
+      // تفاصيل المنتج مع الخيارات إن وجدت
       let optionsText = '';
       if (item.selectedOptions && item.selectedOptions.length) {
         optionsText = `<div style="font-size:11px;color:var(--text2);margin-top:2px;">${item.selectedOptions.map(opt => opt.value).join('، ')}</div>`;
@@ -723,6 +688,7 @@ async function loadOrdersData() {
         <div class="order-body">
           <div class="customer-info">
             <div class="customer-name"><i class="fas fa-user"></i> ${order.customerName || '—'}</div>
+
           </div>
           <div class="items-list">
             <div class="items-title"><i class="fas fa-receipt"></i> المنتجات</div>
@@ -732,9 +698,10 @@ async function loadOrdersData() {
             <span class="total-label">إجمالي المنتجات</span>
             <span class="total-value">${productTotal} ج</span>
           </div>
-                   <div class="order-total">
-            <span class="total-label">إجمالي المنتجات</span>
-            <span class="total-value">${productTotal} ج</span>
+         
+          <div class="order-total" style="margin-top:4px;">
+            <span class="total-label">الإجمالي النهائي</span>
+            <span class="total-value">${order.total} ج</span>
           </div>
           ${timerHtml}
         </div>
@@ -754,7 +721,7 @@ async function showOrderInvoice(orderId) {
   const orders = await res.json();
   const order = orders.find(o => o.id === orderId);
   if (!order) return toast('الطلب غير موجود', 'error');
-
+  
   const productTotal = (order.total || 0) - (order.deliveryFee || 0);
   let itemsHtml = '';
   (order.items || []).forEach(item => {
@@ -774,7 +741,7 @@ async function showOrderInvoice(orderId) {
       </div>
     `;
   });
-
+  
   const invoiceHtml = `
     <div style="direction:rtl;">
       <div style="background:var(--surface2); padding:12px; border-radius:12px; margin-bottom:16px;">
@@ -786,15 +753,20 @@ async function showOrderInvoice(orderId) {
       <div><strong>المنتجات:</strong></div>
       ${itemsHtml || '<div>لا توجد منتجات</div>'}
       <div style="margin-top:16px; border-top:2px solid var(--orange); padding-top:12px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span>إجمالي المنتجات:</span>
+          <span>${productTotal} ج</span>
+        </div>
         <div style="display:flex; justify-content:space-between; font-weight:800; font-size:16px; color:var(--orange);">
           <span>الإجمالي النهائي:</span>
-          <span>${productTotal} ج</span>
+          <span>${order.total} ج</span>
         </div>
       </div>
     </div>
   `;
   openModal(`فاتورة الطلب #${order.id.slice(-8)}`, invoiceHtml, `<button class="btn btn-primary" onclick="closeModal()">إغلاق</button>`);
 }
+
 function getOrderActions(order) {
   if (order.status === 'PENDING') {
     return `<button class="btn btn-success btn-sm" onclick="updateOrderStatus('${order.id}','ACCEPTED')">قبول الطلب</button>
@@ -921,7 +893,7 @@ function showAddProduct() {
   `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveProduct()">حفظ</button>`);
   addGroupRow();
 }
-function addGroupRow() {
+function addGroupRow() { /* kept as in original */ 
   const container = document.getElementById('groups-container');
   const div = document.createElement('div');
   div.className = 'group-box';
@@ -1081,11 +1053,6 @@ function addQuickGroup(type) {
   await loadCategoriesOptions();
   navigate('profile');
 })();
-
-// تجديد الجلسة بصمت كل 5 دقائق
-setInterval(async () => {
-  try { await fetch('/api/restaurant/profile', { credentials: 'include' }); } catch(e) {}
-}, 5 * 60 * 1000);
 
 const socket = io();
 socket.on('newOrder', (data) => {
