@@ -138,11 +138,11 @@ function rolePageAuth(requiredRole) {
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'customer.html')));
 app.get('/customer', (req, res) => res.sendFile(path.join(__dirname, 'customer.html')));
 app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, 'login.html')));
-app.get('/admin', rolePageAuth('ADMIN'), (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
-app.get('/restaurant', rolePageAuth('RESTAURANT'), (req, res) => res.sendFile(path.join(__dirname, 'restaurant.html')));
-app.get('/driver', rolePageAuth('DRIVER'), (req, res) => res.sendFile(path.join(__dirname, 'driver.html')));
-app.get('/market', rolePageAuth('MARKET'), (req, res) => res.sendFile(path.join(__dirname, 'market.html')));
-app.get('/pharmacy', rolePageAuth('PHARMACY'), (req, res) => res.sendFile(path.join(__dirname, 'pharmacy.html')));
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
+app.get('/restaurant', (req, res) => res.sendFile(path.join(__dirname, 'restaurant.html')));
+app.get('/driver', (req, res) => res.sendFile(path.join(__dirname, 'driver.html')));
+app.get('/market', (req, res) => res.sendFile(path.join(__dirname, 'market.html')));
+app.get('/pharmacy', (req, res) => res.sendFile(path.join(__dirname, 'pharmacy.html')));
 
 // تسجيل الدخول
 app.post('/login', (req, res) => {
