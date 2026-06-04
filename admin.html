@@ -36,7 +36,6 @@ body{background:var(--bg);color:var(--text);display:flex;min-height:100vh;overfl
 }
 .sb-logo-name{font-size:18px;font-weight:900;color:var(--text);}
 .sb-nav{flex:1;padding:12px 10px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;}
-.sb-label{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;padding:12px 10px 4px;}
 .nav-item{
   display:flex;align-items:center;gap:11px;padding:10px 12px;
   border-radius:11px;cursor:pointer;font-size:13.5px;font-weight:600;
@@ -168,42 +167,83 @@ tbody tr:hover{background:var(--surface2);}
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-// ========== إدارة الجلسة (بدون انتهاء) ==========
+// ==================== إدارة الجلسة الذكية ====================
 const TOKEN_KEY = 'auth_token';
-function getToken() { return localStorage.getItem(TOKEN_KEY); }
+
+function getToken() {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+async function refreshTokenFromCookie() {
+  try {
+    const res = await fetch('/api/whoami', { credentials: 'include' });
+    if (res.ok) {
+      const data = await res.json();
+      localStorage.setItem(TOKEN_KEY, data.token);
+      return data.token;
+    }
+  } catch(e) {}
+  return null;
+}
 
 async function apiFetch(url, options = {}) {
   let token = getToken();
+
   if (!token) {
-    document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;color:white;background:#0D0F14;height:100vh;padding-top:80px">
-      <h2>الجلسة منتهية</h2>
-      <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
-    </div>`;
-    throw new Error('NO_TOKEN');
+    token = await refreshTokenFromCookie();
+    if (!token) {
+      document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;color:white;background:#0D0F14;height:100vh;padding-top:80px">
+        <h2>الجلسة منتهية</h2>
+        <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
+      </div>`;
+      throw new Error('NO_TOKEN');
+    }
   }
 
-  let res = await fetch(url, {
-    ...options,
-    headers: {
-      ...(options.headers || {}),
-      'Authorization': 'Bearer ' + token,
-      'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
-    }
-  });
+  const headers = {
+    ...(options.headers || {}),
+    'Authorization': 'Bearer ' + token
+  };
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  let res = await fetch(url, { ...options, headers });
 
   if (res.status === 401 || res.status === 403) {
-    localStorage.removeItem(TOKEN_KEY);
-    document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;color:white;background:#0D0F14;height:100vh;padding-top:80px">
-      <h2>انتهت صلاحية الجلسة</h2>
-      <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
-    </div>`;
-    throw new Error('AUTH_ERROR');
+    const newToken = await refreshTokenFromCookie();
+    if (newToken) {
+      headers['Authorization'] = 'Bearer ' + newToken;
+      res = await fetch(url, { ...options, headers });
+      if (res.status === 401 || res.status === 403) {
+        localStorage.removeItem(TOKEN_KEY);
+        document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;color:white;background:#0D0F14;height:100vh;padding-top:80px">
+          <h2>انتهت صلاحية الجلسة</h2>
+          <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
+        </div>`;
+        throw new Error('AUTH_ERROR');
+      }
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+      document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;color:white;background:#0D0F14;height:100vh;padding-top:80px">
+        <h2>انتهت صلاحية الجلسة</h2>
+        <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
+      </div>`;
+      throw new Error('AUTH_ERROR');
+    }
   }
 
   return res;
 }
 
-// ========== SOUND ENGINE ==========
+// تجديد دوري كل 30 دقيقة
+setInterval(async () => {
+  if (getToken()) {
+    await refreshTokenFromCookie();
+  }
+}, 30 * 60 * 1000);
+
+// ==================== SOUND ENGINE ====================
 function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
   const sampleRate = 44100;
   const numSamples = Math.floor(sampleRate * duration);
@@ -261,7 +301,7 @@ createSound('orderCancelled', generateToneWAV(400, 0.3, 'triangle'));
 createSound('driverArrived', generateToneWAV(600, 0.1, 'sine'), generateToneWAV(800, 0.1, 'sine'));
 createSound('orderAccepted', generateToneWAV(600, 0.2, 'sine'));
 
-// ========== MAIN APP ==========
+// ==================== MAIN APP ====================
 const API = '/api';
 let currentPage='dashboard';
 let allOrdersCache=[], allRestaurantsCache=[], allDriversCache=[];
@@ -313,17 +353,11 @@ async function renderPage(page){
   }catch(e){ toast('خطأ في التحميل','error'); console.error(e); }
 }
 
-// ========== DASHBOARD ==========
+// ==================== DASHBOARD ====================
 async function loadDashboard(){
-  const res = await apiFetch(API+'/admin/stats');
-  if (!res.ok) return;
-  const stats = await res.json();
-  const res2 = await apiFetch(API+'/orders');
-  if (!res2.ok) return;
-  const orders = await res2.json();
-  const res3 = await apiFetch(API + '/admin/platform-revenue');
-  if (!res3.ok) return;
-  const platformRev = await res3.json();
+  const stats=await apiFetch(API+'/admin/stats').then(r=>r.json()).catch(()=>({}));
+  const orders=await apiFetch(API+'/orders').then(r=>r.json()).catch(()=>[]);
+  const platformRev = await apiFetch(API + '/admin/platform-revenue').then(r => r.json()).catch(() => ({}));
   allOrdersCache=orders;
   const today=orders.filter(o=>new Date(o.createdAt).toDateString()===new Date().toDateString());
   const active=orders.filter(o=>!['DELIVERED','CANCELLED'].includes(o.status));
@@ -338,22 +372,12 @@ async function loadDashboard(){
       <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${(stats.totalRevenue||0).toLocaleString()}</div><div class="sc-label">إجمالي الإيرادات</div></div><div class="sc-icon" style="background:rgba(0,214,143,.12)">💰</div></div></div>
     </div>
     <div class="section"><div class="sec-head"><div class="sec-title">⚡ آخر الطلبات</div></div>
-    ${orders.slice(-6).reverse().map(o=>`<div style="display:flex;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border);cursor:pointer" onclick=
-    "viewOrder('${o.id}')"><div>${o.invoiceAmount ? `<div><strong>💰 قيمة الفاتورة:</strong> ${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div>` : ''}
-${o.attachments && o.attachments.length ? `
-  <div style="margin-top:12px"><strong>📎 المرفقات:</strong></div>
-  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px">
-    ${o.attachments.map(url => `<img src="${url}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;cursor:pointer" onclick="window.open('${url}')">`).join('')}
-  </div>
-` : ''}<div style="color:var(--orange);font-weight:700">#${(o.id||'').slice(-6)}</div><div style="font-size:12px;color:var(--text2)">${o.customerName||'—'} • ${o.regionName || o.address||'—'}</div></div><div>${statusBadge(o.status)}</div></div>`).join('')}</div>`;
-    {o.invoiceAmount ? `<div><strong>💰 قيمة الفاتورة:</strong> ${o.invoiceAmount} ج ${o.invoiceBy ? ' (من ' + o.invoiceBy + ')' : ''}</div>` : ''}
+    ${orders.slice(-6).reverse().map(o=>`<div style="display:flex;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border);cursor:pointer" onclick="viewOrder('${o.id}')"><div>${o.invoiceAmount ? `<div><strong>💰 قيمة الفاتورة:</strong> ${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div>` : ''}${o.attachments && o.attachments.length ? `<div style="margin-top:12px"><strong>📎 المرفقات:</strong></div><div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px">${o.attachments.map(url => `<img src="${url}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;cursor:pointer" onclick="window.open('${url}')">`).join('')}</div>` : ''}<div style="color:var(--orange);font-weight:700">#${(o.id||'').slice(-6)}</div><div style="font-size:12px;color:var(--text2)">${o.customerName||'—'} • ${o.regionName || o.address||'—'}</div></div><div>${statusBadge(o.status)}</div></div>`).join('')}</div>`;
 }
 
-// ========== ORDERS ==========
+// ==================== ORDERS ====================
 async function loadOrders(){
-  const res = await apiFetch(API+'/orders');
-  if (!res.ok) return;
-  const orders = await res.json();
+  const orders=await apiFetch(API+'/orders').then(r=>r.json()).catch(()=>[]);
   allOrdersCache=orders;
   window._orders=orders.slice().reverse();
 
@@ -486,12 +510,9 @@ function viewOrder(id){
     </div>`, '');
 }
 
-// ========== DISPATCH ==========
+// ==================== DISPATCH ====================
 async function loadDispatch(){
-  const [res1, res2] = await Promise.all([apiFetch(API+'/orders'), apiFetch(API+'/admin/drivers')]);
-  if (!res1.ok || !res2.ok) return;
-  const orders = await res1.json();
-  const drivers = await res2.json();
+  const [orders,drivers]=await Promise.all([apiFetch(API+'/orders').then(r=>r.json()), apiFetch(API+'/admin/drivers').then(r=>r.json())]);
   const ready=orders.filter(o=>o.status==='READY'&&!o.driverId);
   const avail=drivers.filter(d=>d.isAvailable);
   document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">🛵 توزيع الطلبات</div><div class="page-sub">${ready.length} طلب جاهز</div></div></div>
@@ -505,15 +526,13 @@ async function assignDriver(orderId,driverId){
   toast('تم تعيين الطيار'); loadDispatch();
 }
 
-// ========== RESTAURANTS ==========
+// ==================== RESTAURANTS ====================
 async function loadRestaurants(){
-  const res = await apiFetch(API+'/admin/restaurants');
-  if (!res.ok) return;
-  const list = await res.json();
-  allRestaurantsCache=list;
-  document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">🍽️ المطاعم</div><div class="page-sub">${list.length} مطعم</div></div><button class="btn btn-primary" onclick="showAddRestaurant()">+ إضافة</button></div>
+  const res=await apiFetch(API+'/admin/restaurants').then(r=>r.json()).catch(()=>[]);
+  allRestaurantsCache=res;
+  document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">🍽️ المطاعم</div><div class="page-sub">${res.length} مطعم</div></div><button class="btn btn-primary" onclick="showAddRestaurant()">+ إضافة</button></div>
     <div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>المالك</th><th>الهاتف</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>
-    ${list.length?list.map((r,i)=>`<tr>
+    ${res.length?res.map((r,i)=>`<tr>
       <td>${i+1}</td>
       <td style="font-weight:700">${r.name||'—'}</td>
       <td>${r.ownerName||'—'}</td>
@@ -535,9 +554,8 @@ function showAddRestaurant(){
 async function addRestaurant(){
   const n=document.getElementById('r-name').value,p=document.getElementById('r-phone').value,ps=document.getElementById('r-pass').value;
   if(!n||!p||!ps) return toast('أكمل الحقول','error');
-  const res = await apiFetch(API+'/admin/restaurants',{method:'POST',body:JSON.stringify({name:n,ownerPhone:p,ownerPassword:ps})});
-  if (!res.ok) { toast('فشل','error'); return; }
-  toast('تمت الإضافة'); closeModal(); loadRestaurants();
+  const d=await apiFetch(API+'/admin/restaurants',{method:'POST',body:JSON.stringify({name:n,ownerPhone:p,ownerPassword:ps})}).then(r=>r.json());
+  if(d.error) toast(d.error,'error'); else { toast('تمت الإضافة'); closeModal(); loadRestaurants(); }
 }
 
 async function editRestaurant(id) {
@@ -555,23 +573,21 @@ async function saveRestaurantEdit(id) {
   const name = document.getElementById('edit-r-name').value.trim();
   const phone = document.getElementById('edit-r-phone').value.trim();
   if (!name || !phone) return alert('الاسم والهاتف مطلوبان');
-  await apiFetch(API+'/admin/restaurants/'+id, {method:'PATCH', body:JSON.stringify({name, ownerPhone:phone})});
-  toast('تم التعديل'); closeModal(); loadRestaurants();
+  const d = await apiFetch(API+'/admin/restaurants/'+id, {method:'PATCH', body:JSON.stringify({name, ownerPhone:phone})}).then(r=>r.json());
+  if(d.error) toast(d.error,'error'); else { toast('تم التعديل'); closeModal(); loadRestaurants(); }
 }
 async function deleteRestaurant(id) {
   if (!confirm('هل أنت متأكد من حذف هذا المطعم؟')) return;
-  await apiFetch(API+'/admin/restaurants/'+id, {method:'DELETE'});
-  toast('تم الحذف'); loadRestaurants();
+  const d = await apiFetch(API+'/admin/restaurants/'+id, {method:'DELETE'}).then(r=>r.json());
+  if(d.error) toast(d.error,'error'); else { toast('تم الحذف'); loadRestaurants(); }
 }
 
-// ========== MARKETS ==========
+// ==================== MARKETS ====================
 async function loadMarkets(){
-  const res = await apiFetch(API+'/admin/markets');
-  if (!res.ok) return;
-  const list = await res.json();
-  document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">🛒 الأسواق</div><div class="page-sub">${list.length} سوق</div></div><button class="btn btn-primary" onclick="showAddMarket()">+ إضافة</button></div>
+  const res=await apiFetch(API+'/admin/markets').then(r=>r.json()).catch(()=>[]);
+  document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">🛒 الأسواق</div><div class="page-sub">${res.length} سوق</div></div><button class="btn btn-primary" onclick="showAddMarket()">+ إضافة</button></div>
     <div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>المالك</th><th>الهاتف</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>
-    ${list.length?list.map((m,i)=>`<tr>
+    ${res.length?res.map((m,i)=>`<tr>
       <td>${i+1}</td>
       <td style="font-weight:700">${m.name||'—'}</td>
       <td>${m.ownerName||'—'}</td>
@@ -587,20 +603,23 @@ async function loadMarkets(){
 }
 async function toggleMarket(id){ await apiFetch(API+'/admin/markets/'+id+'/toggle',{method:'PATCH'}); loadMarkets(); }
 function showAddMarket(){
-  openModal('إضافة سوق',`<div class="field"><label>اسم السوق</label><input id="m-name"></div><div class="field"><label>هاتف المالك</label><input id="m-phone"></div><div class="field"><label>كلمة المرور</label><input id="m-pass" type="password"></div>`,
+  openModal('إضافة سوق',`<div class="field"><label>اسم السوق</label><input id="m-name"></div><div class="field"><label>هاتف المالك</label><input id="m-phone"></div><div class="field"><label>كلمة المرور</label><input id="m-pass" type="password"></div><div class="field"><label>الشعار</label><input type="file" id="m-logo"></div>`,
   `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addMarket()">إضافة</button>`);
 }
 async function addMarket(){
-  const n=document.getElementById('m-name').value.trim(),p=document.getElementById('m-phone').value.trim(),ps=document.getElementById('m-pass').value.trim();
+  const n = document.getElementById('m-name').value.trim();
+  const p = document.getElementById('m-phone').value.trim();
+  const ps = document.getElementById('m-pass').value.trim();
   if(!n||!p||!ps) return toast('أكمل الحقول','error');
-  const res = await apiFetch(API+'/admin/markets',{method:'POST',body:JSON.stringify({name:n,ownerPhone:p,ownerPassword:ps})});
-  if (!res.ok) { toast('فشل','error'); return; }
-  toast('تمت الإضافة'); closeModal(); loadMarkets();
+  const d = await apiFetch(API+'/admin/markets', {
+    method: 'POST',
+    body: JSON.stringify({ name: n, ownerPhone: p, ownerPassword: ps })
+  }).then(r => r.json());
+  if(d.error) toast(d.error, 'error');
+  else { toast('تمت الإضافة'); closeModal(); loadMarkets(); }
 }
 async function editMarket(id) {
-  const res = await apiFetch(API+'/admin/markets');
-  if (!res.ok) return;
-  const markets = await res.json();
+  const markets = await apiFetch(API+'/admin/markets').then(r=>r.json());
   const m = markets.find(m => m.id === id);
   if (!m) return;
   openModal('تعديل سوق', `
@@ -615,23 +634,21 @@ async function saveMarketEdit(id) {
   const name = document.getElementById('edit-m-name').value.trim();
   const phone = document.getElementById('edit-m-phone').value.trim();
   if (!name || !phone) return alert('الاسم والهاتف مطلوبان');
-  await apiFetch(API+'/admin/markets/'+id, {method:'PATCH', body:JSON.stringify({name, ownerPhone:phone})});
-  toast('تم التعديل'); closeModal(); loadMarkets();
+  const d = await apiFetch(API+'/admin/markets/'+id, {method:'PATCH', body:JSON.stringify({name, ownerPhone:phone})}).then(r=>r.json());
+  if(d.error) toast(d.error,'error'); else { toast('تم التعديل'); closeModal(); loadMarkets(); }
 }
 async function deleteMarket(id) {
   if (!confirm('هل أنت متأكد من حذف هذا السوق؟')) return;
-  await apiFetch(API+'/admin/markets/'+id, {method:'DELETE'});
-  toast('تم الحذف'); loadMarkets();
+  const d = await apiFetch(API+'/admin/markets/'+id, {method:'DELETE'}).then(r=>r.json());
+  if(d.error) toast(d.error,'error'); else { toast('تم الحذف'); loadMarkets(); }
 }
 
-// ========== PHARMACIES ==========
+// ==================== PHARMACIES ====================
 async function loadPharmacies(){
-  const res = await apiFetch(API+'/admin/pharmacies');
-  if (!res.ok) return;
-  const list = await res.json();
-  document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">💊 الصيدليات</div><div class="page-sub">${list.length} صيدلية</div></div><button class="btn btn-primary" onclick="showAddPharmacy()">+ إضافة</button></div>
+  const res=await apiFetch(API+'/admin/pharmacies').then(r=>r.json()).catch(()=>[]);
+  document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">💊 الصيدليات</div><div class="page-sub">${res.length} صيدلية</div></div><button class="btn btn-primary" onclick="showAddPharmacy()">+ إضافة</button></div>
     <div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>المالك</th><th>الهاتف</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>
-    ${list.length?list.map((p,i)=>`<tr>
+    ${res.length?res.map((p,i)=>`<tr>
       <td>${i+1}</td>
       <td style="font-weight:700">${p.name||'—'}</td>
       <td>${p.ownerName||'—'}</td>
@@ -647,20 +664,24 @@ async function loadPharmacies(){
 }
 async function togglePharmacy(id){ await apiFetch(API+'/admin/pharmacies/'+id+'/toggle',{method:'PATCH'}); loadPharmacies(); }
 function showAddPharmacy(){
-  openModal('إضافة صيدلية',`<div class="field"><label>اسم الصيدلية</label><input id="ph-name"></div><div class="field"><label>هاتف المالك</label><input id="ph-phone"></div><div class="field"><label>كلمة المرور</label><input id="ph-pass" type="password"></div>`,
+  openModal('إضافة صيدلية',`<div class="field"><label>اسم الصيدلية</label><input id="ph-name"></div><div class="field"><label>هاتف المالك</label><input id="ph-phone"></div><div class="field"><label>كلمة المرور</label><input id="ph-pass" type="password"></div><div class="field"><label>الشعار</label><input type="file" id="ph-logo"></div>`,
   `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addPharmacy()">إضافة</button>`);
 }
 async function addPharmacy(){
-  const n=document.getElementById('ph-name').value.trim(),p=document.getElementById('ph-phone').value.trim(),ps=document.getElementById('ph-pass').value.trim();
+  const n = document.getElementById('ph-name').value.trim();
+  const p = document.getElementById('ph-phone').value.trim();
+  const ps = document.getElementById('ph-pass').value.trim();
   if(!n||!p||!ps) return toast('أكمل الحقول','error');
-  const res = await apiFetch(API+'/admin/pharmacies',{method:'POST',body:JSON.stringify({name:n,ownerPhone:p,ownerPassword:ps})});
-  if (!res.ok) { toast('فشل','error'); return; }
-  toast('تمت الإضافة'); closeModal(); loadPharmacies();
+  const d = await apiFetch(API+'/admin/pharmacies', {
+    method: 'POST',
+    body: JSON.stringify({ name: n, ownerPhone: p, ownerPassword: ps })
+  }).then(r => r.json());
+  if(d.error) toast(d.error, 'error');
+  else { toast('تمت الإضافة'); closeModal(); loadPharmacies(); }
 }
+
 async function editPharmacy(id) {
-  const res = await apiFetch(API+'/admin/pharmacies');
-  if (!res.ok) return;
-  const pharmacies = await res.json();
+  const pharmacies = await apiFetch(API+'/admin/pharmacies').then(r=>r.json());
   const p = pharmacies.find(p => p.id === id);
   if (!p) return;
   openModal('تعديل صيدلية', `
@@ -675,24 +696,22 @@ async function savePharmacyEdit(id) {
   const name = document.getElementById('edit-ph-name').value.trim();
   const phone = document.getElementById('edit-ph-phone').value.trim();
   if (!name || !phone) return alert('الاسم والهاتف مطلوبان');
-  await apiFetch(API+'/admin/pharmacies/'+id, {method:'PATCH', body:JSON.stringify({name, ownerPhone:phone})});
-  toast('تم التعديل'); closeModal(); loadPharmacies();
+  const d = await apiFetch(API+'/admin/pharmacies/'+id, {method:'PATCH', body:JSON.stringify({name, ownerPhone:phone})}).then(r=>r.json());
+  if(d.error) toast(d.error,'error'); else { toast('تم التعديل'); closeModal(); loadPharmacies(); }
 }
 async function deletePharmacy(id) {
   if (!confirm('هل أنت متأكد من حذف هذه الصيدلية؟')) return;
-  await apiFetch(API+'/admin/pharmacies/'+id, {method:'DELETE'});
-  toast('تم الحذف'); loadPharmacies();
+  const d = await apiFetch(API+'/admin/pharmacies/'+id, {method:'DELETE'}).then(r=>r.json());
+  if(d.error) toast(d.error,'error'); else { toast('تم الحذف'); loadPharmacies(); }
 }
 
-// ========== DRIVERS ==========
+// ==================== DRIVERS ====================
 async function loadDrivers(){
-  const res = await apiFetch(API+'/admin/drivers');
-  if (!res.ok) return;
-  const list = await res.json();
-  allDriversCache=list;
-  document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">👨‍✈️ الطيارين</div><div class="page-sub">${list.length} طيار</div></div><button class="btn btn-primary" onclick="showAddDriver()">+ إضافة</button></div>
+  const res=await apiFetch(API+'/admin/drivers').then(r=>r.json()).catch(()=>[]);
+  allDriversCache=res;
+  document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">👨‍✈️ الطيارين</div><div class="page-sub">${res.length} طيار</div></div><button class="btn btn-primary" onclick="showAddDriver()">+ إضافة</button></div>
     <div class="section"><div class="table-wrap"><table><thead><tr><th>الاسم</th><th>الهاتف</th><th>الأرباح</th><th>طلبات نشطة</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>
-    ${list.length?list.map(d=>`<tr>
+    ${res.length?res.map(d=>`<tr>
       <td style="font-weight:700">${d.name||'—'}</td>
       <td style="font-size:12px;color:var(--text3)">${d.phone||'—'}</td>
       <td style="color:var(--orange)">${d.earnings||0} ج</td>
@@ -717,14 +736,12 @@ function showAddDriver(){
 async function addDriver(){
   const n=document.getElementById('d-name').value,p=document.getElementById('d-phone').value,ps=document.getElementById('d-pass').value;
   if(!n||!p||!ps) return toast('أكمل الحقول','error');
-  const res = await apiFetch(API+'/admin/drivers',{method:'POST',body:JSON.stringify({name:n,phone:p,password:ps})});
-  if (!res.ok) { toast('فشل','error'); return; }
-  toast('تمت الإضافة'); closeModal(); loadDrivers();
+  const d=await apiFetch(API+'/admin/drivers',{method:'POST',body:JSON.stringify({name:n,phone:p,password:ps})}).then(r=>r.json());
+  if(d.error) toast(d.error,'error'); else { toast('تمت الإضافة'); closeModal(); loadDrivers(); }
 }
 async function viewDriverDetails(id) {
   try {
     const res = await apiFetch(API + '/admin/drivers/' + id + '/details');
-    if (!res.ok) return;
     const d = await res.json();
     if (d.error) return toast(d.error, 'error');
     openModal(`تفاصيل الطيار: ${d.name}`,
@@ -766,23 +783,21 @@ async function saveDriverEdit(id) {
   if (!name || !phone) return alert('الاسم والهاتف مطلوبان');
   const body = { name, phone };
   if (pass) body.password = pass;
-  await apiFetch(API+'/admin/drivers/'+id, {method:'PATCH', body:JSON.stringify(body)});
-  toast('تم التعديل'); closeModal(); loadDrivers();
+  const d = await apiFetch(API+'/admin/drivers/'+id, {method:'PATCH', body:JSON.stringify(body)}).then(r=>r.json());
+  if(d.error) toast(d.error,'error'); else { toast('تم التعديل'); closeModal(); loadDrivers(); }
 }
 async function deleteDriver(id) {
   if (!confirm('هل أنت متأكد من حذف هذا الطيار؟')) return;
-  await apiFetch(API+'/admin/drivers/'+id, {method:'DELETE'});
-  toast('تم الحذف'); loadDrivers();
+  const d = await apiFetch(API+'/admin/drivers/'+id, {method:'DELETE'}).then(r=>r.json());
+  if(d.error) toast(d.error,'error'); else { toast('تم الحذف'); loadDrivers(); }
 }
 
-// ========== PRODUCTS ==========
+// ==================== PRODUCTS ====================
 async function loadProducts(){
-  const res = await apiFetch(API+'/admin/products');
-  if (!res.ok) return;
-  const list = await res.json();
-  document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">📋 المنتجات</div><div class="page-sub">${list.length} منتج</div></div><button class="btn btn-primary" onclick="showAddProduct()">+ إضافة</button></div>
+  const res=await apiFetch(API+'/admin/products').then(r=>r.json()).catch(()=>[]);
+  document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">📋 المنتجات</div><div class="page-sub">${res.length} منتج</div></div><button class="btn btn-primary" onclick="showAddProduct()">+ إضافة</button></div>
     <div class="section"><div class="table-wrap"><table><thead><tr><th>الصورة</th><th>الاسم</th><th>المطعم</th><th>السعر</th><th>إجراءات</th></tr></thead><tbody>
-    ${list.length?list.map(p=>`<tr><td>${p.image?`<img src="${p.image}" style="width:40px;height:40px;border-radius:8px;object-fit:cover">`:'—'}</td><td style="font-weight:600">${p.name||''}</td><td style="color:var(--text2)">${p.restaurantName||'—'}</td><td style="color:var(--orange);font-weight:700">${p.price||0} ج</td><td><button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">🗑️</button></td></tr>`).join(''):`<tr><td colspan="5"><div class="empty-state"><div class="icon">📋</div><div class="msg">لا توجد منتجات</div></div></td></tr>`}
+    ${res.length?res.map(p=>`<tr><td>${p.image?`<img src="${p.image}" style="width:40px;height:40px;border-radius:8px;object-fit:cover">`:'—'}</td><td style="font-weight:600">${p.name||''}</td><td style="color:var(--text2)">${p.restaurantName||'—'}</td><td style="color:var(--orange);font-weight:700">${p.price||0} ج</td><td><button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">🗑️</button></td></tr>`).join(''):`<tr><td colspan="5"><div class="empty-state"><div class="icon">📋</div><div class="msg">لا توجد منتجات</div></div></td></tr>`}
     </tbody></table></div></div>`;
 }
 function showAddProduct(){
@@ -798,20 +813,17 @@ async function addProduct(){
   f.append('restaurantId',document.getElementById('prod-rest').value);
   const img=document.getElementById('prod-img').files[0];
   if(img) f.append('image',img);
-  const res = await apiFetch(API+'/admin/products',{method:'POST',body:f});
-  if (!res.ok) { toast('فشل','error'); return; }
-  toast('تمت الإضافة'); closeModal(); loadProducts();
+  const d=await apiFetch(API+'/admin/products',{method:'POST',body:f}).then(r=>r.json());
+  if(d.error) toast(d.error,'error'); else { toast('تمت الإضافة'); closeModal(); loadProducts(); }
 }
 async function deleteProduct(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/products/'+id,{method:'DELETE'}); loadProducts(); } }
 
-// ========== CATEGORIES ==========
+// ==================== CATEGORIES ====================
 async function loadCategories(){
-  const res = await apiFetch(API+'/admin/categories');
-  if (!res.ok) return;
-  const list = await res.json();
+  const res=await apiFetch(API+'/admin/categories').then(r=>r.json()).catch(()=>[]);
   document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">🏷️ التصنيفات</div></div><button class="btn btn-primary" onclick="showAddCategory()">+ إضافة</button></div>
     <div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>إجراءات</th></tr></thead><tbody>
-    ${list.length?list.map((c,i)=>`<tr><td>${i+1}</td><td style="font-weight:600">${c.name||''}</td><td><button class="btn btn-danger btn-sm" onclick="deleteCategory('${c.id}')">🗑️</button></td></tr>`).join(''):`<tr><td colspan="3"><div class="empty-state"><div class="icon">🏷️</div><div class="msg">لا توجد تصنيفات</div></div></td></tr>`}
+    ${res.length?res.map((c,i)=>`<tr><td>${i+1}</td><td style="font-weight:600">${c.name||''}</td><td><button class="btn btn-danger btn-sm" onclick="deleteCategory('${c.id}')">🗑️</button></td></tr>`).join(''):`<tr><td colspan="3"><div class="empty-state"><div class="icon">🏷️</div><div class="msg">لا توجد تصنيفات</div></div></td></tr>`}
     </tbody></table></div></div>`;
 }
 function showAddCategory(){
@@ -825,14 +837,12 @@ async function addCategory(){
 }
 async function deleteCategory(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/categories/'+id,{method:'DELETE'}); loadCategories(); } }
 
-// ========== REGIONS ==========
+// ==================== REGIONS ====================
 async function loadRegions(){
-  const res = await apiFetch(API+'/admin/regions');
-  if (!res.ok) return;
-  const list = await res.json();
+  const res=await apiFetch(API+'/admin/regions').then(r=>r.json()).catch(()=>[]);
   document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">🌍 مناطق التوصيل</div></div><button class="btn btn-primary" onclick="showAddRegion()">+ إضافة</button></div>
     <div class="section"><div class="table-wrap"><table><thead><tr><th>#</th><th>الاسم</th><th>الرسوم</th><th>إجراءات</th></tr></thead><tbody>
-    ${list.length?list.map((r,i)=>`<tr><td>${i+1}</td><td style="font-weight:600">${r.name||''}</td><td style="color:var(--orange);font-weight:700">${r.fee||0} ج</td><td><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="editRegion('${r.id}','${r.name}',${r.fee})">✏️</button><button class="btn btn-danger btn-sm" onclick="deleteRegion('${r.id}')">🗑️</button></div></td></tr>`).join(''):`<tr><td colspan="4"><div class="empty-state"><div class="icon">🌍</div><div class="msg">لا توجد مناطق</div></div></td></tr>`}
+    ${res.length?res.map((r,i)=>`<tr><td>${i+1}</td><td style="font-weight:600">${r.name||''}</td><td style="color:var(--orange);font-weight:700">${r.fee||0} ج</td><td><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="editRegion('${r.id}','${r.name}',${r.fee})">✏️</button><button class="btn btn-danger btn-sm" onclick="deleteRegion('${r.id}')">🗑️</button></div></td></tr>`).join(''):`<tr><td colspan="4"><div class="empty-state"><div class="icon">🌍</div><div class="msg">لا توجد مناطق</div></div></td></tr>`}
     </tbody></table></div></div>`;
 }
 function showAddRegion(){
@@ -854,7 +864,7 @@ async function updateRegion(id){
 }
 async function deleteRegion(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/regions/'+id,{method:'DELETE'}); loadRegions(); } }
 
-// ========== CUSTOMERS ==========
+// ==================== CUSTOMERS ====================
 async function loadCustomers() {
   const c = document.getElementById('content');
   c.innerHTML = `
@@ -874,7 +884,6 @@ async function renderCustomersTable() {
   let url = API + '/admin/customers';
   if (search) url += '?search=' + encodeURIComponent(search);
   const res = await apiFetch(url);
-  if (!res.ok) return;
   const customers = await res.json();
   if (!customers.length) {
     container.innerHTML = `<div class="empty-state"><div class="icon">👥</div><div class="msg">لا يوجد عملاء مسجلين</div></div>`;
@@ -903,11 +912,9 @@ async function renderCustomersTable() {
 
 async function editCustomer(id) {
   const res = await apiFetch(API + '/admin/customers/' + id);
-  if (!res.ok) return;
   const customer = await res.json();
   if (customer.error) return toast(customer.error, 'error');
   const regionsRes = await apiFetch(API + '/admin/regions');
-  if (!regionsRes.ok) return;
   const regions = await regionsRes.json();
   const regionOptions = regions.map(r => 
     `<option value="${r.id}" ${r.id === customer.regionId ? 'selected' : ''}>${r.name} (${r.fee} ج)</option>`
@@ -933,17 +940,16 @@ async function saveCustomerEdit(id) {
     method: 'PATCH',
     body: JSON.stringify({ name, phone, regionId, address })
   });
-  if (!res.ok) return;
+  const data = await res.json();
+  if (data.error) { alert(data.error); return; }
   toast('تم تعديل بيانات العميل');
   closeModal();
   loadCustomers();
 }
 
-// ========== REPORTS ==========
+// ==================== REPORTS ====================
 async function loadReports(){
-  const res = await apiFetch(API+'/admin/reports/full');
-  if (!res.ok) return;
-  const data = await res.json();
+  const data=await apiFetch(API+'/admin/reports/full').then(r=>r.json()).catch(()=>null);
   document.getElementById('content').innerHTML=`
     <div class="page-header"><div><div class="page-title">📊 التقارير الشاملة</div></div></div>
     <div class="tab-bar" id="report-tabs"><div class="tab-btn active" onclick="switchReportTab('daily')">اليوم</div><div class="tab-btn" onclick="switchReportTab('weekly')">الأسبوع</div><div class="tab-btn" onclick="switchReportTab('monthly')">الشهر</div><div class="tab-btn" onclick="switchReportTab('total')">الإجمالي</div></div><div id="report-content"></div>`;
@@ -972,18 +978,18 @@ function switchReportTab(tab){
     </div>`;
 }
 
-// ========== SETTINGS ==========
+// ==================== SETTINGS ====================
 function loadSettings(){
   document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">⚙️ الإعدادات</div></div></div><div class="section" style="padding:20px"><p>الإصدار: Drako v2.0</p><a href="/logout" class="btn btn-danger" style="margin-top:16px">⏻ تسجيل الخروج</a></div>`;
 }
 
-// ========== TEST ORDER ==========
+// ==================== TEST ORDER ====================
 async function testOrder(){
   const restId=prompt('معرف المطعم (من صفحة المطاعم):');
   if(!restId) return;
-  const res = await apiFetch(API+'/admin/test-order',{method:'POST',body:JSON.stringify({restaurantId:restId})});
-  if (!res.ok) { toast('فشل','error'); return; }
-  toast('تم إنشاء طلب تجريبي'); navigate('orders');
+  const d=await apiFetch(API+'/admin/test-order',{method:'POST',body:JSON.stringify({restaurantId:restId})}).then(r=>r.json());
+  if(d.success){ toast('تم إنشاء طلب تجريبي'); navigate('orders'); }
+  else toast(d.error||'فشل','error');
 }
 
 // دوال الموافقة والرفض والتعديل
@@ -1033,13 +1039,13 @@ async function saveOrderEdit(id) {
   }
 }
 
-// ========== بدء التشغيل ==========
+// ==================== بدء التشغيل ====================
 (async function() {
   if (!getToken()) return;
   navigate('dashboard');
 })();
 
-// Socket.IO listeners
+// ==================== Socket.IO ====================
 const socket = io();
 socket.on('newOrder', (data) => {
   playSound('adminNewOrder');
