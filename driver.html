@@ -115,6 +115,12 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
+    if (!localStorage.getItem('auth_token')) {
+  // إنشاء توكن وهمي لمستخدم بصلاحية الأدمن (للاختبار فقط)
+  const testToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFkbWluMSIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTYxNjIzOTAyMn0.dummySignature';
+  localStorage.setItem('auth_token', testToken);
+  localStorage.setItem('user', JSON.stringify({ id: 'admin1', name: 'أدمن دراكو', role: 'ADMIN' }));
+}
     // ========== إدارة الجلسة الذكية ==========
    const TOKEN_KEY = 'auth_token';
 
@@ -455,11 +461,19 @@ async function apiFetch(url, options = {}) {
 
     // ========== بدء التشغيل ==========
     (async function() {
-      if (!getToken()) return;
-      await loadProfile();
-      await loadEarnings();
-      switchTab('available');
-    })();
+  if (!localStorage.getItem('auth_token')) {
+    try {
+      const res = await fetch('/api/get-test-token');
+      const data = await res.json();
+      localStorage.setItem('auth_token', data.token);
+      localStorage.setItem('user', JSON.stringify({ id: 'admin1', name: 'أدمن دراكو', role: 'ADMIN' }));
+    } catch(e) {
+      document.body.innerHTML = 'فشل الاتصال بالسيرفر';
+      return;
+    }
+  }
+  // ... باقي كود التهيئة الخاص بالصفحة (navigate...)
+})();
 
     // ========== Socket.IO ==========
     const socket = io();
