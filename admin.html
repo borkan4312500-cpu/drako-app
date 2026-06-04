@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Drako — Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
@@ -21,27 +21,19 @@
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px;}
 body{background:var(--bg);color:var(--text);display:flex;min-height:100vh;overflow:hidden;}
 
+/* الشريط الجانبي */
 .sidebar{
   width:var(--sidebar-w);flex-shrink:0;background:var(--surface);
   border-left:1px solid var(--border);display:flex;flex-direction:column;
-  height:100vh;position:sticky;top:0;overflow-y:auto;z-index:10;
+  height:100vh;position:fixed;top:0;right:0;z-index:200;overflow-y:auto;
+  transition: transform 0.3s ease; transform: translateX(0);
 }
+.sidebar.hidden{ transform: translateX(100%); }
 .sb-logo{padding:20px 18px 12px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);}
-.sb-logo-mark{
-  width:42px;height:42px;border-radius:13px;flex-shrink:0;
-  background:linear-gradient(135deg,var(--orange),var(--orange2));
-  display:flex;align-items:center;justify-content:center;
-  font-size:20px;font-weight:900;color:#fff;
-  box-shadow:0 4px 16px var(--orange-glow);
-}
+.sb-logo-mark{width:42px;height:42px;border-radius:13px;flex-shrink:0;background:linear-gradient(135deg,var(--orange),var(--orange2));display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;box-shadow:0 4px 16px var(--orange-glow);}
 .sb-logo-name{font-size:18px;font-weight:900;color:var(--text);}
 .sb-nav{flex:1;padding:12px 10px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;}
-.sb-label{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;padding:12px 10px 4px;}
-.nav-item{
-  display:flex;align-items:center;gap:11px;padding:10px 12px;
-  border-radius:11px;cursor:pointer;font-size:13.5px;font-weight:600;
-  color:var(--text2);transition:all .18s;position:relative;
-}
+.nav-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:11px;cursor:pointer;font-size:13.5px;font-weight:600;color:var(--text2);transition:all .18s;position:relative;}
 .nav-item:hover{background:var(--surface2);color:var(--text);}
 .nav-item.active{background:var(--orange-dim);color:var(--orange);}
 .nav-item.active::before{content:'';position:absolute;right:-10px;top:20%;height:60%;width:3px;background:var(--orange);border-radius:99px;}
@@ -52,23 +44,26 @@ body{background:var(--bg);color:var(--text);display:flex;min-height:100vh;overfl
 .sb-user{display:flex;align-items:center;gap:10px;padding:10px;border-radius:var(--radius);background:var(--surface2);}
 .sb-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--orange),var(--orange2));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;}
 .sb-user-name{font-size:13px;font-weight:700;}
-.sb-user-role{font-size:11px;color:var(--text3);}
 .sb-logout{color:var(--text3);font-size:18px;cursor:pointer;text-decoration:none;}
 
-.main-wrap{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;}
-.topbar{height:var(--header-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;flex-shrink:0;}
+/* المحتوى الرئيسي */
+.main-wrap{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden; margin-right:0;}
+.topbar{height:var(--header-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0;z-index:150;}
+.hamburger{display:none;background:none;border:none;color:var(--text);font-size:26px;cursor:pointer;margin-left:10px;}
 .topbar-title{font-size:20px;font-weight:800;}
 .topbar-actions{margin-right:auto;display:flex;align-items:center;gap:10px;}
 .tb-icon-btn{width:38px;height:38px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;transition:all .2s;}
 .tb-icon-btn:hover{background:var(--surface3);}
-.content{flex:1;overflow-y:auto;padding:24px;}
+.content{flex:1;overflow-y:auto;padding:20px;}
 
+/* تنبيهات */
 .toast-wrap{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
 .toast{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:11px 18px;border-radius:12px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;min-width:240px;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:toastIn .3s ease;}
 .toast.success{border-color:var(--green);} .toast.error{border-color:var(--red);}
 @keyframes toastIn{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
 
-.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+/* بطاقات الإحصائيات */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(200px,1fr));gap:16px;margin-bottom:24px;}
 .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;cursor:pointer;transition:all .2s;}
 .stat-card:hover{border-color:rgba(255,107,0,.3);transform:translateY(-2px);}
 .sc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;}
@@ -76,13 +71,14 @@ body{background:var(--bg);color:var(--text);display:flex;min-height:100vh;overfl
 .sc-value{font-size:28px;font-weight:900;}
 .sc-label{font-size:12px;color:var(--text3);}
 
+/* الجداول */
 .section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:20px;overflow:hidden;}
 .sec-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);}
 .sec-title{font-size:15px;font-weight:800;}
 .table-wrap{overflow-x:auto;max-height:500px;overflow-y:auto;}
 table{width:100%;border-collapse:collapse;}
-thead th{padding:10px 20px;text-align:right;font-size:11px;font-weight:700;color:var(--text3);background:var(--surface2);border-bottom:1px solid var(--border);text-transform:uppercase;position:sticky;top:0;z-index:1;}
-tbody td{padding:13px 20px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle;}
+thead th{padding:10px 15px;text-align:right;font-size:11px;font-weight:700;color:var(--text3);background:var(--surface2);border-bottom:1px solid var(--border);text-transform:uppercase;position:sticky;top:0;z-index:1;white-space:nowrap;}
+tbody td{padding:12px 15px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle;}
 tbody tr:hover{background:var(--surface2);}
 
 .badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;}
@@ -93,7 +89,7 @@ tbody tr:hover{background:var(--surface2);}
 .badge-blue{background:rgba(59,130,246,.12);color:var(--blue);}
 .badge-yellow{background:rgba(251,191,36,.12);color:var(--yellow);}
 
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;font-size:13px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;border:none;transition:all .18s;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;font-size:13px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;border:none;transition:all .18s;white-space:nowrap;}
 .btn-primary{background:var(--orange);color:#fff;}
 .btn-primary:hover{background:var(--orange2);}
 .btn-ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
@@ -104,13 +100,12 @@ tbody tr:hover{background:var(--surface2);}
 
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;display:none;align-items:center;justify-content:center;padding:16px;}
 .modal-overlay.open{display:flex;}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:0;width:100%;max-width:460px;overflow:hidden;animation:modalUp .3s cubic-bezier(.34,1.2,.64,1);}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:0;width:100%;max-width:500px;overflow:hidden;animation:modalUp .3s cubic-bezier(.34,1.2,.64,1);}
 @keyframes modalUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 .modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border);}
 .modal-title{font-size:16px;font-weight:800;}
 .modal-close{width:30px;height:30px;background:var(--surface2);border:none;border-radius:8px;cursor:pointer;color:var(--text3);font-size:18px;display:flex;align-items:center;justify-content:center;}
-.modal-close:hover{background:var(--surface3);color:var(--red);}
-.modal-body{padding:20px;}
+.modal-body{padding:20px;max-height:60vh;overflow-y:auto;}
 .modal-foot{display:flex;gap:10px;padding:16px 20px;border-top:1px solid var(--border);}
 .modal-foot .btn{flex:1;height:42px;justify-content:center;}
 
@@ -119,23 +114,36 @@ tbody tr:hover{background:var(--surface2);}
 .field input,.field select{background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 13px;font-size:13px;font-family:'Cairo';color:var(--text);outline:none;}
 .field input:focus,.field select:focus{border-color:var(--orange);}
 
-.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
 .page-title{font-size:22px;font-weight:900;}
 .page-sub{font-size:12px;color:var(--text3);}
 .empty-state{text-align:center;padding:48px;color:var(--text3);}
 .empty-state .icon{font-size:40px;margin-bottom:12px;}
 .skeleton{background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:var(--radius);}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-.tab-bar{display:flex;gap:8px;margin-bottom:16px;}
+.tab-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
 .tab-btn{padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text2);transition:all .2s;}
 .tab-btn.active{background:var(--orange);color:#fff;border-color:var(--orange);}
+
+/* استجابة الهاتف */
+@media (max-width: 768px) {
+  .sidebar{ transform: translateX(100%); }
+  .sidebar.open{ transform: translateX(0); }
+  .hamburger{ display: block; }
+  .main-wrap{ margin-right: 0; }
+  .stats-grid{ grid-template-columns: repeat(2,1fr); }
+  .topbar{ padding: 0 14px; }
+  .content{ padding: 16px; }
+  table{ font-size: 12px; }
+  .btn-sm{ padding: 4px 8px; font-size: 11px; }
+}
 </style>
 </head>
 <body>
 <div class="toast-wrap" id="toast-wrap"></div>
 
 <!-- SIDEBAR -->
-<div class="sidebar">
+<div class="sidebar" id="sidebar">
   <div class="sb-logo"><div class="sb-logo-mark">D</div><div><div class="sb-logo-name">Drako</div></div></div>
   <div class="sb-nav">
     <div class="nav-item active" id="nav-dashboard" onclick="navigate('dashboard')"><div class="nav-icon">🏠</div>لوحة التحكم</div>
@@ -157,7 +165,11 @@ tbody tr:hover{background:var(--surface2);}
 
 <!-- MAIN -->
 <div class="main-wrap">
-  <div class="topbar"><div><div class="topbar-title" id="topbar-title">لوحة التحكم</div></div><div class="topbar-actions"><button class="btn btn-primary btn-sm" onclick="testOrder()">🧪 طلب تجريبي</button><div class="tb-icon-btn" onclick="refreshPage()">🔄</div></div></div>
+  <div class="topbar">
+    <button class="hamburger" id="hamburger" onclick="toggleSidebar()">☰</button>
+    <div><div class="topbar-title" id="topbar-title">لوحة التحكم</div></div>
+    <div class="topbar-actions"><button class="btn btn-primary btn-sm" onclick="testOrder()">🧪 طلب تجريبي</button><div class="tb-icon-btn" onclick="refreshPage()">🔄</div></div>
+  </div>
   <div class="content" id="content"></div>
 </div>
 
@@ -168,6 +180,11 @@ tbody tr:hover{background:var(--surface2);}
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
+// ---------- Sidebar toggle ----------
+function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('open'); }
+function closeSidebar(){ document.getElementById('sidebar').classList.remove('open'); }
+
+// ---------- التحقق من الجلسة (عرض رسالة فقط) ----------
 async function checkAuth() {
   try {
     const res = await fetch('/api/admin/stats', { credentials: 'include' });
@@ -182,79 +199,50 @@ async function checkAuth() {
     }
     return true;
   } catch(e) {
-    document.body.innerHTML = `<div style="display:flex;...">فشل الاتصال</div>`;
+    document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:var(--bg);color:var(--text);flex-direction:column;gap:20px"><div>فشل الاتصال</div></div>`;
     return false;
   }
 }
 checkAuth();
 
-// ========== SOUND ENGINE ==========
+// ---------- SOUND ENGINE ----------
 function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
-  const sampleRate = 44100;
-  const numSamples = Math.floor(sampleRate * duration);
+  const sampleRate = 44100; const numSamples = Math.floor(sampleRate * duration);
   const buffer = new Float32Array(numSamples);
   for (let i = 0; i < numSamples; i++) {
-    const t = i / sampleRate;
-    let sample = 0;
+    const t = i / sampleRate; let sample = 0;
     if (type === 'sine') sample = Math.sin(2 * Math.PI * frequency * t);
     else if (type === 'square') sample = Math.sign(Math.sin(2 * Math.PI * frequency * t));
-    else if (type === 'triangle') {
-      const p = (frequency * t) % 1;
-      sample = 4 * Math.abs(p - 0.5) - 1;
-    }
+    else if (type === 'triangle') { const p = (frequency * t) % 1; sample = 4 * Math.abs(p - 0.5) - 1; }
     buffer[i] = sample * volume;
   }
-  const dataLength = buffer.length * 2;
-  const bufferArray = new ArrayBuffer(44 + dataLength);
+  const dataLength = buffer.length * 2; const bufferArray = new ArrayBuffer(44 + dataLength);
   const view = new DataView(bufferArray);
   function writeString(offset, string) { for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i)); }
-  writeString(0, 'RIFF');
-  view.setUint32(4, 36 + dataLength, true);
-  writeString(8, 'WAVE');
-  writeString(12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, 1, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * 2, true);
-  view.setUint16(32, 2, true);
-  view.setUint16(34, 16, true);
-  writeString(36, 'data');
-  view.setUint32(40, dataLength, true);
+  writeString(0, 'RIFF'); view.setUint32(4, 36 + dataLength, true); writeString(8, 'WAVE'); writeString(12, 'fmt ');
+  view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+  writeString(36, 'data'); view.setUint32(40, dataLength, true);
   let offset = 44;
-  for (let i = 0; i < buffer.length; i++) {
-    const s = Math.max(-1, Math.min(1, buffer[i]));
-    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-    offset += 2;
-  }
-  const blob = new Blob([bufferArray], { type: 'audio/wav' });
-  return URL.createObjectURL(blob);
+  for (let i = 0; i < buffer.length; i++) { const s = Math.max(-1, Math.min(1, buffer[i])); view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true); offset += 2; }
+  const blob = new Blob([bufferArray], { type: 'audio/wav' }); return URL.createObjectURL(blob);
 }
-
 const soundInstances = {};
-function createSound(name, ...tones) {
-  soundInstances[name] = tones.map(t => new Howl({ src: [t], format: ['wav'], volume: 0.5 }));
-}
-function playSound(name) {
-  if (soundInstances[name]) {
-    soundInstances[name].forEach(h => h.play());
-  }
-}
-
+function createSound(name, ...tones) { soundInstances[name] = tones.map(t => new Howl({ src: [t], format: ['wav'], volume: 0.5 })); }
+function playSound(name) { if (soundInstances[name]) soundInstances[name].forEach(h => h.play()); }
 createSound('adminNewOrder', generateToneWAV(800, 0.15, 'square'), generateToneWAV(1000, 0.15, 'square'));
 createSound('orderCancelled', generateToneWAV(400, 0.3, 'triangle'));
 createSound('driverArrived', generateToneWAV(600, 0.1, 'sine'), generateToneWAV(800, 0.1, 'sine'));
-createSound('orderAccepted', generateToneWAV(600, 0.2, 'sine'));
 
-// ========== MAIN APP ==========
+// ---------- MAIN APP ----------
 const API='/api';
 let currentPage='dashboard';
 let allOrdersCache=[], allRestaurantsCache=[], allDriversCache=[];
+let autoRefreshInterval = null;
 
-async function apiFetch(url, options = {}) {
+async function apiFetch(url, options={}) {
   const res = await fetch(url, { ...options, credentials: 'include', headers: { ...(options.headers||{}), 'Content-Type': options.body instanceof FormData ? undefined : 'application/json' } });
   if (res.status === 401) {
-    // عرض رسالة انتهاء الجلسة في مكان بارز دون مسح الصفحة
     document.body.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:var(--bg);color:var(--text);flex-direction:column;gap:20px">
         <div style="font-size:22px;font-weight:800">انتهت الجلسة</div>
@@ -285,7 +273,8 @@ function statusBadge(s){ const cl={PENDING:'badge-yellow',ACCEPTED:'badge-blue',
 
 function refreshPage(){ renderPage(currentPage); }
 function navigate(page){
-  currentPage=page;
+  currentPage=page; closeSidebar();
+  if (autoRefreshInterval) { clearInterval(autoRefreshInterval); autoRefreshInterval = null; }
   document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active'));
   document.getElementById('nav-'+page)?.classList.add('active');
   const titles={dashboard:'لوحة التحكم',orders:'الطلبات',dispatch:'توزيع الطلبات',restaurants:'المطاعم',markets:'الأسواق',pharmacies:'الصيدليات',drivers:'الطيارين',products:'المنتجات',categories:'التصنيفات',regions:'المناطق',customers:'العملاء',reports:'التقارير',settings:'الإعدادات'};
@@ -294,13 +283,10 @@ function navigate(page){
 }
 
 async function renderPage(page){
-  // تحقق سريع من الجلسة قبل التحميل
-  try { await apiFetch(API+'/admin/stats'); } catch(e) { return; }
-  // ... باقي الكود
-
   const c=document.getElementById('content');
   c.innerHTML='<div class="skeleton" style="height:200px"></div>';
   try{
+    await apiFetch(API+'/admin/stats');
     if(page==='dashboard') await loadDashboard();
     else if(page==='orders') await loadOrders();
     else if(page==='dispatch') await loadDispatch();
@@ -314,10 +300,18 @@ async function renderPage(page){
     else if(page==='customers') await loadCustomers();
     else if(page==='reports') await loadReports();
     else if(page==='settings') loadSettings();
-  }catch(e){ toast('خطأ في التحميل','error'); console.error(e); }
+    if (page === 'orders' || page === 'dashboard') {
+      autoRefreshInterval = setInterval(() => {
+        if (page === 'orders') loadOrders();
+        else if (page === 'dashboard') loadDashboard();
+      }, 30000);
+    }
+  } catch(e) {
+    if (e.message !== 'SESSION_EXPIRED') toast('خطأ في التحميل','error');
+  }
 }
 
-// ========== DASHBOARD ==========
+// ---------- DASHBOARD ----------
 async function loadDashboard(){
   const stats=await apiFetch(API+'/admin/stats').then(r=>r.json()).catch(()=>({}));
   const orders=await apiFetch(API+'/orders').then(r=>r.json()).catch(()=>[]);
@@ -339,12 +333,11 @@ async function loadDashboard(){
     ${orders.slice(-6).reverse().map(o=>`<div style="display:flex;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border);cursor:pointer" onclick="viewOrder('${o.id}')"><div><div style="color:var(--orange);font-weight:700">#${(o.id||'').slice(-6)}</div><div style="font-size:12px;color:var(--text2)">${o.customerName||'—'} • ${o.regionName || o.address||'—'}</div></div><div>${statusBadge(o.status)}</div></div>`).join('')}</div>`;
 }
 
-// ========== ORDERS ==========
+// ---------- ORDERS ----------
 async function loadOrders(){
   const orders=await apiFetch(API+'/orders').then(r=>r.json()).catch(()=>[]);
   allOrdersCache=orders;
   window._orders=orders.slice().reverse();
-
   document.getElementById('content').innerHTML=`
     <div class="page-header"><div><div class="page-title">📦 الطلبات</div></div>
       <input type="text" id="ord-search" placeholder="بحث..." style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px;font-size:13px;font-family:'Cairo';color:var(--text);outline:none;width:200px" oninput="applyCurrentTabFilter()">
@@ -355,7 +348,6 @@ async function loadOrders(){
       <div class="tab-btn" onclick="switchOrderTab('completed')">✅ مكتملة</div>
     </div>
     <div class="section"><div class="table-wrap"><table><thead><tr><th>رقم</th><th>العميل</th><th>المنطقة</th><th>العنوان</th><th>المطعم</th><th>الأصناف</th><th>المبلغ</th><th>الحالة</th><th>الطيار</th><th>الوقت</th><th>إجراء</th></tr></thead><tbody id="orders-tbody">${renderOrderRows(window._orders)}</tbody></table></div></div>`;
-
   window._currentOrderTab = 'new';
   applyCurrentTabFilter();
 }
@@ -370,18 +362,11 @@ function switchOrderTab(tab){
 function applyCurrentTabFilter(){
   const tab = window._currentOrderTab || 'new';
   let filtered = window._orders || [];
-
-  if (tab === 'new') {
-    filtered = filtered.filter(o => !o.adminApproved && o.status !== 'CANCELLED');
-  } else if (tab === 'in-progress') {
-    filtered = filtered.filter(o => o.adminApproved && !['DELIVERED', 'CANCELLED'].includes(o.status));
-  } else if (tab === 'completed') {
-    filtered = filtered.filter(o => ['DELIVERED', 'CANCELLED'].includes(o.status));
-  }
-
+  if (tab === 'new') filtered = filtered.filter(o => !o.adminApproved && o.status !== 'CANCELLED');
+  else if (tab === 'in-progress') filtered = filtered.filter(o => o.adminApproved && !['DELIVERED', 'CANCELLED'].includes(o.status));
+  else if (tab === 'completed') filtered = filtered.filter(o => ['DELIVERED', 'CANCELLED'].includes(o.status));
   const q=document.getElementById('ord-search')?.value||'';
   if(q) filtered = filtered.filter(o=>(o.customerName||'').includes(q)||(o.id||'').includes(q));
-
   document.getElementById('orders-tbody').innerHTML=renderOrderRows(filtered);
 }
 
@@ -392,19 +377,11 @@ function renderOrderRows(list){
     const itemsDetail = (o.items || []).length === 0 ? '—' :
       o.items.map(i => {
         let itemHtml = `<div><strong>${i.name || ''}</strong> × ${i.quantity || 1} (${i.price || 0} ج)</div>`;
-        if (i.selectedOptions && i.selectedOptions.length > 0) {
-          itemHtml += `<div style="color:var(--text3); font-size:11px; margin-right:8px;">` +
-                      i.selectedOptions.map(opt => opt.value).join('، ') + `</div>`;
-        }
-        if (i.notes) {
-          itemHtml += `<div style="color:var(--text3); font-size:10px; margin-right:8px;">📝 ${i.notes}</div>`;
-        }
+        if (i.selectedOptions && i.selectedOptions.length > 0) itemHtml += `<div style="color:var(--text3); font-size:11px; margin-right:8px;">` + i.selectedOptions.map(opt => opt.value).join('، ') + `</div>`;
+        if (i.notes) itemHtml += `<div style="color:var(--text3); font-size:10px; margin-right:8px;">📝 ${i.notes}</div>`;
         return itemHtml;
       }).join('<div style="margin:4px 0; border-top:1px dotted var(--border);"></div>');
-
-    // إظهار الفاتورة في عمود المبلغ
     const totalCell = (o.invoiceAmount ? `<div>فاتورة: ${o.invoiceAmount} ج ${o.invoiceBy ? '(' + o.invoiceBy + ')' : ''}</div>` : '') + `<div style="font-weight:700;color:var(--orange)">${o.total||0} ج</div>`;
-
     return `<tr>
       <td style="color:var(--orange);font-weight:800">#${(o.id||'').slice(-6)}</td>
       <td><div style="font-weight:600">${o.customerName||'—'}</div><div style="font-size:11px;color:var(--text3)">${o.customerPhone||''}</div></td>
@@ -423,15 +400,11 @@ function renderOrderRows(list){
 
 function getOrderActions(o) {
   if (!o.adminApproved && o.status !== 'CANCELLED') {
-    return `
-      <button class="btn btn-success btn-sm" onclick="approveOrder('${o.id}')">✅ موافقة</button>
-      <button class="btn btn-danger btn-sm" onclick="rejectOrder('${o.id}')">❌ رفض</button>
-      <button class="btn btn-ghost btn-sm" onclick="editOrder('${o.id}')">✏️ تعديل</button>
-    `;
+    return `<button class="btn btn-success btn-sm" onclick="approveOrder('${o.id}')">✅ موافقة</button>
+            <button class="btn btn-danger btn-sm" onclick="rejectOrder('${o.id}')">❌ رفض</button>
+            <button class="btn btn-ghost btn-sm" onclick="editOrder('${o.id}')">✏️ تعديل</button>`;
   }
-  if (o.adminApproved && o.status === 'PENDING') {
-    return '<span style="color:var(--green)">✓ معتمد</span>';
-  }
+  if (o.adminApproved && o.status === 'PENDING') return '<span style="color:var(--green)">✓ معتمد</span>';
   return '—';
 }
 
@@ -448,26 +421,8 @@ function viewOrder(id){
       ${o.invoiceAmount ? `<div><strong>💰 قيمة الفاتورة:</strong> ${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div>` : ''}
       ${o.adminApproved ? '<div><strong>حالة الموافقة:</strong> ✅ معتمد من الأدمن</div>' : (o.status === 'CANCELLED' ? '<div><strong>حالة الموافقة:</strong> ❌ مرفوض (' + (o.cancelReason || '—') + ')</div>' : '<div><strong>حالة الموافقة:</strong> ⏳ في انتظار الموافقة</div>')}
       ${o.adminNotes ? `<div><strong>ملاحظات الأدمن:</strong> ${o.adminNotes}</div>` : ''}
-      <div><strong>الأصناف:</strong> 
-        ${(o.items || []).map(i => {
-          let itemHtml = `<div style="margin-bottom:8px;font-weight:600">${i.name || ''} × ${i.quantity || 1} (${i.price || 0} ج)</div>`;
-          if (i.selectedOptions && i.selectedOptions.length > 0) {
-            itemHtml += `<div style="color:var(--text2); font-size:12px; margin-right:12px;">` +
-                        i.selectedOptions.map(opt => opt.value).join('، ') + 
-                        `</div>`;
-          }
-          if (i.notes) {
-            itemHtml += `<div style="color:var(--text3); font-size:11px; margin-right:12px;">📝 ${i.notes}</div>`;
-          }
-          return itemHtml;
-        }).join('') || '—'}
-      </div>
-      ${o.attachments && o.attachments.length ? `
-        <div style="margin-top:12px"><strong>📎 المرفقات:</strong></div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px">
-          ${o.attachments.map(url => `<img src="${url}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;cursor:pointer" onclick="window.open('${url}')">`).join('')}
-        </div>
-      ` : ''}
+      <div><strong>الأصناف:</strong> ${(o.items || []).map(i => { let itemHtml = `<div style="margin-bottom:8px;font-weight:600">${i.name || ''} × ${i.quantity || 1} (${i.price || 0} ج)</div>`; if (i.selectedOptions && i.selectedOptions.length > 0) itemHtml += `<div style="color:var(--text2); font-size:12px; margin-right:12px;">` + i.selectedOptions.map(opt => opt.value).join('، ') + `</div>`; if (i.notes) itemHtml += `<div style="color:var(--text3); font-size:11px; margin-right:12px;">📝 ${i.notes}</div>`; return itemHtml; }).join('') || '—'}</div>
+      ${o.attachments && o.attachments.length ? `<div style="margin-top:12px"><strong>📎 المرفقات:</strong></div><div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px">${o.attachments.map(url => `<img src="${url}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;cursor:pointer" onclick="window.open('${url}')">`).join('')}</div>` : ''}
       <div><strong>الإجمالي:</strong> <span style="color:var(--orange)">${o.total||0} ج</span></div>
       <div><strong>طريقة الدفع:</strong> ${o.paymentMethod==='CASH'?'كاش':'فودافون كاش'}</div>
       <div><strong>الحالة:</strong> ${STATUS_AR[o.status]||o.status}</div>
@@ -477,7 +432,7 @@ function viewOrder(id){
     </div>`, '');
 }
 
-// ========== DISPATCH ==========
+// ---------- DISPATCH ----------
 async function loadDispatch(){
   const [orders,drivers]=await Promise.all([apiFetch(API+'/orders').then(r=>r.json()), apiFetch(API+'/admin/drivers').then(r=>r.json())]);
   const ready=orders.filter(o=>o.status==='READY'&&!o.driverId);
@@ -493,7 +448,7 @@ async function assignDriver(orderId,driverId){
   toast('تم تعيين الطيار'); loadDispatch();
 }
 
-// ========== RESTAURANTS ==========
+// ---------- RESTAURANTS ----------
 async function loadRestaurants(){
   const res=await apiFetch(API+'/admin/restaurants').then(r=>r.json()).catch(()=>[]);
   allRestaurantsCache=res;
@@ -524,17 +479,10 @@ async function addRestaurant(){
   const d=await apiFetch(API+'/admin/restaurants',{method:'POST',body:JSON.stringify({name:n,ownerPhone:p,ownerPassword:ps})}).then(r=>r.json());
   if(d.error) toast(d.error,'error'); else { toast('تمت الإضافة'); closeModal(); loadRestaurants(); }
 }
-
 async function editRestaurant(id) {
   const r = allRestaurantsCache.find(r => r.id === id);
   if (!r) return;
-  openModal('تعديل مطعم', `
-    <div class="field"><label>اسم المطعم</label><input id="edit-r-name" value="${r.name||''}"></div>
-    <div class="field"><label>هاتف المالك</label><input id="edit-r-phone" value="${r.ownerPhone||''}"></div>
-  `, `
-    <button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>
-    <button class="btn btn-primary" onclick="saveRestaurantEdit('${id}')">حفظ</button>
-  `);
+  openModal('تعديل مطعم', `<div class="field"><label>اسم المطعم</label><input id="edit-r-name" value="${r.name||''}"></div><div class="field"><label>هاتف المالك</label><input id="edit-r-phone" value="${r.ownerPhone||''}"></div>`, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveRestaurantEdit('${id}')">حفظ</button>`);
 }
 async function saveRestaurantEdit(id) {
   const name = document.getElementById('edit-r-name').value.trim();
@@ -549,7 +497,7 @@ async function deleteRestaurant(id) {
   if(d.error) toast(d.error,'error'); else { toast('تم الحذف'); loadRestaurants(); }
 }
 
-// ========== MARKETS ==========
+// ---------- MARKETS ----------
 async function loadMarkets(){
   const res=await apiFetch(API+'/admin/markets').then(r=>r.json()).catch(()=>[]);
   document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">🛒 الأسواق</div><div class="page-sub">${res.length} سوق</div></div><button class="btn btn-primary" onclick="showAddMarket()">+ إضافة</button></div>
@@ -578,24 +526,14 @@ async function addMarket(){
   const p = document.getElementById('m-phone').value.trim();
   const ps = document.getElementById('m-pass').value.trim();
   if(!n||!p||!ps) return toast('أكمل الحقول','error');
-  const d = await apiFetch(API+'/admin/markets', {
-    method: 'POST',
-    body: JSON.stringify({ name: n, ownerPhone: p, ownerPassword: ps })
-  }).then(r => r.json());
-  if(d.error) toast(d.error, 'error');
-  else { toast('تمت الإضافة'); closeModal(); loadMarkets(); }
+  const d = await apiFetch(API+'/admin/markets', { method: 'POST', body: JSON.stringify({ name: n, ownerPhone: p, ownerPassword: ps }) }).then(r => r.json());
+  if(d.error) toast(d.error, 'error'); else { toast('تمت الإضافة'); closeModal(); loadMarkets(); }
 }
 async function editMarket(id) {
   const markets = await apiFetch(API+'/admin/markets').then(r=>r.json());
   const m = markets.find(m => m.id === id);
   if (!m) return;
-  openModal('تعديل سوق', `
-    <div class="field"><label>اسم السوق</label><input id="edit-m-name" value="${m.name||''}"></div>
-    <div class="field"><label>هاتف المالك</label><input id="edit-m-phone" value="${m.ownerPhone||''}"></div>
-  `, `
-    <button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>
-    <button class="btn btn-primary" onclick="saveMarketEdit('${id}')">حفظ</button>
-  `);
+  openModal('تعديل سوق', `<div class="field"><label>اسم السوق</label><input id="edit-m-name" value="${m.name||''}"></div><div class="field"><label>هاتف المالك</label><input id="edit-m-phone" value="${m.ownerPhone||''}"></div>`, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveMarketEdit('${id}')">حفظ</button>`);
 }
 async function saveMarketEdit(id) {
   const name = document.getElementById('edit-m-name').value.trim();
@@ -610,7 +548,7 @@ async function deleteMarket(id) {
   if(d.error) toast(d.error,'error'); else { toast('تم الحذف'); loadMarkets(); }
 }
 
-// ========== PHARMACIES ==========
+// ---------- PHARMACIES ----------
 async function loadPharmacies(){
   const res=await apiFetch(API+'/admin/pharmacies').then(r=>r.json()).catch(()=>[]);
   document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">💊 الصيدليات</div><div class="page-sub">${res.length} صيدلية</div></div><button class="btn btn-primary" onclick="showAddPharmacy()">+ إضافة</button></div>
@@ -639,25 +577,14 @@ async function addPharmacy(){
   const p = document.getElementById('ph-phone').value.trim();
   const ps = document.getElementById('ph-pass').value.trim();
   if(!n||!p||!ps) return toast('أكمل الحقول','error');
-  const d = await apiFetch(API+'/admin/pharmacies', {
-    method: 'POST',
-    body: JSON.stringify({ name: n, ownerPhone: p, ownerPassword: ps })
-  }).then(r => r.json());
-  if(d.error) toast(d.error, 'error');
-  else { toast('تمت الإضافة'); closeModal(); loadPharmacies(); }
+  const d = await apiFetch(API+'/admin/pharmacies', { method: 'POST', body: JSON.stringify({ name: n, ownerPhone: p, ownerPassword: ps }) }).then(r => r.json());
+  if(d.error) toast(d.error, 'error'); else { toast('تمت الإضافة'); closeModal(); loadPharmacies(); }
 }
-
 async function editPharmacy(id) {
   const pharmacies = await apiFetch(API+'/admin/pharmacies').then(r=>r.json());
   const p = pharmacies.find(p => p.id === id);
   if (!p) return;
-  openModal('تعديل صيدلية', `
-    <div class="field"><label>اسم الصيدلية</label><input id="edit-ph-name" value="${p.name||''}"></div>
-    <div class="field"><label>هاتف المالك</label><input id="edit-ph-phone" value="${p.ownerPhone||''}"></div>
-  `, `
-    <button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>
-    <button class="btn btn-primary" onclick="savePharmacyEdit('${id}')">حفظ</button>
-  `);
+  openModal('تعديل صيدلية', `<div class="field"><label>اسم الصيدلية</label><input id="edit-ph-name" value="${p.name||''}"></div><div class="field"><label>هاتف المالك</label><input id="edit-ph-phone" value="${p.ownerPhone||''}"></div>`, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="savePharmacyEdit('${id}')">حفظ</button>`);
 }
 async function savePharmacyEdit(id) {
   const name = document.getElementById('edit-ph-name').value.trim();
@@ -672,7 +599,7 @@ async function deletePharmacy(id) {
   if(d.error) toast(d.error,'error'); else { toast('تم الحذف'); loadPharmacies(); }
 }
 
-// ========== DRIVERS ==========
+// ---------- DRIVERS ----------
 async function loadDrivers(){
   const res=await apiFetch(API+'/admin/drivers').then(r=>r.json()).catch(()=>[]);
   allDriversCache=res;
@@ -730,18 +657,10 @@ async function viewDriverDetails(id) {
       </div>`, '');
   } catch { toast('فشل تحميل التفاصيل', 'error'); }
 }
-
 async function editDriver(id) {
   const driver = allDriversCache.find(d => d.id === id);
   if (!driver) return;
-  openModal('تعديل طيار', `
-    <div class="field"><label>الاسم</label><input id="edit-d-name" value="${driver.name||''}"></div>
-    <div class="field"><label>الهاتف</label><input id="edit-d-phone" value="${driver.phone||''}"></div>
-    <div class="field"><label>كلمة المرور (اتركه فارغاً للاحتفاظ بالحالية)</label><input id="edit-d-pass" type="password" placeholder="كلمة جديدة"></div>
-  `, `
-    <button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>
-    <button class="btn btn-primary" onclick="saveDriverEdit('${id}')">حفظ</button>
-  `);
+  openModal('تعديل طيار', `<div class="field"><label>الاسم</label><input id="edit-d-name" value="${driver.name||''}"></div><div class="field"><label>الهاتف</label><input id="edit-d-phone" value="${driver.phone||''}"></div><div class="field"><label>كلمة المرور (اتركه فارغاً للاحتفاظ بالحالية)</label><input id="edit-d-pass" type="password" placeholder="كلمة جديدة"></div>`, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveDriverEdit('${id}')">حفظ</button>`);
 }
 async function saveDriverEdit(id) {
   const name = document.getElementById('edit-d-name').value.trim();
@@ -759,7 +678,7 @@ async function deleteDriver(id) {
   if(d.error) toast(d.error,'error'); else { toast('تم الحذف'); loadDrivers(); }
 }
 
-// ========== PRODUCTS ==========
+// ---------- PRODUCTS ----------
 async function loadProducts(){
   const res=await apiFetch(API+'/admin/products').then(r=>r.json()).catch(()=>[]);
   document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">📋 المنتجات</div><div class="page-sub">${res.length} منتج</div></div><button class="btn btn-primary" onclick="showAddProduct()">+ إضافة</button></div>
@@ -785,7 +704,7 @@ async function addProduct(){
 }
 async function deleteProduct(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/products/'+id,{method:'DELETE'}); loadProducts(); } }
 
-// ========== CATEGORIES ==========
+// ---------- CATEGORIES ----------
 async function loadCategories(){
   const res=await apiFetch(API+'/admin/categories').then(r=>r.json()).catch(()=>[]);
   document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">🏷️ التصنيفات</div></div><button class="btn btn-primary" onclick="showAddCategory()">+ إضافة</button></div>
@@ -804,7 +723,7 @@ async function addCategory(){
 }
 async function deleteCategory(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/categories/'+id,{method:'DELETE'}); loadCategories(); } }
 
-// ========== REGIONS ==========
+// ---------- REGIONS ----------
 async function loadRegions(){
   const res=await apiFetch(API+'/admin/regions').then(r=>r.json()).catch(()=>[]);
   document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">🌍 مناطق التوصيل</div></div><button class="btn btn-primary" onclick="showAddRegion()">+ إضافة</button></div>
@@ -831,7 +750,7 @@ async function updateRegion(id){
 }
 async function deleteRegion(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/regions/'+id,{method:'DELETE'}); loadRegions(); } }
 
-// ========== CUSTOMERS ==========
+// ---------- CUSTOMERS ----------
 async function loadCustomers() {
   const c = document.getElementById('content');
   c.innerHTML = `
@@ -842,24 +761,19 @@ async function loadCustomers() {
   `;
   await renderCustomersTable();
 }
-
 async function renderCustomersTable() {
   const container = document.getElementById('customers-table');
   if (!container) return;
   container.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3)">⏳ جاري التحميل...</div>';
-
   const search = document.getElementById('cust-search')?.value || '';
   let url = API + '/admin/customers';
   if (search) url += '?search=' + encodeURIComponent(search);
-  
   const res = await apiFetch(url);
   const customers = await res.json();
-  
   if (!customers.length) {
     container.innerHTML = `<div class="empty-state"><div class="icon">👥</div><div class="msg">لا يوجد عملاء مسجلين</div></div>`;
     return;
   }
-  
   container.innerHTML = `
     <div class="section"><div class="table-wrap"><table><thead><tr>
       <th>الاسم</th><th>الهاتف</th><th>المنطقة</th><th>رسوم التوصيل</th>
@@ -880,41 +794,27 @@ async function renderCustomersTable() {
     }).join('')}
     </tbody></table></div></div>`;
 }
-
 async function editCustomer(id) {
   const res = await apiFetch(API + '/admin/customers/' + id);
   const customer = await res.json();
   if (customer.error) return toast(customer.error, 'error');
-
   const regionsRes = await apiFetch(API + '/admin/regions');
   const regions = await regionsRes.json();
-  const regionOptions = regions.map(r => 
-    `<option value="${r.id}" ${r.id === customer.regionId ? 'selected' : ''}>${r.name} (${r.fee} ج)</option>`
-  ).join('');
-
+  const regionOptions = regions.map(r => `<option value="${r.id}" ${r.id === customer.regionId ? 'selected' : ''}>${r.name} (${r.fee} ج)</option>`).join('');
   openModal('تعديل بيانات العميل', `
     <div class="field"><label>الاسم</label><input id="cust-name" value="${customer.name}"></div>
     <div class="field"><label>رقم الهاتف</label><input id="cust-phone" value="${customer.phone}"></div>
     <div class="field"><label>المنطقة</label><select id="cust-region">${regionOptions}</select></div>
     <div class="field"><label>العنوان التفصيلي</label><input id="cust-address" value="${customer.address}"></div>
-  `, `
-    <button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>
-    <button class="btn btn-primary" onclick="saveCustomerEdit('${id}')">حفظ</button>
-  `);
+  `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveCustomerEdit('${id}')">حفظ</button>`);
 }
-
 async function saveCustomerEdit(id) {
   const name = document.getElementById('cust-name').value.trim();
   const phone = document.getElementById('cust-phone').value.trim();
   const regionId = document.getElementById('cust-region').value;
   const address = document.getElementById('cust-address').value.trim();
-
   if (!name || !phone || !address) return alert('أكمل جميع الحقول');
-
-  const res = await apiFetch(API + '/admin/customers/' + id, {
-    method: 'PATCH',
-    body: JSON.stringify({ name, phone, regionId, address })
-  });
+  const res = await apiFetch(API + '/admin/customers/' + id, { method: 'PATCH', body: JSON.stringify({ name, phone, regionId, address }) });
   const data = await res.json();
   if (data.error) { alert(data.error); return; }
   toast('تم تعديل بيانات العميل');
@@ -922,7 +822,7 @@ async function saveCustomerEdit(id) {
   loadCustomers();
 }
 
-// ========== REPORTS ==========
+// ---------- REPORTS ----------
 async function loadReports(){
   const data=await apiFetch(API+'/admin/reports/full').then(r=>r.json()).catch(()=>null);
   document.getElementById('content').innerHTML=`
@@ -930,7 +830,6 @@ async function loadReports(){
     <div class="tab-bar" id="report-tabs"><div class="tab-btn active" onclick="switchReportTab('daily')">اليوم</div><div class="tab-btn" onclick="switchReportTab('weekly')">الأسبوع</div><div class="tab-btn" onclick="switchReportTab('monthly')">الشهر</div><div class="tab-btn" onclick="switchReportTab('total')">الإجمالي</div></div><div id="report-content"></div>`;
   window._reportData=data; switchReportTab('daily');
 }
-
 function switchReportTab(tab){
   document.querySelectorAll('#report-tabs .tab-btn').forEach(b=>b.classList.remove('active'));
   event?.target?.classList.add('active');
@@ -953,12 +852,12 @@ function switchReportTab(tab){
     </div>`;
 }
 
-// ========== SETTINGS ==========
+// ---------- SETTINGS ----------
 function loadSettings(){
   document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">⚙️ الإعدادات</div></div></div><div class="section" style="padding:20px"><p>الإصدار: Drako v2.0</p><a href="/logout" class="btn btn-danger" style="margin-top:16px">⏻ تسجيل الخروج</a></div>`;
 }
 
-// ========== TEST ORDER ==========
+// ---------- TEST ORDER ----------
 async function testOrder(){
   const restId=prompt('معرف المطعم (من صفحة المطاعم):');
   if(!restId) return;
@@ -967,18 +866,15 @@ async function testOrder(){
   else toast(d.error||'فشل','error');
 }
 
-// دوال الموافقة والرفض والتعديل
+// ---------- الموافقة / الرفض / التعديل ----------
 async function approveOrder(id) {
   try {
     const res = await apiFetch(API + '/admin/orders/' + id + '/approve', { method: 'PATCH' });
     if (!res.ok) throw new Error('فشل');
     toast('تمت الموافقة على الطلب');
     loadOrders();
-  } catch(e) {
-    if (e.message !== 'SESSION_EXPIRED') toast('فشلت الموافقة', 'error');
-  }
+  } catch(e) { if (e.message !== 'SESSION_EXPIRED') toast('فشلت الموافقة', 'error'); }
 }
-
 async function rejectOrder(id) {
   const reason = prompt('سبب الرفض:');
   if (!reason) return;
@@ -987,13 +883,8 @@ async function rejectOrder(id) {
     if (!res.ok) throw new Error('فشل');
     toast('تم رفض الطلب');
     loadOrders();
-  } catch(e) {
-    if (e.message !== 'SESSION_EXPIRED') toast('فشل الرفض', 'error');
-  }
+  } catch(e) { if (e.message !== 'SESSION_EXPIRED') toast('فشل الرفض', 'error'); }
 }
-
-// وتأكد من دالة editOrder و saveOrderEdit بنفس الطريقة
-
 async function editOrder(id) {
   const o = allOrdersCache.find(o => o.id === id);
   if (!o) return;
@@ -1002,54 +893,38 @@ async function editOrder(id) {
     <div class="field"><label>الإجمالي</label><input id="edit-total" type="number" value="${o.total}"></div>
     <div class="field"><label>ملاحظات الأدمن</label><input id="edit-notes" value="${o.adminNotes || ''}"></div>
     <div class="field"><label>نص الطلب (الفاتورة النصية)</label><textarea id="edit-order-notes" style="height:80px">${o.orderNotes || ''}</textarea></div>
-  `, `
-    <button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>
-    <button class="btn btn-primary" onclick="saveOrderEdit('${id}')">حفظ</button>
-  `);
+  `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveOrderEdit('${id}')">حفظ</button>`);
 }
-
 async function saveOrderEdit(id) {
   try {
     const items = JSON.parse(document.getElementById('edit-items').value);
     const total = Number(document.getElementById('edit-total').value);
     const adminNotes = document.getElementById('edit-notes').value;
     const orderNotes = document.getElementById('edit-order-notes').value;
-    await apiFetch(API + '/admin/orders/' + id, {
-      method: 'PATCH',
-      body: JSON.stringify({ items, total, adminNotes, orderNotes })
-    });
+    await apiFetch(API + '/admin/orders/' + id, { method: 'PATCH', body: JSON.stringify({ items, total, adminNotes, orderNotes }) });
     toast('تم تعديل الطلب');
     closeModal();
     loadOrders();
-  } catch (e) {
-    alert('صيغة JSON غير صحيحة');
-  }
+  } catch (e) { alert('صيغة JSON غير صحيحة'); }
 }
 
-navigate('dashboard');
-
-// Socket.IO listeners
-const socket = io();
-socket.on('newOrder', (data) => {
-  playSound('adminNewOrder');
-  toast('طلب جديد من ' + data.customerName, 'success');
-  document.getElementById('pending-badge').textContent = 
-    (parseInt(document.getElementById('pending-badge').textContent) || 0) + 1;
-});
-
-socket.on('orderCancelled', (data) => {
-  playSound('orderCancelled');
-  toast('تم إلغاء طلب #' + (data.orderId || '').slice(-6), 'error');
-});
- 
+// ---------- التحديث الصامت للجلسة ----------
 setInterval(async () => {
   try { await fetch('/api/admin/stats', { credentials: 'include' }); } catch(e) {}
 }, 5 * 60 * 1000);
 
-socket.on('driverArrived', (data) => {
-  playSound('driverArrived');
-  toast('الطيار ' + (data.driverName || '') + ' وصل لاستلام الطلب', 'info');
+// ---------- بدء التطبيق ----------
+navigate('dashboard');
+
+// Socket.IO
+const socket = io();
+socket.on('newOrder', (data) => {
+  playSound('adminNewOrder');
+  toast('طلب جديد من ' + data.customerName, 'success');
+  document.getElementById('pending-badge').textContent = (parseInt(document.getElementById('pending-badge').textContent) || 0) + 1;
 });
+socket.on('orderCancelled', (data) => { playSound('orderCancelled'); toast('تم إلغاء طلب #' + (data.orderId || '').slice(-6), 'error'); });
+socket.on('driverArrived', (data) => { playSound('driverArrived'); toast('الطيار ' + (data.driverName || '') + ' وصل لاستلام الطلب', 'info'); });
 </script>
 </body>
 </html>
