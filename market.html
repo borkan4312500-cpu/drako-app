@@ -110,27 +110,19 @@
     function closeModal() { document.getElementById('modal').classList.remove('open'); }
 
     // ---------- apiFetch (معدلة: بدون إعادة توجيه) ----------
-    async function apiFetch(url, options = {}) {
-      const res = await fetch(url, {
-        ...options,
-        credentials: 'include',
-        headers: {
-          ...(options.headers || {}),
-          'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
-        }
-      });
-      if (res.status === 401 || res.status === 403) {
-        // عرض رسالة انتهاء الجلسة فقط
-        document.getElementById('mainContent').innerHTML = `
-          <div class="error-box">
-            <p>انتهت الجلسة. يرجى تسجيل الدخول مجدداً.</p>
-            <button class="btn" style="margin-top:16px" onclick="window.location.href='/login.html'">تسجيل الدخول</button>
-          </div>
-        `;
-        throw new Error('SESSION_EXPIRED');
-      }
-      return res;
+   async function apiFetch(url, options = {}) {
+  const res = await fetch(url, {
+    ...options,
+    credentials: 'include',
+    headers: {
+      ...(options.headers || {}),
+      // لو بتبعت JSON بس، ومش FormData
+      'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
     }
+  });
+  // لا نقوم بتحويل لأي مكان عند أي خطأ
+  return res;
+}
 
     // ---------- checkSession (تعرض رسالة فقط) ----------
     async function checkSession() {
