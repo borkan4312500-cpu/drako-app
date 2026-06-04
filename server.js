@@ -1,1458 +1,1070 @@
-require('dotenv').config();
-const express = require('express');
-const path = require('path');
-const fs = require('fs');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
-const cookieParser = require('cookie-parser');
-const multer = require('multer');
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>Drako — لوحة المطعم</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
+<style>
+:root{
+  --bg:#0D0F14; --surface:#161B24; --surface2:#1E2535; --surface3:#252D40;
+  --border:#2A3348; --orange:#FF6B00; --orange2:#FF8C3A;
+  --orange-glow:rgba(255,107,0,.18); --orange-dim:rgba(255,107,0,.08);
+  --text:#F0F2F8; --text2:#8B95A8; --text3:#55627A;
+  --green:#00D68F; --blue:#3B82F6; --red:#F05252; --yellow:#FBBF24;
+  --radius:14px; --radius-lg:20px;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo',sans-serif;}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px;}
+body{background:var(--bg);color:var(--text);display:flex;min-height:100vh;overflow:hidden;}
 
-const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
+.sidebar{ width:260px;flex-shrink:0;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;overflow-y:auto; }
+.sb-logo{padding:20px 18px 12px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);}
+.sb-logo-mark{width:42px;height:42px;border-radius:13px;flex-shrink:0;background:linear-gradient(135deg,var(--orange),var(--orange2));display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;box-shadow:0 4px 16px var(--orange-glow);}
+.sb-logo-text{display:flex;flex-direction:column;}
+.sb-logo-name{font-size:18px;font-weight:900;color:var(--text);}
+.sb-nav{flex:1;padding:12px 10px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;}
+.nav-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:11px;cursor:pointer;font-size:13.5px;font-weight:600;color:var(--text2);transition:all .18s;}
+.nav-item:hover{background:var(--surface2);color:var(--text);}
+.nav-item.active{background:var(--orange-dim);color:var(--orange);}
+.nav-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;background:var(--surface2);}
+.nav-item.active .nav-icon{background:var(--orange-dim);}
+.sb-footer{padding:12px 10px;border-top:1px solid var(--border);}
+.sb-user{display:flex;align-items:center;gap:10px;padding:10px;border-radius:var(--radius);background:var(--surface2);}
+.sb-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--orange),var(--orange2));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;}
+.sb-user-name{font-size:13px;font-weight:700;}
+.sb-user-role{font-size:11px;color:var(--text3);}
+.sb-logout{color:var(--text3);font-size:18px;cursor:pointer;text-decoration:none;}
 
-// إعداد multer لرفع الملفات
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    let dir = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
-    if (req.originalUrl.includes('/orders/special')) {
-      dir = path.join(dir, 'special_orders');
-    }
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + '-' + file.originalname);
-  }
-});
-const upload = multer({ storage: storage });
-app.use('/uploads', express.static(process.env.UPLOADS_DIR || path.join(__dirname, 'uploads')));
+.main-wrap{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;}
+.topbar{height:64px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;flex-shrink:0;}
+.topbar-title{font-size:20px;font-weight:800;}
+.topbar-sub{font-size:12px;color:var(--text3);}
+.content{flex:1;overflow-y:auto;padding:24px;}
 
-const http = require('http');
-const { Server } = require('socket.io');
-const server = http.createServer(app);
-const io = new Server(server);
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;cursor:pointer;transition:all .2s;}
+.stat-card:hover{border-color:rgba(255,107,0,.3);transform:translateY(-2px);}
+.sc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;}
+.sc-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+.sc-value{font-size:28px;font-weight:900;}
+.sc-label{font-size:12px;color:var(--text3);}
 
-const DATA_DIR = process.env.DATA_DIR || __dirname;
-const DATA_FILE = path.join(DATA_DIR, 'data.json');
-const JWT_SECRET = process.env.JWT_SECRET || 'drako_secret_key_fallback';
+.section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:20px;overflow:hidden;}
+.sec-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);}
+.sec-title{font-size:15px;font-weight:800;}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+thead th{padding:10px 20px;text-align:right;font-size:11px;font-weight:700;color:var(--text3);background:var(--surface2);border-bottom:1px solid var(--border);}
+tbody td{padding:13px 20px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tbody tr:hover{background:var(--surface2);}
 
-// تجديد الكوكي تلقائياً (مرة واحدة فقط، بعد تعريف JWT_SECRET)
-app.use((req, res, next) => {
-  const token = req.cookies?.token;
-  if (token) {
-    try {
-      jwt.verify(token, JWT_SECRET);
-      // إعادة تعيين الكوكي لمدة سنة من الآن
-      res.cookie('token', token, { 
-        httpOnly: true, 
-        sameSite: 'lax', 
-        secure: true,                // ← تمت الإضافة
-        maxAge: 365 * 24 * 60 * 60 * 1000 
-      });
-    } catch (e) { /* منتهي، لا نفعل شيئاً */ }
-  }
-  next();
-});
+.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;}
+.badge-green{background:rgba(0,214,143,.12);color:var(--green);}
+.badge-orange{background:var(--orange-dim);color:var(--orange);}
+.badge-red{background:rgba(240,82,82,.12);color:var(--red);}
+.badge-blue{background:rgba(59,130,246,.12);color:var(--blue);}
 
-function readData() {
-  if (!fs.existsSync(DATA_FILE)) {
-    const initial = {
-      users: [],
-      restaurants: [],
-      markets: [],
-      pharmacies: [],
-      drivers: [],
-      orders: [],
-      products: [],
-      categories: [],
-      regions: [
-        { id: 'reg_1', name: 'مساكن جمصة', fee: 10 },
-        { id: 'reg_2', name: '15 مايو', fee: 15 },
-        { id: 'reg_3', name: 'المنصورة الجديدة', fee: 20 },
-        { id: 'reg_4', name: 'الدلتا', fee: 25 },
-        { id: 'reg_5', name: 'الشيخ زايد', fee: 30 }
-      ]
-    };
-    initial.users.push({
-      id: "admin1",
-      name: "أدمن دراكو",
-      phone: "01000000000",
-      password: bcrypt.hashSync("123456", 10),
-      role: "ADMIN"
-    });
-    fs.writeFileSync(DATA_FILE, JSON.stringify(initial, null, 2));
-    return initial;
-  }
-  const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-  if (!data.products) data.products = [];
-  if (!data.categories) data.categories = [];
-  if (!data.regions) data.regions = [];
-  if (!data.markets) data.markets = [];
-  if (!data.pharmacies) data.pharmacies = [];
-  const adminUser = data.users.find(u => u.phone === '01000000000');
-  if (adminUser && adminUser.role !== 'ADMIN') adminUser.role = 'ADMIN';
-  return data;
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;font-size:13px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;border:none;transition:all .18s;}
+.btn-primary{background:var(--orange);color:#fff;}
+.btn-primary:hover{background:var(--orange2);}
+.btn-ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--surface3);color:var(--text);}
+.btn-danger{background:rgba(240,82,82,.12);color:var(--red);border:1px solid rgba(240,82,82,.2);}
+.btn-success{background:rgba(0,214,143,.12);color:var(--green);border:1px solid rgba(0,214,143,.2);}
+.btn-sm{padding:5px 10px;font-size:12px;border-radius:8px;}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;display:none;align-items:center;justify-content:center;padding:16px;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:0;width:100%;max-width:500px;overflow:hidden;}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border);}
+.modal-title{font-size:16px;font-weight:800;}
+.modal-close{width:30px;height:30px;background:var(--surface2);border:none;border-radius:8px;cursor:pointer;color:var(--text3);font-size:18px;display:flex;align-items:center;justify-content:center;}
+.modal-body{padding:20px;max-height:60vh;overflow-y:auto;}
+.modal-foot{display:flex;gap:10px;padding:16px 20px;border-top:1px solid var(--border);}
+.modal-foot .btn{flex:1;height:42px;justify-content:center;}
+
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
+.field label{font-size:12px;font-weight:700;color:var(--text3);}
+.field input,.field select{background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 13px;font-size:13px;font-family:'Cairo';color:var(--text);outline:none;}
+
+.filter-bar{display:flex;gap:8px;margin-bottom:16px;align-items:center;}
+.filter-bar input[type="date"]{flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;font-family:'Cairo',sans-serif;color:var(--text);outline:none;}
+
+.empty-state{text-align:center;padding:48px;color:var(--text3);}
+.empty-state .icon{font-size:40px;margin-bottom:12px;}
+
+.btn-add-row{background:var(--surface2);border:1px dashed var(--border);color:var(--text2);padding:5px 10px;border-radius:8px;cursor:pointer;font-size:12px;margin-top:4px;}
+.group-box{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;}
+.option-row{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
+.option-row input{flex:1;}
+
+.tab-bar{display:flex;gap:8px;margin-bottom:16px;}
+.tab-btn{padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text2);transition:all .2s;}
+.tab-btn.active{background:var(--orange);color:#fff;border-color:var(--orange);}
+
+.profile-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+.profile-image {
+  width: 100px;
+  height: 100px;
+  border-radius: 20px;
+  object-fit: cover;
+  border: 3px solid var(--orange);
+}
+.profile-info {
+  flex: 1;
+}
+.profile-name {
+  font-size: 24px;
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+.profile-bio {
+  color: var(--text2);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+.profile-rating {
+  display: flex;
+  gap: 16px;
+  color: var(--text3);
+  font-size: 13px;
+}
+.rating-stars {
+  color: var(--yellow);
 }
 
-function writeData(data) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+.categories-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 10px;
+}
+.category-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+}
+.category-card:hover {
+  background: var(--surface3);
+  transform: translateY(-2px);
+  border-color: var(--orange);
+}
+.category-name {
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+.category-name:hover {
+  color: var(--orange);
+}
+.category-actions {
+  display: flex;
+  gap: 8px;
 }
 
-// Middlewares
-function requireAuth(req, res, next) {
-  const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'غير مصرح' });
+/* تنسيقات بطاقات الطلبات الجديدة */
+.orders-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  background: var(--surface);
+  padding: 16px 20px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+.filter-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.filter-tab {
+  padding: 6px 16px;
+  border-radius: 30px;
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  transition: all 0.2s;
+}
+.filter-tab.active {
+  background: var(--orange);
+  color: white;
+  border-color: var(--orange);
+}
+.date-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.date-controls input {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  padding: 6px 12px;
+  color: var(--text);
+  font-size: 13px;
+}
+.orders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 20px;
+}
+.order-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all 0.2s;
+}
+.order-card:hover {
+  border-color: var(--orange);
+  transform: translateY(-3px);
+}
+.order-header {
+  background: var(--surface2);
+  padding: 14px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+.order-id {
+  font-weight: 800;
+  color: var(--orange);
+  font-size: 14px;
+}
+.order-status {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 30px;
+  background: rgba(255,107,0,0.15);
+  color: var(--orange);
+}
+.order-status.delivered { background: rgba(0,214,143,0.15); color: var(--green); }
+.order-status.cancelled { background: rgba(240,82,82,0.15); color: var(--red); }
+.order-status.preparing { background: rgba(59,130,246,0.15); color: var(--blue); }
+.order-body { padding: 16px 20px; }
+.customer-info {
+  background: var(--surface2);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+.customer-name { font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+.items-list { margin: 12px 0; }
+.items-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.item-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.item-name { font-weight: 600; }
+.item-price { color: var(--orange); }
+.order-total {
+  display: flex;
+  justify-content: space-between;
+  font-size: 16px;
+  font-weight: 800;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.total-label { color: var(--text2); }
+.total-value { color: var(--orange); }
+.order-timer {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 8px;
+  text-align: left;
+  direction: ltr;
+}
+.order-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+.order-actions .btn { flex: 1; justify-content: center; }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sb-logo"><div class="sb-logo-mark">D</div><div class="sb-logo-text"><div class="sb-logo-name">Drako</div><div class="sb-logo-sub">لوحة المطعم</div></div></div>
+  <div class="sb-nav">
+    <div class="nav-item active" id="nav-profile" onclick="navigate('profile')"><div class="nav-icon">🏠</div>الملف الشخصي</div>
+    <div class="nav-item" id="nav-dashboard" onclick="navigate('dashboard')"><div class="nav-icon">📊</div>لوحة التحكم</div>
+    <div class="nav-item" id="nav-orders" onclick="navigate('orders')"><div class="nav-icon">📦</div>الطلبات</div>
+    <div class="nav-item" id="nav-categories" onclick="navigate('categories')"><div class="nav-icon">🏷️</div>التصنيفات</div>
+    <div class="nav-item" id="nav-products" onclick="navigate('products')"><div class="nav-icon">📋</div>المنتجات</div>
+  </div>
+  <div class="sb-footer"><div class="sb-user"><div class="sb-avatar">🍽️</div><div><div class="sb-user-name" id="rest-name-side">مطعمي</div></div><a href="/logout" class="sb-logout">⏻</a></div></div>
+</div>
+
+<div class="main-wrap">
+  <div class="topbar"><div><div class="topbar-title" id="topbar-title">الملف الشخصي</div><div class="topbar-sub">مرحباً بك</div></div></div>
+  <div class="content" id="content"></div>
+</div>
+
+<div class="modal-overlay" id="modal"><div class="modal"><div class="modal-head"><div class="modal-title" id="modal-title"></div><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body" id="modal-body"></div><div class="modal-foot" id="modal-foot"></div></div></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+// ========== إصلاح apiFetch للتعامل مع 403 والـ credentials ==========
+async function apiFetch(url, options = {}) {
+  const res = await fetch(url, { ...options, credentials: 'include', headers: { ...(options.headers || {}), ...(typeof options.body === 'string' ? { 'Content-Type': 'application/json' } : {}) } });
+  if (res.status === 401 || res.status === 403) {
+    localStorage.setItem('redirectAfterLogin', window.location.pathname);
+    window.location.href = '/login.html';
+    throw new Error('غير مصرح');
+  }
+  return res;
+}
+
+// ========== دالة التحقق من المصادقة ==========
+async function checkAuth() {
   try {
-    req.user = jwt.verify(token, JWT_SECRET);
-    next();
-  } catch { res.status(401).json({ error: 'انتهت الجلسة' }); }
+    const res = await apiFetch('/api/restaurant/profile');
+    const data = await res.json();
+    window.myRestaurantId = data.id;
+    localStorage.setItem('restaurantId', data.id);
+    localStorage.setItem('restaurantName', data.name);
+    if (data.logo) localStorage.setItem('restaurantLogo', data.logo);
+    return true;
+  } catch(e) {
+    console.error('Auth error:', e);
+    return false;
+  }
 }
 
-function adminOnly(req, res, next) {
-  if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'صلاحيات غير كافية' });
-  next();
+// ========== SOUND ENGINE ==========
+function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) { /* full function - kept as is */ 
+  const sampleRate = 44100;
+  const numSamples = Math.floor(sampleRate * duration);
+  const buffer = new Float32Array(numSamples);
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / sampleRate;
+    let sample = 0;
+    if (type === 'sine') sample = Math.sin(2 * Math.PI * frequency * t);
+    else if (type === 'square') sample = Math.sign(Math.sin(2 * Math.PI * frequency * t));
+    else if (type === 'triangle') {
+      const p = (frequency * t) % 1;
+      sample = 4 * Math.abs(p - 0.5) - 1;
+    }
+    buffer[i] = sample * volume;
+  }
+  const dataLength = buffer.length * 2;
+  const bufferArray = new ArrayBuffer(44 + dataLength);
+  const view = new DataView(bufferArray);
+  function writeString(offset, string) { for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i)); }
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + dataLength, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, dataLength, true);
+  let offset = 44;
+  for (let i = 0; i < buffer.length; i++) {
+    const s = Math.max(-1, Math.min(1, buffer[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    offset += 2;
+  }
+  const blob = new Blob([bufferArray], { type: 'audio/wav' });
+  return URL.createObjectURL(blob);
+}
+const soundInstances = {};
+function createSound(name, ...tones) { soundInstances[name] = tones.map(t => new Howl({ src: [t], format: ['wav'], volume: 0.5 })); }
+function playSound(name) { if (soundInstances[name]) soundInstances[name].forEach(h => h.play()); }
+createSound('newOrderBell', generateToneWAV(1200,0.25,'sine'));
+createSound('driverArrived', generateToneWAV(600,0.1,'sine'), generateToneWAV(800,0.1,'sine'));
+createSound('orderCancelled', generateToneWAV(400,0.3,'triangle'));
+
+// ========== MAIN APP ==========
+const API = '/api';
+let currentPage = 'profile';
+window._catOptions = '<option value="">بدون تصنيف</option>';
+let categoriesList = [];
+
+function toast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1E2535;color:#fff;padding:12px 20px;border-radius:12px;z-index:9999;font-weight:600;';
+  t.textContent = (type === 'success' ? '✅ ' : '❌ ') + msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+function openModal(title, bodyHTML, footHTML) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = bodyHTML;
+  document.getElementById('modal-foot').innerHTML = footHTML || '';
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+const STATUS_AR = { PENDING: 'في الانتظار', ACCEPTED: 'مقبول', PREPARING: 'يتحضر', READY: 'جاهز', DRIVER_ASSIGNED: 'مع طيار', ON_THE_WAY: 'في الطريق', DELIVERED: 'تم التوصيل', CANCELLED: 'ملغي' };
+function getStatusClass(status) {
+  if (status === 'DELIVERED') return 'delivered';
+  if (status === 'CANCELLED') return 'cancelled';
+  if (status === 'PREPARING') return 'preparing';
+  return '';
 }
 
-function rolePageAuth(requiredRole) {
-  return (req, res, next) => {
-    const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
-    if (!token) return res.redirect('/login.html?redirect=' + encodeURIComponent(req.originalUrl));
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      if (decoded.role !== requiredRole) return res.redirect('/login.html?error=role');
-      req.user = decoded;
-      next();
-    } catch { return res.redirect('/login.html?redirect=' + encodeURIComponent(req.originalUrl)); }
-  };
+async function loadCategoriesOptions() {
+  try {
+    const res = await apiFetch(API + '/restaurant/categories');
+    const cats = await res.json();
+    let opts = '<option value="">بدون تصنيف</option>';
+    cats.forEach(c => opts += `<option value="${c.id}">${c.name}</option>`);
+    window._catOptions = opts;
+  } catch(e) {}
 }
 
-// الصفحات الثابتة
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'customer.html')));
-app.get('/customer', (req, res) => res.sendFile(path.join(__dirname, 'customer.html')));
-app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, 'login.html')));
-app.get('/admin', rolePageAuth('ADMIN'), (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
-app.get('/restaurant', rolePageAuth('RESTAURANT'), (req, res) => res.sendFile(path.join(__dirname, 'restaurant.html')));
-app.get('/driver', rolePageAuth('DRIVER'), (req, res) => res.sendFile(path.join(__dirname, 'driver.html')));
-app.get('/market', rolePageAuth('MARKET'), (req, res) => res.sendFile(path.join(__dirname, 'market.html')));
-app.get('/pharmacy', rolePageAuth('PHARMACY'), (req, res) => res.sendFile(path.join(__dirname, 'pharmacy.html')));
+async function navigate(page) {
+  currentPage = page;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('nav-' + page).classList.add('active');
+  const titles = { profile: 'الملف الشخصي', dashboard: 'لوحة التحكم', orders: 'الطلبات', categories: 'التصنيفات', products: 'المنتجات' };
+  document.getElementById('topbar-title').textContent = titles[page] || page;
+  await renderPage(page);
+}
+async function renderPage(page) {
+  const c = document.getElementById('content');
+  c.innerHTML = '<div style="text-align:center;padding:48px;color:var(--text3)">⏳ جاري التحميل...</div>';
+  try {
+    if (page === 'profile') await renderProfile();
+    else if (page === 'dashboard') await loadDashboard();
+    else if (page === 'orders') await loadOrdersView();
+    else if (page === 'categories') await loadCategories();
+    else if (page === 'products') await loadProducts();
+  } catch (e) { toast('خطأ في التحميل', 'error'); console.error(e); }
+}
 
-// تسجيل الدخول (يدعم إعادة التوجيه)
-app.post('/login', (req, res) => {
-  const { phone, password, redirect } = req.body;
-  const data = readData();
-  const user = data.users.find(u => u.phone === phone);
-  if (!user || !bcrypt.compareSync(password, user.password)) {
-    return res.redirect('/login.html?error=1');
-  }
-  const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '365d' });
-  res.cookie('token', token, { 
-    httpOnly: true, 
-    sameSite: 'lax', 
-    secure: true,                // ← تمت الإضافة
-    maxAge: 365 * 24 * 60 * 60 * 1000 
-  });
-  let target = '/';
-  switch (user.role) {
-    case 'ADMIN': target = '/admin'; break;
-    case 'RESTAURANT': target = '/restaurant'; break;
-    case 'DRIVER': target = '/driver'; break;
-    case 'MARKET': target = '/market'; break;
-    case 'PHARMACY': target = '/pharmacy'; break;
-    default: return res.send('تم الدخول');
-  }
-  if (redirect) {
-    const redirectPrefix = '/' + redirect.split('/')[1];
-    if (target.startsWith(redirectPrefix)) target = redirect;
-  }
-  return res.redirect(target);
-});
+// ========== الملف الشخصي ==========
+async function renderProfile() {
+  let profile = null, stats = null;
+  try {
+    profile = await apiFetch(API + '/restaurant/profile').then(r => r.json());
+    stats = await apiFetch(API + '/restaurant/stats').then(r => r.json());
+  } catch(e) {}
+  const name = profile?.name || localStorage.getItem('restaurantName') || 'مطعمي';
+  let logo = profile?.logo || localStorage.getItem('restaurantLogo') || '';
+  if (logo && !logo.includes('?t=')) logo += '?t=' + Date.now();
+  window.myRestaurantId = profile?.id || localStorage.getItem('restaurantId');
+  document.getElementById('rest-name-side').innerHTML = name;
+  const savedBio = localStorage.getItem('restaurant_bio') || 'مرحباً بكم في مطعمنا، نقدم أشهى المأكولات بجودة عالية.';
+  const savedRating = localStorage.getItem('restaurant_rating') || '4.8';
+  const savedReviews = localStorage.getItem('restaurant_reviews') || '128';
+  const html = `
+    <div class="profile-card">
+      <img src="${logo || 'https://placehold.co/100x100/FF6B00/white?text=🍽️'}" class="profile-image" id="profileLogo">
+      <div class="profile-info">
+        <div class="profile-name" id="profileName">${name}</div>
+        <div class="profile-bio" id="profileBio">${savedBio}</div>
+        <div class="profile-rating"><span class="rating-stars">⭐⭐⭐⭐⭐</span><span>${savedRating} (${savedReviews} تقييم)</span></div>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="openEditProfile()">✏️ تعديل</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('logoFile').click()">🖼️ تغيير الشعار</button>
+        <input type="file" id="logoFile" accept="image/*" style="display:none" onchange="uploadLogo(this)">
+      </div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card" onclick="navigate('orders');setOrdersTab('new')"><div class="sc-value">${stats?.pending || 0}</div><div class="sc-label">طلبات جديدة</div></div>
+      <div class="stat-card" onclick="navigate('orders');setOrdersTab('accepted')"><div class="sc-value">${stats?.accepted || 0}</div><div class="sc-label">مقبولة</div></div>
+      <div class="stat-card" onclick="navigate('orders');setOrdersTab('preparing')"><div class="sc-value">${stats?.preparing || 0}</div><div class="sc-label">قيد التحضير</div></div>
+      <div class="stat-card"><div class="sc-value">${stats?.todayRevenue || 0} ج</div><div class="sc-label">إيرادات اليوم</div></div>
+    </div>
+  `;
+  document.getElementById('content').innerHTML = html;
+}
+function openEditProfile() {
+  const name = document.getElementById('profileName')?.innerText || '';
+  const bio = document.getElementById('profileBio')?.innerText || '';
+  openModal('تعديل الملف الشخصي', `
+    <div class="field"><label>اسم المطعم</label><input id="editName" value="${name.replace(/"/g, '&quot;')}"></div>
+    <div class="field"><label>الوصف / السيرة</label><textarea id="editBio" rows="3">${bio.replace(/"/g, '&quot;')}</textarea></div>
+    <div class="field"><label>التقييم (بالنجوم)</label><input id="editRating" type="number" step="0.1" value="${localStorage.getItem('restaurant_rating') || '4.8'}"></div>
+    <div class="field"><label>عدد التقييمات</label><input id="editReviews" type="number" value="${localStorage.getItem('restaurant_reviews') || '128'}"></div>
+  `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveProfileEdit()">حفظ</button>`);
+}
+function saveProfileEdit() {
+  const newName = document.getElementById('editName').value;
+  const newBio = document.getElementById('editBio').value;
+  const newRating = document.getElementById('editRating').value;
+  const newReviews = document.getElementById('editReviews').value;
+  document.getElementById('profileName').innerText = newName;
+  document.getElementById('profileBio').innerText = newBio;
+  localStorage.setItem('restaurant_bio', newBio);
+  localStorage.setItem('restaurant_rating', newRating);
+  localStorage.setItem('restaurant_reviews', newReviews);
+  document.querySelector('.profile-rating').innerHTML = `<span class="rating-stars">⭐⭐⭐⭐⭐</span><span>${newRating} (${newReviews} تقييم)</span>`;
+  toast('تم تحديث الملف الشخصي');
+  closeModal();
+}
+async function uploadLogo(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const fd = new FormData(); fd.append('logo', file);
+  const res = await apiFetch(API + '/restaurant/profile', { method: 'PATCH', body: fd });
+  const data = await res.json();
+  if (data.logo) {
+    const logoUrl = data.logo + '?t=' + Date.now();
+    document.getElementById('profileLogo').src = logoUrl;
+    localStorage.setItem('restaurantLogo', data.logo);
+    toast('تم رفع الشعار');
+  } else toast('فشل الرفع', 'error');
+}
+async function loadDashboard() {
+  const [profile, stats, reports] = await Promise.all([
+    apiFetch(API + '/restaurant/profile').then(r => r.json()).catch(() => ({ name: 'مطعمي', logo: '' })),
+    apiFetch(API + '/restaurant/stats').then(r => r.json()).catch(() => ({})),
+    apiFetch(API + '/restaurant/reports').then(r => r.json()).catch(() => ({}))
+  ]);
+  window.myRestaurantId = profile.id;
+  localStorage.setItem('restaurantId', profile.id);
+  localStorage.setItem('restaurantName', profile.name);
+  if (profile.logo) localStorage.setItem('restaurantLogo', profile.logo);
+  document.getElementById('rest-name-side').innerHTML = profile.name || 'مطعمي';
+  document.getElementById('content').innerHTML = `
+  
+    <div class="stats-grid">
+      <div class="stat-card" onclick="navigate('orders');setOrdersTab('new')"><div class="sc-top"><div><div class="sc-value">${stats.pending || 0}</div><div class="sc-label">طلبات جديدة</div></div><div class="sc-icon" style="background:var(--orange-dim)">📦</div></div></div>
+      <div class="stat-card" onclick="navigate('orders');setOrdersTab('accepted')"><div class="sc-top"><div><div class="sc-value">${stats.accepted || 0}</div><div class="sc-label">مقبولة</div></div><div class="sc-icon" style="background:rgba(59,130,246,.12)">✅</div></div></div>
+      <div class="stat-card" onclick="navigate('orders');setOrdersTab('preparing')"><div class="sc-top"><div><div class="sc-value">${stats.preparing || 0}</div><div class="sc-label">قيد التحضير</div></div><div class="sc-icon" style="background:rgba(251,191,36,.12)">👨‍🍳</div></div></div>
+      <div class="stat-card"><div class="sc-top"><div><div class="sc-value">${stats.todayRevenue || 0} ج</div><div class="sc-label">إيرادات اليوم</div></div><div class="sc-icon" style="background:rgba(0,214,143,.12)">💰</div></div></div>
+    </div>
+    <div class="section"><div class="sec-head"><div class="sec-title">📈 تقارير الإيرادات</div></div>
+      <div style="padding:20px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
+        <div class="stat-card"><div class="sc-value" style="color:var(--orange)">${reports.daily?.productRevenue || 0} ج</div><div class="sc-label">اليوم</div></div>
+        <div class="stat-card"><div class="sc-value" style="color:var(--blue)">${reports.weekly?.productRevenue || 0} ج</div><div class="sc-label">الأسبوع</div></div>
+        <div class="stat-card"><div class="sc-value" style="color:var(--green)">${reports.monthly?.productRevenue || 0} ج</div><div class="sc-label">الشهر</div></div>
+        <div class="stat-card"><div class="sc-value">${reports.total?.productRevenue || 0} ج</div><div class="sc-label">الإجمالي الكلي</div></div>
+      </div>
+    </div>`;
+}
+async function uploadLogoDashboard() {
+  const file = document.getElementById('logo-file').files[0];
+  if (!file) return;
+  const fd = new FormData(); fd.append('logo', file);
+  const res = await apiFetch(API + '/restaurant/profile', { method: 'PATCH', body: fd });
+  const data = await res.json();
+  if (data.logo) {
+    const logoUrl = data.logo + '?t=' + Date.now();
+    document.getElementById('logo-preview').src = logoUrl;
+    document.getElementById('profileLogo') && (document.getElementById('profileLogo').src = logoUrl);
+    localStorage.setItem('restaurantLogo', data.logo);
+    toast('تم رفع الشعار');
+  } else toast('فشل الرفع', 'error');
+}
 
-app.get('/logout', (req, res) => { res.clearCookie('token'); res.redirect('/'); });
-
-// ==================== ADMIN ====================
-app.get('/api/admin/stats', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  res.json({ users: data.users.length, restaurants: data.restaurants.length, drivers: data.drivers.length, orders: data.orders.length, totalRevenue: data.orders.reduce((s, o) => s + (o.total || 0), 0) });
-});
-
-app.get('/api/admin/dashboard', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const today = new Date().toISOString().slice(0, 10);
-  const todayOrders = data.orders.filter(o => o.createdAt?.startsWith(today));
-  const activeOrders = data.orders.filter(o => ['PENDING','ACCEPTED','PREPARING','READY','DRIVER_ASSIGNED','ON_THE_WAY'].includes(o.status));
-  const availableDrivers = data.users.filter(u => u.role === 'DRIVER').map(u => {
-    const dp = data.drivers.find(d => d.userId === u.id) || {};
-    const activeCount = data.orders.filter(o => o.driverId === u.id && !['DELIVERED','CANCELLED'].includes(o.status)).length;
-    return { id: u.id, name: u.name, phone: u.phone, earnings: dp.earnings || 0, isAvailable: dp.isAvailable !== false, isActive: u.isActive !== false, activeOrdersCount: activeCount };
-  });
-  res.json({ todayOrders: todayOrders.length, activeOrders: activeOrders.length, restaurants: data.restaurants.length, drivers: data.drivers.length, totalRevenue: data.orders.reduce((s, o) => s + (o.total || 0), 0), recentOrders: data.orders.slice(-10).reverse(), availableDrivers });
-});
-
-// مطاعم (أدمن)
-app.get('/api/admin/restaurants', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const list = data.restaurants.map(r => {
-    const owner = data.users.find(u => u.id === r.userId);
-    return { ...r, ownerName: owner?.name, ownerPhone: owner?.phone };
-  });
-  res.json(list);
-});
-app.post('/api/admin/restaurants', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const { name, ownerPhone, ownerPassword } = req.body;
-  if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
-  if (data.users.find(u => u.phone === ownerPhone)) return res.status(400).json({ error: 'الهاتف مستخدم' });
-  const userId = 'usr_' + Date.now();
-  const restaurantId = 'res_' + Date.now();
-  const hashed = bcrypt.hashSync(ownerPassword, 10);
-  data.users.push({ id: userId, name, phone: ownerPhone, password: hashed, role: 'RESTAURANT' });
-  data.restaurants.push({ id: restaurantId, userId, name, isOpen: true });
-  writeData(data);
-  res.json({ id: restaurantId, name });
-});
-app.patch('/api/admin/restaurants/:id/toggle', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const restaurant = data.restaurants.find(r => r.id === req.params.id);
-  if (!restaurant) return res.status(404).json({ error: 'غير موجود' });
-  restaurant.isOpen = !restaurant.isOpen;
-  writeData(data);
-  res.json({ isOpen: restaurant.isOpen });
-});
-// تعديل وحذف مطعم
-app.patch('/api/admin/restaurants/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const restaurant = data.restaurants.find(r => r.id === req.params.id);
-  if (!restaurant) return res.status(404).json({ error: 'غير موجود' });
-  const { name, ownerPhone } = req.body;
-  if (name) restaurant.name = name;
-  if (ownerPhone) {
-    const user = data.users.find(u => u.id === restaurant.userId);
-    if (user) user.phone = ownerPhone;
-  }
-  writeData(data);
-  res.json({ success: true });
-});
-app.delete('/api/admin/restaurants/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const idx = data.restaurants.findIndex(r => r.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: 'غير موجود' });
-  const restaurant = data.restaurants[idx];
-  const userIndex = data.users.findIndex(u => u.id === restaurant.userId);
-  if (userIndex !== -1) data.users.splice(userIndex, 1);
-  data.restaurants.splice(idx, 1);
-  writeData(data);
-  res.json({ success: true });
-});
-
-// طيارين (أدمن)
-app.get('/api/admin/drivers', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const list = data.users.filter(u => u.role === 'DRIVER').map(u => {
-    const dp = data.drivers.find(d => d.userId === u.id) || {};
-    const activeOrders = data.orders.filter(o => o.driverId === u.id && !['DELIVERED','CANCELLED'].includes(o.status));
-    return { id: u.id, name: u.name, phone: u.phone, earnings: dp.earnings || 0, isAvailable: dp.isAvailable !== false, isActive: u.isActive !== false, activeOrdersCount: activeOrders.length };
-  });
-  res.json(list);
-});
-app.post('/api/admin/drivers', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const { name, phone, password } = req.body;
-  if (!name || !phone || !password) return res.status(400).json({ error: 'بيانات ناقصة' });
-  if (data.users.find(u => u.phone === phone)) return res.status(400).json({ error: 'الهاتف مستخدم' });
-  const userId = 'usr_' + Date.now();
-  const driverId = 'drv_' + Date.now();
-  const hashed = bcrypt.hashSync(password, 10);
-  data.users.push({ id: userId, name, phone, password: hashed, role: 'DRIVER' });
-  data.drivers.push({ id: driverId, userId, earnings: 0, isAvailable: true });
-  writeData(data);
-  res.json({ id: userId, name });
-});
-app.patch('/api/admin/drivers/:id/toggle', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const user = data.users.find(u => u.id === req.params.id && u.role === 'DRIVER');
-  if (!user) return res.status(404).json({ error: 'غير موجود' });
-  const dp = data.drivers.find(d => d.userId === user.id);
-  if (dp) dp.isAvailable = !dp.isAvailable;
-  writeData(data);
-  res.json({ isAvailable: dp?.isAvailable ?? false });
-});
-app.patch('/api/admin/drivers/:id/block', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const user = data.users.find(u => u.id === req.params.id && u.role === 'DRIVER');
-  if (!user) return res.status(404).json({ error: 'غير موجود' });
-  user.isActive = !user.isActive;
-  writeData(data);
-  res.json({ isActive: user.isActive });
-});
-// تعديل وحذف طيار
-app.patch('/api/admin/drivers/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const user = data.users.find(u => u.id === req.params.id && u.role === 'DRIVER');
-  if (!user) return res.status(404).json({ error: 'غير موجود' });
-  const { name, phone, password } = req.body;
-  if (name) user.name = name;
-  if (phone) user.phone = phone;
-  if (password) user.password = bcrypt.hashSync(password, 10);
-  writeData(data);
-  res.json({ success: true });
-});
-app.delete('/api/admin/drivers/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const userIndex = data.users.findIndex(u => u.id === req.params.id && u.role === 'DRIVER');
-  if (userIndex === -1) return res.status(404).json({ error: 'غير موجود' });
-  const driverIndex = data.drivers.findIndex(d => d.userId === req.params.id);
-  if (driverIndex !== -1) data.drivers.splice(driverIndex, 1);
-  data.users.splice(userIndex, 1);
-  writeData(data);
-  res.json({ success: true });
-});
-
-// تفاصيل الطيار
-app.get('/api/admin/drivers/:id/details', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const user = data.users.find(u => u.id === req.params.id && u.role === 'DRIVER');
-  if (!user) return res.status(404).json({ error: 'الطيار غير موجود' });
-  const driver = data.drivers.find(d => d.userId === user.id) || {};
-  const today = new Date().toISOString().slice(0, 10);
-  const todayOrders = data.orders.filter(o =>
-    o.driverId === user.id &&
-    o.status === 'DELIVERED' &&
-    o.deliveredAt && o.deliveredAt.startsWith(today)
-  );
-  const todayRevenue = todayOrders.reduce((sum, o) => sum + (o.deliveryFee || 0), 0);
-  const enrichedOrders = todayOrders.map(o => ({
-    id: o.id,
-    createdAt: o.createdAt,
-    deliveredAt: o.deliveredAt,
-    customerName: o.customerName,
-    total: o.total,
-    deliveryFee: o.deliveryFee,
-    restaurantName: data.restaurants.find(r => r.id === o.restaurantId)?.name || 'طلب خاص',
-    address: o.address
-  }));
-  res.json({
-    id: user.id,
-    name: user.name,
-    phone: user.phone,
-    isAvailable: driver.isAvailable !== false,
-    isActive: user.isActive !== false,
-    earnings: driver.earnings || 0,
-    todayOrdersCount: todayOrders.length,
-    todayRevenue: todayRevenue,
-    todayOrders: enrichedOrders
-  });
-});
-
-// مناطق (أدمن)
-app.get('/api/admin/regions', requireAuth, adminOnly, (req, res) => { const data = readData(); res.json(data.regions); });
-app.post('/api/admin/regions', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const { name, fee } = req.body;
-  if (!name || fee == null) return res.status(400).json({ error: 'بيانات ناقصة' });
-  data.regions.push({ id: 'reg_' + Date.now(), name, fee: Number(fee) });
-  writeData(data);
-  res.json(data.regions);
-});
-app.patch('/api/admin/regions/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const region = data.regions.find(r => r.id === req.params.id);
-  if (!region) return res.status(404).json({ error: 'غير موجود' });
-  if (req.body.name !== undefined) region.name = req.body.name;
-  if (req.body.fee !== undefined) region.fee = Number(req.body.fee);
-  writeData(data);
-  res.json(region);
-});
-app.delete('/api/admin/regions/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const idx = data.regions.findIndex(r => r.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: 'غير موجود' });
-  data.regions.splice(idx, 1);
-  writeData(data);
-  res.json({ success: true });
-});
-
-// منتجات وتصنيفات (أدمن)
-app.get('/api/admin/products', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const enriched = data.products.map(p => {
-    const restaurant = data.restaurants.find(r => r.id === p.restaurantId);
-    return { ...p, restaurantName: restaurant?.name };
-  });
-  res.json(enriched);
-});
-app.post('/api/admin/products', requireAuth, adminOnly, upload.single('image'), (req, res) => {
-  const data = readData();
-  const { name, description, price, category, restaurantId } = req.body;
-  if (!name || !price) return res.status(400).json({ error: 'الاسم والسعر مطلوبان' });
-  const imagePath = req.file ? '/uploads/' + req.file.filename : '';
-  const product = { id: 'prod_' + Date.now(), restaurantId, name, description: description || '', price: Number(price), category: category || 'أخرى', image: imagePath, isAvailable: true };
-  data.products.push(product);
-  writeData(data);
-  res.json(product);
-});
-app.delete('/api/admin/products/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const idx = data.products.findIndex(p => p.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: 'غير موجود' });
-  data.products.splice(idx, 1);
-  writeData(data);
-  res.json({ success: true });
-});
-app.get('/api/admin/categories', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const enriched = data.categories.map(c => ({ ...c, restaurantName: data.restaurants.find(r => r.id === c.restaurantId)?.name }));
-  res.json(enriched);
-});
-app.post('/api/admin/categories', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const { name } = req.body;
-  if (!name) return res.status(400).json({ error: 'الاسم مطلوب' });
-  data.categories.push({ id: 'cat_' + Date.now(), restaurantId: '', name });
-  writeData(data);
-  res.json({ success: true });
-});
-app.delete('/api/admin/categories/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const idx = data.categories.findIndex(c => c.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: 'غير موجود' });
-  data.categories.splice(idx, 1);
-  writeData(data);
-  res.json({ success: true });
-});
-
-// طلبات وتعيين طيار وتجريبي وتقارير
-app.get('/api/orders', (req, res) => {
-  const data = readData();
-  const enriched = data.orders.map(o => ({
-    ...o,
-    restaurantName: data.restaurants.find(r => r.id === o.restaurantId)?.name,
-    driverName: data.users.find(u => u.id === o.driverId)?.name || '—',
-    customerName: o.customerName || data.users.find(u => u.phone === o.customerPhone)?.name
-  }));
-  res.json(enriched);
-});
-app.patch('/api/admin/orders/:id/assign-driver', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const order = data.orders.find(o => o.id === req.params.id);
-  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
-  order.driverId = req.body.driverId;
-  order.status = 'DRIVER_ASSIGNED';
-  writeData(data);
-  res.json({ success: true });
-});
-app.post('/api/admin/test-order', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const { restaurantId } = req.body;
-  if (!restaurantId) return res.status(400).json({ error: 'اختر مطعماً' });
-  const order = {
-    id: 'test_' + Date.now(),
-    restaurantId,
-    customerName: 'عميل تجريبي',
-    customerPhone: '0100000000',
-    address: 'العنوان التجريبي',
-    regionName: '',
-    items: [{ name: 'منتج تجريبي', price: 50, quantity: 2 }],
-    total: 100,
-    paymentMethod: 'CASH',
-    status: 'PENDING',
-    driverId: null,
-    deliveryFee: 10,
-    adminApproved: false,
-    createdAt: new Date().toISOString(),
-    deliveredAt: null
-  };
-  data.orders.push(order);
-  writeData(data);
-  res.json({ success: true, order });
-});
-app.get('/api/admin/reports/full', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const orders = data.orders.filter(o => o.status === 'DELIVERED');
-  const today = new Date().toISOString().slice(0, 10);
-  const now = new Date();
-  const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay()).toISOString().slice(0, 10);
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-
-  const todayOrders = orders.filter(o => o.deliveredAt?.startsWith(today));
-  const weekOrders = orders.filter(o => o.deliveredAt && o.deliveredAt >= startOfWeek);
-  const monthOrders = orders.filter(o => o.deliveredAt && o.deliveredAt >= startOfMonth);
-
-  function calcStats(list) {
-    const productRevenue = list.reduce((s, o) => s + (o.total - (o.deliveryFee || 0)), 0);
-    const deliveryRevenue = list.reduce((s, o) => s + (o.deliveryFee || 0), 0);
-    const platformFee = list.reduce((s, o) => s + (o.platformFee || 0), 0);
-    return { productRevenue, deliveryRevenue, platformFee, totalRevenue: productRevenue + deliveryRevenue, count: list.length };
-  }
-
-  function groupBy(list, key) {
-    const m = {};
-    list.forEach(o => {
-      const k = o[key];
-      if (!k) return;
-      if (!m[k]) m[k] = { productRevenue: 0, deliveryRevenue: 0, platformFee: 0, count: 0 };
-      m[k].productRevenue += (o.total || 0) - (o.deliveryFee || 0);
-      m[k].deliveryRevenue += (o.deliveryFee || 0);
-      m[k].platformFee += (o.platformFee || 0);
-      m[k].count++;
+// ========== ORDERS (تصميم جديد ببطاقات + فاتورة) ==========
+let ordersSelectedDate = new Date().toISOString().slice(0, 10);
+let currentOrderTab = 'all';
+function setOrdersTab(tab) { currentOrderTab = tab; }
+async function loadOrdersView() {
+  const c = document.getElementById('content');
+  c.innerHTML = `
+    <div class="orders-filter-bar">
+      <div class="filter-tabs">
+        <div class="filter-tab ${currentOrderTab==='all'?'active':''}" data-tab="all">الكل</div>
+        <div class="filter-tab ${currentOrderTab==='new'?'active':''}" data-tab="new">جديدة</div>
+        <div class="filter-tab ${currentOrderTab==='accepted'?'active':''}" data-tab="accepted">مقبولة</div>
+        <div class="filter-tab ${currentOrderTab==='preparing'?'active':''}" data-tab="preparing">تحضير</div>
+        <div class="filter-tab ${currentOrderTab==='completed'?'active':''}" data-tab="completed">مكتملة</div>
+      </div>
+      <div class="date-controls">
+        <input type="date" id="order-date-input" value="${ordersSelectedDate}" />
+        <button class="btn btn-sm btn-primary" onclick="applyOrderFilter()">عرض</button>
+        <button class="btn btn-sm btn-ghost" onclick="setTodayOrders()">اليوم</button>
+        <button class="btn btn-sm btn-ghost" onclick="clearOrderFilter()">الكل</button>
+      </div>
+    </div>
+    <div id="orders-container"></div>
+  `;
+  document.querySelectorAll('.filter-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const tabVal = tab.getAttribute('data-tab');
+      currentOrderTab = tabVal;
+      loadOrdersData();
     });
-    return m;
-  }
+  });
+  await loadOrdersData();
+}
 
-  function enrich(g, type) {
-    return Object.entries(g).map(([id, s]) => {
-      let name = '—';
-      if (type === 'restaurant') {
-        const r = data.restaurants.find(r => r.id === id);
-        name = r?.name || id;
-        return { id, name, productRevenue: s.productRevenue, platformFee: s.platformFee, netRevenue: s.productRevenue - s.platformFee, count: s.count };
-      } else if (type === 'driver') {
-        const d = data.users.find(u => u.id === id);
-        name = d?.name || id;
-        return { id, name, revenue: s.deliveryRevenue, count: s.count };
+async function loadOrdersData() {
+  const container = document.getElementById('orders-container');
+  if (!container) return;
+  container.innerHTML = '<div style="text-align:center;padding:32px">⏳ جاري التحميل...</div>';
+  let url = API + '/restaurant/orders';
+  if (ordersSelectedDate) url += '?date=' + ordersSelectedDate;
+  const res = await apiFetch(url);
+  const orders = await res.json();
+  
+  let filtered = orders;
+  if (currentOrderTab === 'new') filtered = orders.filter(o => o.status === 'PENDING');
+  else if (currentOrderTab === 'accepted') filtered = orders.filter(o => o.status === 'ACCEPTED');
+  else if (currentOrderTab === 'preparing') filtered = orders.filter(o => o.status === 'PREPARING');
+  else if (currentOrderTab === 'completed') filtered = orders.filter(o => ['DELIVERED','CANCELLED'].includes(o.status));
+  
+  if (!filtered.length) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><div>لا توجد طلبات</div></div>`;
+    return;
+  }
+  
+  let html = `<div class="orders-grid">`;
+  filtered.forEach(order => {
+    const productTotal = (order.total || 0) - (order.deliveryFee || 0);
+    let statusClass = getStatusClass(order.status);
+    const statusText = STATUS_AR[order.status] || order.status;
+    const preparingTime = order.status === 'PREPARING' && order.preparingAt ? new Date(order.preparingAt) : null;
+    let timerHtml = '';
+    if (preparingTime) {
+      const elapsed = Math.floor((new Date() - preparingTime) / 1000);
+      const remaining = Math.max(0, 25*60 - elapsed);
+      if (remaining > 0) {
+        const mins = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+        timerHtml = `<div class="order-timer">⏱️ متبقي ${mins}:${secs.toString().padStart(2,'0')}</div>`;
       }
-      return { id, name, revenue: 0, count: 0 };
+    }
+    let itemsHtml = '';
+    (order.items || []).forEach(item => {
+      // تفاصيل المنتج مع الخيارات إن وجدت
+      let optionsText = '';
+      if (item.selectedOptions && item.selectedOptions.length) {
+        optionsText = `<div style="font-size:11px;color:var(--text2);margin-top:2px;">${item.selectedOptions.map(opt => opt.value).join('، ')}</div>`;
+      }
+      let notesText = item.notes ? `<div style="font-size:11px;color:var(--text3);margin-top:2px;">📝 ${item.notes}</div>` : '';
+      itemsHtml += `
+        <div class="item-row">
+          <div>
+            <span class="item-name">${item.name} × ${item.quantity}</span>
+            ${optionsText}
+            ${notesText}
+          </div>
+          <span class="item-price">${item.price} ج</span>
+        </div>
+      `;
     });
-  }
+    html += `
+      <div class="order-card">
+        <div class="order-header">
+          <div class="order-id">#${order.id.slice(-8)}</div>
+          <div class="order-status ${statusClass}">${statusText}</div>
+        </div>
+        <div class="order-body">
+          <div class="customer-info">
+            <div class="customer-name"><i class="fas fa-user"></i> ${order.customerName || '—'}</div>
 
-  res.json({
-    daily: calcStats(todayOrders),
-    weekly: calcStats(weekOrders),
-    monthly: calcStats(monthOrders),
-    total: calcStats(orders),
-    restaurants: {
-      today: enrich(groupBy(todayOrders, 'restaurantId'), 'restaurant'),
-      week: enrich(groupBy(weekOrders, 'restaurantId'), 'restaurant'),
-      month: enrich(groupBy(monthOrders, 'restaurantId'), 'restaurant'),
-      all: enrich(groupBy(orders, 'restaurantId'), 'restaurant')
-    },
-    drivers: {
-      today: enrich(groupBy(todayOrders, 'driverId'), 'driver'),
-      week: enrich(groupBy(weekOrders, 'driverId'), 'driver'),
-      month: enrich(groupBy(monthOrders, 'driverId'), 'driver'),
-      all: enrich(groupBy(orders, 'driverId'), 'driver')
-    }
+          </div>
+          <div class="items-list">
+            <div class="items-title"><i class="fas fa-receipt"></i> المنتجات</div>
+            ${itemsHtml || '<div class="item-row">لا توجد منتجات</div>'}
+          </div>
+          <div class="order-total">
+            <span class="total-label">إجمالي المنتجات</span>
+            <span class="total-value">${productTotal} ج</span>
+          </div>
+         
+                   <div class="order-total">
+            <span class="total-label">إجمالي المنتجات</span>
+            <span class="total-value">${productTotal} ج</span>
+          </div>
+          ${timerHtml}
+        </div>
+        <div class="order-actions">
+          ${getOrderActions(order)}
+          <button class="btn btn-sm btn-ghost" onclick="showOrderInvoice('${order.id}')">📄 فاتورة</button>
+        </div>
+      </div>
+    `;
   });
-});
-
-// مسارات تحكم الأدمن في الطلبات
-app.patch('/api/admin/orders/:id/approve', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const order = data.orders.find(o => o.id === req.params.id);
-  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
-  order.adminApproved = true;
-  writeData(data);
-  res.json({ success: true });
-});
-
-app.patch('/api/admin/orders/:id/reject', requireAuth, adminOnly, (req, res) => {
-  const { reason } = req.body;
-  const data = readData();
-  const order = data.orders.find(o => o.id === req.params.id);
-  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
-  order.status = 'CANCELLED';
-  order.cancelReason = reason || 'ألغاه الأدمن';
-  order.adminApproved = false;
-  writeData(data);
-  io.emit('orderCancelled', { orderId: order.id });
-  res.json({ success: true });
-});
-
-app.patch('/api/admin/orders/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const order = data.orders.find(o => o.id === req.params.id);
-  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
-  const { items, total, adminNotes, orderNotes } = req.body;
-  if (items !== undefined) order.items = items;
-  if (total !== undefined) order.total = Number(total);
-  if (adminNotes !== undefined) order.adminNotes = adminNotes;
-  if (orderNotes !== undefined) order.orderNotes = orderNotes;
-  writeData(data);
-  res.json({ success: true });
-});
-
-// ==================== RESTAURANT ====================
-app.get('/api/restaurant/profile', requireAuth, (req, res) => {
-  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const restaurant = data.restaurants.find(r => r.userId === req.user.id);
-  if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-  res.json({ id: restaurant.id, name: restaurant.name, logo: restaurant.logo || '' });
-});
-app.patch('/api/restaurant/profile', requireAuth, upload.single('logo'), (req, res) => {
-  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const restaurant = data.restaurants.find(r => r.userId === req.user.id);
-  if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-  if (req.file) restaurant.logo = '/uploads/' + req.file.filename;
-  writeData(data);
-  res.json({ logo: restaurant.logo });
-});
-
-app.get('/api/restaurant/orders', requireAuth, (req, res) => {
-  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const restaurant = data.restaurants.find(r => r.userId === req.user.id);
-  if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-  let orders = data.orders.filter(o => o.restaurantId === restaurant.id && o.adminApproved === true);
-  if (req.query.date) orders = orders.filter(o => o.createdAt && o.createdAt.startsWith(req.query.date));
-  orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  const enriched = orders.map(o => ({
-    ...o,
-    customerName: o.customerName || 'زائر',
-    customerPhone: o.customerPhone || '',
-    items: o.items || []
-  }));
-  res.json(enriched);
-});
-
-app.patch('/api/restaurant/orders/:id', requireAuth, (req, res) => {
-  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const order = data.orders.find(o => o.id === req.params.id);
-  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
-  const restaurant = data.restaurants.find(r => r.id === order.restaurantId);
-  if (!restaurant || restaurant.userId !== req.user.id) return res.status(403).json({ error: 'ليس مطعمك' });
-  const { status } = req.body;
-  if (!['ACCEPTED', 'PREPARING', 'READY', 'CANCELLED'].includes(status)) return res.status(400).json({ error: 'حالة غير صالحة' });
-  order.status = status;
-  if (status === 'PREPARING') order.preparingAt = new Date().toISOString();
-  writeData(data);
-  io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
-  if (status === 'ACCEPTED') io.emit('orderAccepted', { orderId: order.id });
-  else if (status === 'CANCELLED') io.emit('orderCancelled', { orderId: order.id });
-  res.json({ success: true });
-});
-
-// تصنيفات المطعم
-app.get('/api/restaurant/categories', requireAuth, (req, res) => {
-  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const restaurant = data.restaurants.find(r => r.userId === req.user.id);
-  if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-  const categories = data.categories.filter(c => c.restaurantId === restaurant.id);
-  res.json(categories);
-});
-app.post('/api/restaurant/categories', requireAuth, (req, res) => {
-  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const restaurant = data.restaurants.find(r => r.userId === req.user.id);
-  if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-  const { name } = req.body;
-  if (!name) return res.status(400).json({ error: 'اسم التصنيف مطلوب' });
-  const category = { id: 'cat_' + Date.now(), restaurantId: restaurant.id, name };
-  data.categories.push(category);
-  writeData(data);
-  res.json(category);
-});
-app.delete('/api/restaurant/categories/:id', requireAuth, (req, res) => {
-  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const restaurant = data.restaurants.find(r => r.userId === req.user.id);
-  if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-  const index = data.categories.findIndex(c => c.id === req.params.id && c.restaurantId === restaurant.id);
-  if (index === -1) return res.status(404).json({ error: 'التصنيف غير موجود' });
-  data.categories.splice(index, 1);
-  writeData(data);
-  res.json({ success: true });
-});
-app.patch('/api/restaurant/categories/:id', requireAuth, (req, res) => {
-  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const restaurant = data.restaurants.find(r => r.userId === req.user.id);
-  if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-  const cat = data.categories.find(c => c.id === req.params.id && c.restaurantId === restaurant.id);
-  if (!cat) return res.status(404).json({ error: 'التصنيف غير موجود' });
-  if (req.body.name !== undefined) cat.name = req.body.name;
-  writeData(data);
-  res.json(cat);
-});
-
-// منتجات المطعم
-app.get('/api/restaurant/products', requireAuth, (req, res) => {
-  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const restaurant = data.restaurants.find(r => r.userId === req.user.id);
-  if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-  const products = data.products.filter(p => p.restaurantId === restaurant.id);
-  res.json(products);
-});
-
-app.post('/api/restaurant/products', requireAuth, upload.single('image'), (req, res) => {
-  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const restaurant = data.restaurants.find(r => r.userId === req.user.id);
-  if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-  const { name, description, category, groups, basePrice } = req.body;
-  if (!name) return res.status(400).json({ error: 'اسم المنتج مطلوب' });
-  let groupsParsed = [];
-  try { if (groups) groupsParsed = JSON.parse(groups); } catch(e) {}
-  const imagePath = req.file ? '/uploads/' + req.file.filename : '';
-  const product = {
-    id: 'prod_' + Date.now(),
-    restaurantId: restaurant.id,
-    name,
-    description: description || '',
-    basePrice: Number(basePrice) || 0,
-    category: category || 'أخرى',
-    image: imagePath,
-    isAvailable: true,
-    groups: groupsParsed,
-    type: groupsParsed.length ? 'multi' : 'single'
-  };
-  data.products.push(product);
-  writeData(data);
-  res.json(product);
-});
-
-app.patch('/api/restaurant/products/:id', requireAuth, upload.single('image'), (req, res) => {
-  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const restaurant = data.restaurants.find(r => r.userId === req.user.id);
-  if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-  const product = data.products.find(p => p.id === req.params.id && p.restaurantId === restaurant.id);
-  if (!product) return res.status(404).json({ error: 'المنتج غير موجود' });
-  const { name, description, category, isAvailable, groups, basePrice } = req.body;
-  if (name !== undefined) product.name = name;
-  if (description !== undefined) product.description = description;
-  if (category !== undefined) product.category = category;
-  if (isAvailable !== undefined) product.isAvailable = (isAvailable === 'true' || isAvailable === true);
-  if (basePrice !== undefined) product.basePrice = Number(basePrice);
-  if (groups !== undefined) { try { product.groups = JSON.parse(groups); } catch(e) {} }
-  if (req.file) product.image = '/uploads/' + req.file.filename;
-  writeData(data);
-  res.json(product);
-});
-
-app.delete('/api/restaurant/products/:id', requireAuth, (req, res) => {
-  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const restaurant = data.restaurants.find(r => r.userId === req.user.id);
-  if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-  const index = data.products.findIndex(p => p.id === req.params.id && p.restaurantId === restaurant.id);
-  if (index === -1) return res.status(404).json({ error: 'المنتج غير موجود' });
-  data.products.splice(index, 1);
-  writeData(data);
-  res.json({ success: true });
-});
-
-// تقارير وإحصائيات المطعم
-app.get('/api/restaurant/reports', requireAuth, (req, res) => {
-  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const restaurant = data.restaurants.find(r => r.userId === req.user.id);
-  if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-  const orders = data.orders.filter(o => o.restaurantId === restaurant.id && o.adminApproved === true && o.status === 'DELIVERED');
-  const today = new Date().toISOString().slice(0, 10);
-  const now = new Date();
-  const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay()).toISOString().slice(0, 10);
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-  const filterByDate = (list, start) => list.filter(o => o.deliveredAt && o.deliveredAt >= start);
-  const sumRevenue = (list) => {
-    const productRevenue = list.reduce((s, o) => s + (o.total - (o.deliveryFee || 0)), 0);
-    const platformFee = list.reduce((s, o) => s + (o.platformFee || 0), 0);
-    return { productRevenue, platformFee, netRevenue: productRevenue - platformFee, totalOrders: list.length };
-  };
-  res.json({
-    daily: sumRevenue(orders.filter(o => o.deliveredAt?.startsWith(today))),
-    weekly: sumRevenue(filterByDate(orders, startOfWeek)),
-    monthly: sumRevenue(filterByDate(orders, startOfMonth)),
-    total: sumRevenue(orders)
-  });
-});
-
-app.get('/api/restaurant/stats', requireAuth, (req, res) => {
-  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const restaurant = data.restaurants.find(r => r.userId === req.user.id);
-  if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-  const orders = data.orders.filter(o => o.restaurantId === restaurant.id && o.adminApproved === true);
-  const today = new Date().toISOString().slice(0, 10);
-  const todayDelivered = orders.filter(o => o.status === 'DELIVERED' && o.deliveredAt?.startsWith(today));
-  const revenue = todayDelivered.reduce((s, o) => s + (o.total - (o.deliveryFee || 0)), 0);
-  const platformFee = todayDelivered.reduce((s, o) => s + (o.platformFee || 0), 0);
-  res.json({
-    pending: orders.filter(o => o.status === 'PENDING').length,
-    accepted: orders.filter(o => o.status === 'ACCEPTED').length,
-    preparing: orders.filter(o => o.status === 'PREPARING').length,
-    ready: orders.filter(o => o.status === 'READY').length,
-    todayOrders: todayDelivered.length,
-    todayRevenue: revenue,
-    todayPlatformFee: platformFee,
-    todayNetRevenue: revenue - platformFee
-  });
-});
-
-// ==================== DRIVER ====================
-function getStoreNameForOrder(order, data) {
-  if (order.type === 'special') {
-    if (order.orderType === 'market') {
-      const market = data.markets.find(m => m.id === order.storeId);
-      return market ? market.name : 'ماركت';
-    } else if (order.orderType === 'pharmacy') {
-      const pharmacy = data.pharmacies.find(p => p.id === order.storeId);
-      return pharmacy ? pharmacy.name : 'صيدلية';
-    }
-    return 'طلب خاص';
-  }
-  return null;
+  html += `</div>`;
+  container.innerHTML = html;
 }
 
-app.get('/api/driver/available-orders', requireAuth, (req, res) => {
-  if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const orders = data.orders.filter(o => o.status === 'READY' && !o.driverId).map(o => {
-    const restaurant = data.restaurants.find(r => r.id === o.restaurantId);
-    const storeName = getStoreNameForOrder(o, data);
-    return { ...o, restaurantName: restaurant?.name || storeName || '—', customerAddress: o.address || '' };
+async function showOrderInvoice(orderId) {
+  const res = await apiFetch(API + '/restaurant/orders');
+  const orders = await res.json();
+  const order = orders.find(o => o.id === orderId);
+  if (!order) return toast('الطلب غير موجود', 'error');
+  
+  const productTotal = (order.total || 0) - (order.deliveryFee || 0);
+  let itemsHtml = '';
+  (order.items || []).forEach(item => {
+    let optionsText = '';
+    if (item.selectedOptions && item.selectedOptions.length) {
+      optionsText = `<div style="margin-top:4px; font-size:12px; color:var(--text2);">الخيارات: ${item.selectedOptions.map(opt => opt.value).join('، ')}</div>`;
+    }
+    let notesText = item.notes ? `<div style="margin-top:4px; font-size:12px; color:var(--text3);">📝 ملاحظات: ${item.notes}</div>` : '';
+    itemsHtml += `
+      <div style="border-bottom:1px solid var(--border); padding:8px 0;">
+        <div style="display:flex; justify-content:space-between;">
+          <span><strong>${item.name}</strong> × ${item.quantity}</span>
+          <span style="color:var(--orange);">${item.price} ج</span>
+        </div>
+        ${optionsText}
+        ${notesText}
+      </div>
+    `;
   });
-  res.json(orders);
-});
-
-app.get('/api/driver/my-orders', requireAuth, (req, res) => {
-  if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const orders = data.orders.filter(o => o.driverId === req.user.id && ['DRIVER_ASSIGNED', 'ON_THE_WAY'].includes(o.status)).map(o => {
-    const restaurant = data.restaurants.find(r => r.id === o.restaurantId);
-    const storeName = getStoreNameForOrder(o, data);
-    return { ...o, restaurantName: restaurant?.name || storeName || '—', customerAddress: o.address || '' };
-  });
-  res.json(orders);
-});
-
-app.patch('/api/driver/orders/:id/accept', requireAuth, (req, res) => {
-  if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const order = data.orders.find(o => o.id === req.params.id && o.status === 'READY' && !o.driverId);
-  if (!order) return res.status(404).json({ error: 'الطلب غير متاح' });
-  order.driverId = req.user.id;
-  order.status = 'DRIVER_ASSIGNED';
-  writeData(data);
-  io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
-  io.emit('driverArrived', { orderId: order.id, driverName: req.user.name || 'طيار' });
-  res.json({ success: true });
-});
-
-app.patch('/api/driver/orders/:id/status', requireAuth, (req, res) => {
-  if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const order = data.orders.find(o => o.id === req.params.id && o.driverId === req.user.id);
-  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
-  const { status } = req.body;
-  if (!['ON_THE_WAY', 'DELIVERED'].includes(status)) return res.status(400).json({ error: 'حالة غير صالحة' });
-  order.status = status;
-  if (status === 'DELIVERED') {
-    const driver = data.drivers.find(d => d.userId === req.user.id);
-    if (driver) driver.earnings = (driver.earnings || 0) + (order.deliveryFee || 10);
-    order.deliveredAt = new Date().toISOString();
-    const productValue = (order.total || 0) - (order.deliveryFee || 0);
-    order.platformFee = Math.round(productValue * 0.12);
-  }
-  writeData(data);
-  io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
-  res.json({ success: true });
-});
-
-app.get('/api/driver/earnings', requireAuth, (req, res) => {
-  if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const driver = data.drivers.find(d => d.userId === req.user.id);
-  const totalAllTime = driver?.earnings || 0;
-  if (req.query.today === 'true') {
-    const today = new Date().toISOString().slice(0, 10);
-    const todayDelivered = data.orders.filter(o => o.driverId === req.user.id && o.status === 'DELIVERED' && o.deliveredAt?.startsWith(today));
-    const todayEarnings = todayDelivered.reduce((sum, o) => sum + (o.deliveryFee || 10), 0);
-    return res.json({ total: todayEarnings, isToday: true });
-  }
-  res.json({ total: totalAllTime });
-});
-
-app.get('/api/driver/profile', requireAuth, (req, res) => {
-  if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const user = data.users.find(u => u.id === req.user.id);
-  if (!user) return res.status(404).json({ error: 'المستخدم غير موجود' });
-  const dp = data.drivers.find(d => d.userId === req.user.id) || {};
-  res.json({ name: user.name, phone: user.phone, isAvailable: dp.isAvailable !== false, earnings: dp.earnings || 0 });
-});
-
-app.patch('/api/driver/toggle-status', requireAuth, (req, res) => {
-  if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const dp = data.drivers.find(d => d.userId === req.user.id);
-  if (!dp) return res.status(404).json({ error: 'لم يتم العثور على ملف الطيار' });
-  dp.isAvailable = !dp.isAvailable;
-  writeData(data);
-  res.json({ isAvailable: dp.isAvailable });
-});
-
-app.get('/api/driver/history', requireAuth, (req, res) => {
-  if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  let orders = data.orders.filter(o => o.driverId === req.user.id && o.status === 'DELIVERED');
-  if (req.query.date) orders = orders.filter(o => o.deliveredAt && o.deliveredAt.startsWith(req.query.date));
-  orders.sort((a, b) => new Date(b.deliveredAt || b.createdAt) - new Date(a.deliveredAt || a.createdAt));
-  const enriched = orders.map(o => {
-    const restaurant = data.restaurants.find(r => r.id === o.restaurantId);
-    const storeName = getStoreNameForOrder(o, data);
-    return {
-      id: o.id,
-      createdAt: o.createdAt,
-      deliveredAt: o.deliveredAt,
-      restaurantName: restaurant?.name || storeName || '—',
-      customerName: o.customerName,
-      customerPhone: o.customerPhone,
-      address: o.address,
-      total: o.total,
-      deliveryFee: o.deliveryFee || 10,
-      paymentMethod: o.paymentMethod,
-      items: o.items || []
-    };
-  });
-  res.json(enriched);
-});
-
-// ==================== CUSTOMER & PUBLIC ====================
-app.get('/api/restaurants', (req, res) => {
-  const data = readData();
-  const list = data.restaurants.filter(r => r.isOpen).map(r => ({ id: r.id, name: r.name, logo: r.logo || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=150&h=150&fit=crop' }));
-  res.json(list);
-});
-
-app.get('/api/restaurants/:id/menu', (req, res) => {
-  const data = readData();
-  const restaurant = data.restaurants.find(r => r.id === req.params.id);
-  if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-  const restaurantCategories = data.categories.filter(c => c.restaurantId === restaurant.id);
-  const categoryMap = new Map();
-  restaurantCategories.forEach(cat => categoryMap.set(cat.id, cat.name));
-  let products = data.products.filter(p => p.restaurantId === restaurant.id && p.isAvailable);
-  products = products.map(p => {
-    let categoryName = p.category || 'عام';
-    if (categoryMap.has(categoryName)) categoryName = categoryMap.get(categoryName);
-    return { ...p, category: categoryName };
-  });
-  res.json(products);
-});
-
-app.get('/api/markets', (req, res) => {
-  const data = readData();
-  const openMarkets = data.markets.filter(m => m.isOpen !== false);
-  res.json(openMarkets);
-});
-
-app.get('/api/pharmacies', (req, res) => {
-  const data = readData();
-  const openPharmacies = data.pharmacies.filter(p => p.isOpen !== false);
-  res.json(openPharmacies);
-});
-
-// الطلب الخاص (ماركت، صيدلية، طلب مفتوح) مع رفع الملفات
-app.post('/api/orders/special', upload.array('files', 10), async (req, res) => {
-  let { orderData } = req.body;
-  try { orderData = JSON.parse(orderData); } catch(e) { return res.status(400).json({ error: 'بيانات الطلب غير صحيحة' }); }
-  const data = readData();
-  const { orderType, storeId, items, orderNotes, customerName, customerPhone, address, regionName, paymentMethod, deliveryFee } = orderData;
-  if (!customerName || !customerPhone) return res.status(400).json({ error: 'بيانات العميل ناقصة' });
-  const files = req.files || [];
-  const filePaths = files.map(f => '/uploads/special_orders/' + f.filename);
-  const newOrder = {
-    id: 'ord_' + Date.now(),
-    type: 'special',
-    orderType,
-    storeId: storeId || null,
-    items: items || [],
-    orderNotes: orderNotes || '',
-    attachments: filePaths,
-    customerName,
-    customerPhone,
-    address: address || '',
-    regionName: regionName || '',
-    paymentMethod: paymentMethod || 'CASH',
-    deliveryFee: deliveryFee || 10,
-    total: orderData.total,
-    status: 'PENDING',
-    adminApproved: false,
-    createdAt: new Date().toISOString(),
-    deliveredAt: null,
-    invoiceAmount: null
-  };
-  data.orders.push(newOrder);
-  writeData(data);
-  io.emit('newSpecialOrder', { orderId: newOrder.id, orderType, storeId });
-  res.json({ success: true, orderId: newOrder.id });
-});
-
-// طلب عادي
-function customerAuth(req, res, next) {
-  const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
-  if (token) {
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      if (decoded.role === 'CUSTOMER') req.customer = decoded;
-    } catch (e) {}
-  }
-  next();
+  
+  const invoiceHtml = `
+    <div style="direction:rtl;">
+      <div style="background:var(--surface2); padding:12px; border-radius:12px; margin-bottom:16px;">
+        <div><i class="fas fa-user"></i> <strong>العميل:</strong> ${order.customerName || '—'}</div>
+        <div><i class="fas fa-credit-card"></i> <strong>طريقة الدفع:</strong> ${order.paymentMethod === 'CASH' ? 'كاش' : 'فودافون كاش'}</div>
+        <div><i class="fas fa-clock"></i> <strong>وقت الطلب:</strong> ${new Date(order.createdAt).toLocaleString('ar-EG')}</div>
+        <div><i class="fas fa-info-circle"></i> <strong>الحالة:</strong> ${STATUS_AR[order.status] || order.status}</div>
+      </div>
+      <div><strong>المنتجات:</strong></div>
+      ${itemsHtml || '<div>لا توجد منتجات</div>'}
+      <div style="margin-top:16px; border-top:2px solid var(--orange); padding-top:12px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span>إجمالي المنتجات:</span>
+          <span>${productTotal} ج</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-weight:800; font-size:16px; color:var(--orange);">
+          <span>الإجمالي النهائي:</span>
+          <span>${order.total} ج</span>
+        </div>
+      </div>
+    </div>
+  `;
+  openModal(`فاتورة الطلب #${order.id.slice(-8)}`, invoiceHtml, `<button class="btn btn-primary" onclick="closeModal()">إغلاق</button>`);
 }
-app.post('/api/orders', customerAuth, (req, res) => {
-  const data = readData();
-  let { restaurantId, items, total, customerName, customerPhone, address, paymentMethod, deliveryFee } = req.body;
-  if (req.customer) {
-    const user = data.users.find(u => u.id === req.customer.id);
-    if (user) {
-      customerName = user.name;
-      customerPhone = user.phone;
-      if (!address && user.address) address = user.address;
-      if (!deliveryFee && user.regionId) {
-        const region = data.regions.find(r => r.id === user.regionId);
-        if (region) deliveryFee = region.fee;
-      }
-    }
+
+function getOrderActions(order) {
+  if (order.status === 'PENDING') {
+    return `<button class="btn btn-success btn-sm" onclick="updateOrderStatus('${order.id}','ACCEPTED')">قبول الطلب</button>
+            <button class="btn btn-danger btn-sm" onclick="updateOrderStatus('${order.id}','CANCELLED')">رفض</button>`;
   }
-  if (!restaurantId || !total || !customerName || !customerPhone || !address) return res.status(400).json({ error: 'بيانات الطلب ناقصة' });
-  const restaurant = data.restaurants.find(r => r.id === restaurantId);
-  if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-  const order = {
-    id: 'ord_' + Date.now(),
-    restaurantId,
-    items: items || [],
-    total: Number(total),
-    customerName,
-    customerPhone,
-    address,
-    regionName: req.body.regionName || '',
-    paymentMethod: paymentMethod || 'CASH',
-    status: 'PENDING',
-    driverId: null,
-    deliveryFee: deliveryFee || 10,
-    adminApproved: false,
-    createdAt: new Date().toISOString(),
-    deliveredAt: null
+  if (order.status === 'ACCEPTED') {
+    return `<button class="btn btn-primary btn-sm" onclick="updateOrderStatus('${order.id}','PREPARING')">بدء التحضير</button>`;
+  }
+  if (order.status === 'PREPARING') {
+    return `<button class="btn btn-success btn-sm" onclick="updateOrderStatus('${order.id}','READY')">تجهيز الطلب</button>`;
+  }
+  return '<span class="btn btn-ghost btn-sm" style="opacity:0.6">لا توجد إجراءات</span>';
+}
+async function updateOrderStatus(id, status) {
+  await apiFetch(API + '/restaurant/orders/' + id, { method: 'PATCH', body: JSON.stringify({ status }) });
+  toast('تم تحديث الحالة');
+  loadOrdersData();
+}
+function applyOrderFilter() {
+  const inp = document.getElementById('order-date-input');
+  if (inp) ordersSelectedDate = inp.value;
+  loadOrdersData();
+}
+function setTodayOrders() {
+  ordersSelectedDate = new Date().toISOString().slice(0,10);
+  const inp = document.getElementById('order-date-input');
+  if (inp) inp.value = ordersSelectedDate;
+  loadOrdersData();
+}
+function clearOrderFilter() {
+  ordersSelectedDate = '';
+  const inp = document.getElementById('order-date-input');
+  if (inp) inp.value = '';
+  loadOrdersData();
+}
+
+// ========== CATEGORIES ==========
+async function loadCategories() {
+  const res = await apiFetch(API + '/restaurant/categories');
+  const cats = await res.json();
+  categoriesList = cats;
+  let html = `
+    <div style="display:flex;justify-content:space-between;margin-bottom:20px">
+      <h2>🏷️ التصنيفات</h2>
+      <button class="btn btn-primary" onclick="showAddCategory()">+ إضافة تصنيف</button>
+    </div>
+    <div class="categories-grid">
+      ${cats.map(c => `
+        <div class="category-card">
+          <div class="category-name" onclick="editCategory('${c.id}','${c.name}')">${c.name}</div>
+          <div class="category-actions">
+            <button class="btn btn-danger btn-sm" onclick="deleteCategory('${c.id}')">🗑️</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  if(!cats.length) html = `<div class="empty-state"><div class="icon">🏷️</div><div class="msg">لا توجد تصنيفات، أضف تصنيفك الأول</div></div>`;
+  document.getElementById('content').innerHTML = html;
+}
+function editCategory(id, currentName) {
+  const newName = prompt('الاسم الجديد:', currentName);
+  if (!newName || newName === currentName) return;
+  apiFetch(API + '/restaurant/categories/' + id, { method: 'PATCH', body: JSON.stringify({ name: newName }) }).then(() => { toast('تم التعديل'); loadCategories(); });
+}
+function showAddCategory() {
+  openModal('إضافة تصنيف', `<div class="field"><label>اسم التصنيف</label><input id="cat-name" placeholder="مثال: برجر"></div>`, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="addCategory()">إضافة</button>`);
+}
+async function addCategory() {
+  const name = document.getElementById('cat-name').value.trim();
+  if (!name) return toast('أدخل اسماً', 'error');
+  await apiFetch(API + '/restaurant/categories', { method: 'POST', body: JSON.stringify({ name }) });
+  closeModal(); loadCategories(); toast('تمت الإضافة');
+}
+async function deleteCategory(id) {
+  if (!confirm('حذف التصنيف؟')) return;
+  await apiFetch(API + '/restaurant/categories/' + id, { method: 'DELETE' });
+  loadCategories(); toast('تم الحذف');
+}
+
+// ========== PRODUCTS ==========
+let currentCategoryFilter = 'all';
+async function loadProducts() {
+  await loadCategoriesOptions();
+  const prodRes = await apiFetch(API + '/restaurant/products');
+  const products = await prodRes.json();
+  const catsRes = await apiFetch(API + '/restaurant/categories');
+  const categories = await catsRes.json();
+  let filterBar = `<div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:8px; margin-bottom:20px; border-bottom:1px solid var(--border);">
+      <button class="btn ${currentCategoryFilter === 'all' ? 'btn-primary' : 'btn-ghost'}" onclick="setCategoryFilter('all')">الكل</button>`;
+  categories.forEach(cat => {
+    filterBar += `<button class="btn ${currentCategoryFilter === cat.id ? 'btn-primary' : 'btn-ghost'}" onclick="setCategoryFilter('${cat.id}')">${cat.name}</button>`;
+  });
+  filterBar += `</div>`;
+  let filteredProducts = products;
+  if (currentCategoryFilter !== 'all') filteredProducts = products.filter(p => p.category === currentCategoryFilter);
+  let productsHtml = `<div style="display:flex;justify-content:space-between;margin-bottom:24px"><h2>📋 المنتجات</h2><button class="btn btn-primary" onclick="showAddProduct()">+ إضافة منتج</button></div>${filterBar}<div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:20px">`;
+  filteredProducts.forEach(p => {
+    const groupsStr = (p.groups || []).map(g => `<div style="font-size:11px;color:#aaa">${g.name}: ${g.options?.map(o=>`${o.value}(${o.price}ج)`).join(', ')}</div>`).join('');
+    productsHtml += `<div style="background:var(--surface2);border-radius:16px;border:1px solid var(--border);overflow:hidden;"><div style="height:140px;background:#2a2a2a;display:flex;align-items:center;justify-content:center">${p.image ? `<img src="${p.image}" style="width:100%;height:100%;object-fit:cover">` : '<span style="color:var(--text3)">📷 لا توجد صورة</span>'}</div><div style="padding:16px"><div style="font-weight:800;font-size:18px;margin-bottom:6px">${p.name}</div><div style="color:var(--orange);font-weight:700;margin-bottom:8px">${p.basePrice || 0} ج</div><div style="font-size:12px;color:var(--text2);margin-bottom:12px">${p.description || ''}</div>${groupsStr ? `<div style="font-size:11px;margin-top:8px;border-top:1px solid var(--border);padding-top:8px">${groupsStr}</div>` : ''}<div style="display:flex;justify-content:space-between;margin-top:12px"><button class="btn btn-sm btn-ghost" onclick="editProduct('${p.id}')">✏️ تعديل</button><button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.id}')">🗑️ حذف</button></div></div></div>`;
+  });
+  productsHtml += `</div>`;
+  if(filteredProducts.length === 0) productsHtml = `<div class="empty-state"><div class="icon">📋</div><div class="msg">لا توجد منتجات في هذا التصنيف</div></div>`;
+  document.getElementById('content').innerHTML = productsHtml;
+}
+function setCategoryFilter(catId) { currentCategoryFilter = catId; loadProducts(); }
+function showAddProduct() {
+  const catOptions = window._catOptions;
+  openModal('إضافة منتج', `
+    <div class="field"><label>اسم المنتج</label><input id="prod-name"></div>
+    <div class="field"><label>الوصف</label><input id="prod-desc"></div>
+    <div class="field"><label>السعر الأساسي (ج)</label><input id="prod-base-price" type="number" value="0"></div>
+    <div class="field"><label>التصنيف</label><select id="prod-category">${catOptions}</select></div>
+    <div class="field"><label>الصورة</label><input type="file" id="prod-image"></div>
+    <hr><h4>🧩 مجموعات الاختيارات</h4>
+    <div id="quick-add-buttons" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <button type="button" class="btn btn-ghost btn-sm" onclick="addQuickGroup('size')">📏 أحجام</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="addQuickGroup('hot-cold')">❄️🔥 حار/بارد</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="addQuickGroup('spicy')">🌶️ مستوى الحرارة</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="addQuickGroup('extras')">➕ إضافات</button>
+    </div>
+    <div id="groups-container"></div>
+    <button type="button" class="btn-add-row" onclick="addGroupRow()">+ إضافة مجموعة مخصصة</button>
+  `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveProduct()">حفظ</button>`);
+  addGroupRow();
+}
+function addGroupRow() { /* kept as in original */ 
+  const container = document.getElementById('groups-container');
+  const div = document.createElement('div');
+  div.className = 'group-box';
+  div.innerHTML = `
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <input placeholder="اسم المجموعة (مثال: الحجم)" style="flex:1" class="grp-name">
+      <select class="grp-type" style="width:130px"><option value="single">اختيار واحد</option><option value="multiple">اختيار متعدد</option></select>
+      <label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" class="grp-required" checked> إجباري</label>
+    </div>
+    <div class="grp-options-container"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+      <button type="button" class="btn btn-ghost btn-sm" onclick="addOptionToRow(this)">+ إضافة خيار</button>
+      <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.group-box').remove()">✕ حذف المجموعة</button>
+    </div>
+  `;
+  container.appendChild(div);
+  addOptionToRow(div.querySelector('.btn-ghost'));
+}
+function addOptionToRow(buttonEl) {
+  const groupBox = buttonEl.closest('.group-box');
+  const optionsContainer = groupBox.querySelector('.grp-options-container');
+  const row = document.createElement('div');
+  row.className = 'option-row';
+  row.innerHTML = `<input placeholder="القيمة (مثال: صغير)" style="flex:2" class="opt-value"><input placeholder="السعر (ج)" type="number" style="flex:1" class="opt-price" value="0"><button type="button" class="btn btn-ghost btn-sm" onclick="this.parentElement.remove()">✕</button>`;
+  optionsContainer.appendChild(row);
+}
+function collectGroupsData() {
+  const groupBoxes = document.querySelectorAll('.group-box');
+  const groups = [];
+  groupBoxes.forEach(box => {
+    const name = box.querySelector('.grp-name').value.trim();
+    if (!name) return;
+    const type = box.querySelector('.grp-type').value;
+    const required = box.querySelector('.grp-required').checked;
+    const optionRows = box.querySelectorAll('.option-row');
+    const options = [];
+    optionRows.forEach(row => {
+      const value = row.querySelector('.opt-value').value.trim();
+      const price = Number(row.querySelector('.opt-price').value) || 0;
+      if (value) options.push({ value, price });
+    });
+    if (options.length > 0) groups.push({ id: 'grp_' + Date.now() + Math.random(), name, type, required, options });
+  });
+  return groups;
+}
+async function saveProduct() {
+  const name = document.getElementById('prod-name').value.trim();
+  if (!name) return toast('اسم المنتج مطلوب', 'error');
+  const desc = document.getElementById('prod-desc').value.trim();
+  const basePrice = Number(document.getElementById('prod-base-price').value) || 0;
+  const category = document.getElementById('prod-category').value;
+  const imageFile = document.getElementById('prod-image').files[0];
+  const groups = collectGroupsData();
+  const form = new FormData();
+  form.append('name', name);
+  form.append('description', desc);
+  form.append('basePrice', basePrice);
+  form.append('category', category);
+  form.append('groups', JSON.stringify(groups));
+  if (imageFile) form.append('image', imageFile);
+  const res = await apiFetch(API + '/restaurant/products', { method: 'POST', body: form });
+  const data = await res.json();
+  if (data.error) { toast(data.error, 'error'); return; }
+  toast('تم إضافة المنتج');
+  closeModal();
+  loadProducts();
+}
+async function editProduct(id) {
+  const res = await apiFetch(API + '/restaurant/products');
+  const products = await res.json();
+  const product = products.find(p => p.id === id);
+  if (!product) return toast('المنتج غير موجود', 'error');
+  const catOptions = window._catOptions;
+  openModal('تعديل منتج', `
+    <div class="field"><label>الاسم</label><input id="ep-name" value="${product.name}"></div>
+    <div class="field"><label>الوصف</label><input id="ep-desc" value="${product.description||''}"></div>
+    <div class="field"><label>السعر الأساسي (ج)</label><input id="ep-base-price" type="number" value="${product.basePrice || 0}"></div>
+    <div class="field"><label>التصنيف</label><select id="ep-cat">${catOptions}</select></div>
+    <div class="field"><label>صورة جديدة</label><input type="file" id="ep-image"></div>
+    <hr><h4>المجموعات الحالية</h4><div id="groups-container"></div><button type="button" class="btn-add-row" onclick="addGroupRow()">+ إضافة مجموعة</button>
+  `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveEditProduct('${id}')">حفظ التعديلات</button>`);
+  setTimeout(() => {
+    document.getElementById('ep-cat').value = product.category || '';
+    const container = document.getElementById('groups-container');
+    if (product.groups) {
+      product.groups.forEach(g => {
+        addGroupRow();
+        const last = container.lastChild;
+        last.querySelector('.grp-name').value = g.name;
+        last.querySelector('.grp-type').value = g.type;
+        last.querySelector('.grp-required').checked = g.required;
+        const opts = last.querySelector('.grp-options-container');
+        g.options.forEach(opt => {
+          const row = document.createElement('div');
+          row.className = 'option-row';
+          row.innerHTML = `<input value="${opt.value}" style="flex:2" class="opt-value"><input type="number" value="${opt.price}" style="flex:1" class="opt-price"><button type="button" class="btn btn-ghost btn-sm" onclick="this.parentElement.remove()">✕</button>`;
+          opts.appendChild(row);
+        });
+      });
+    } else { addGroupRow(); }
+  }, 100);
+}
+async function saveEditProduct(id) {
+  const name = document.getElementById('ep-name').value.trim();
+  const desc = document.getElementById('ep-desc').value.trim();
+  const category = document.getElementById('ep-cat').value;
+  const basePrice = Number(document.getElementById('ep-base-price').value) || 0;
+  const imageFile = document.getElementById('ep-image').files[0];
+  const groups = collectGroupsData();
+  const form = new FormData();
+  form.append('name', name);
+  form.append('description', desc);
+  form.append('category', category);
+  form.append('basePrice', basePrice);
+  form.append('groups', JSON.stringify(groups));
+  if (imageFile) form.append('image', imageFile);
+  const res = await apiFetch(API + '/restaurant/products/' + id, { method: 'PATCH', body: form });
+  const data = await res.json();
+  if (data.error) { toast(data.error, 'error'); return; }
+  toast('تم التحديث');
+  closeModal(); loadProducts();
+}
+async function deleteProduct(id) {
+  if (!confirm('حذف المنتج؟')) return;
+  await apiFetch(API + '/restaurant/products/' + id, { method: 'DELETE' });
+  loadProducts(); toast('تم الحذف');
+}
+function addQuickGroup(type) {
+  const templates = {
+    'size': { name: 'الحجم', type: 'single', required: true, options: [{ value: 'صغير', price: 0 }, { value: 'وسط', price: 5 }, { value: 'كبير', price: 10 }] },
+    'hot-cold': { name: 'درجة الحرارة', type: 'single', required: true, options: [{ value: 'حار', price: 0 }, { value: 'بارد', price: 0 }] },
+    'spicy': { name: 'مستوى الحرارة', type: 'single', required: false, options: [{ value: 'عادي', price: 0 }, { value: 'وسط', price: 0 }, { value: 'حار', price: 2 }, { value: 'ناري', price: 4 }] },
+    'extras': { name: 'إضافات', type: 'multiple', required: false, options: [{ value: 'جبنة إضافية', price: 5 }, { value: 'بطاطس', price: 7 }, { value: 'بيبسي', price: 10 }] }
   };
-  data.orders.push(order);
-  writeData(data);
-  io.emit('newOrder', { orderId: order.id, restaurantId, customerName });
-  res.json({ success: true, orderId: order.id });
-});
-
-app.get('/api/orders/:id/track', (req, res) => {
-  const data = readData();
-  const order = data.orders.find(o => o.id === req.params.id);
-  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
-  let restaurantName = null, storeName = null;
-  if (order.type === 'special') {
-    if (order.orderType === 'market') {
-      const market = data.markets.find(m => m.id === order.storeId);
-      storeName = market ? market.name : 'ماركت';
-    } else if (order.orderType === 'pharmacy') {
-      const pharmacy = data.pharmacies.find(p => p.id === order.storeId);
-      storeName = pharmacy ? pharmacy.name : 'صيدلية';
-    } else { storeName = 'طلب خاص'; }
-  } else {
-    const restaurant = data.restaurants.find(r => r.id === order.restaurantId);
-    restaurantName = restaurant ? restaurant.name : null;
-  }
-  res.json({ ...order, restaurantName, storeName });
-});
-
-// مناطق عامة
-app.get('/api/regions', (req, res) => {
-  const data = readData();
-  res.json(data.regions);
-});
-
-// حساب العميل
-app.post('/api/customer/register', (req, res) => {
-  const { name, phone, password, regionId, address } = req.body;
-  if (!name || !phone || !password) return res.status(400).json({ error: 'جميع الحقول مطلوبة' });
-  const data = readData();
-  if (data.users.find(u => u.phone === phone)) return res.status(400).json({ error: 'الهاتف مستخدم بالفعل' });
-  const hashed = bcrypt.hashSync(password, 10);
-  const userId = 'cus_' + Date.now();
-  data.users.push({ id: userId, name, phone, password: hashed, role: 'CUSTOMER', regionId: regionId || '', address: address || '' });
-  writeData(data);
-  const token = jwt.sign({ id: userId, role: 'CUSTOMER' }, JWT_SECRET, { expiresIn: '365d' });
-  res.cookie('token', token, { 
-    httpOnly: true, 
-    sameSite: 'lax', 
-    secure: true,                // ← تمت الإضافة
-    maxAge: 365 * 24 * 60 * 60 * 1000 
+  const tpl = templates[type];
+  if (!tpl) return;
+  addGroupRow();
+  const container = document.getElementById('groups-container');
+  const lastGroup = container.lastChild;
+  lastGroup.querySelector('.grp-name').value = tpl.name;
+  lastGroup.querySelector('.grp-type').value = tpl.type;
+  lastGroup.querySelector('.grp-required').checked = tpl.required;
+  const optsContainer = lastGroup.querySelector('.grp-options-container');
+  optsContainer.innerHTML = '';
+  tpl.options.forEach(opt => {
+    const row = document.createElement('div');
+    row.className = 'option-row';
+    row.innerHTML = `<input value="${opt.value}" style="flex:2" class="opt-value"><input type="number" value="${opt.price}" style="flex:1" class="opt-price"><button type="button" class="btn btn-ghost btn-sm" onclick="this.parentElement.remove()">✕</button>`;
+    optsContainer.appendChild(row);
   });
-  res.json({ success: true, token, name, phone, regionId: regionId || '', address: address || '' });
-});
-app.post('/api/customer/login', (req, res) => {
-  const { phone, password } = req.body;
-  const data = readData();
-  const user = data.users.find(u => u.phone === phone && u.role === 'CUSTOMER');
-  if (!user || !bcrypt.compareSync(password, user.password)) return res.status(401).json({ error: 'رقم الهاتف أو كلمة المرور غير صحيحة' });
-  const token = jwt.sign({ id: user.id, role: 'CUSTOMER' }, JWT_SECRET, { expiresIn: '365d' });
-  res.cookie('token', token, { 
-    httpOnly: true, 
-    sameSite: 'lax', 
-    secure: true,                // ← تمت الإضافة
-    maxAge: 365 * 24 * 60 * 60 * 1000 
-  });
-  res.json({ success: true, token, name: user.name, phone: user.phone, regionId: user.regionId || '', address: user.address || '' });
-});
+}
 
-// العملاء (أدمن)
-app.get('/api/admin/customers', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const search = req.query.search || '';
-  let customers = data.users.filter(u => u.role === 'CUSTOMER');
-  if (search) {
-    const q = search.toLowerCase();
-    customers = customers.filter(u => u.name.toLowerCase().includes(q) || u.phone.includes(q) || (u.address || '').toLowerCase().includes(q));
+// ========== بدء التشغيل ==========
+(async function init() {
+  const isAuth = await checkAuth();
+  if (!isAuth) return;
+  await loadCategoriesOptions();
+  navigate('profile');
+})();
+
+const socket = io();
+socket.on('newOrder', (data) => {
+  if (data.restaurantId === window.myRestaurantId) {
+    playSound('newOrderBell');
+    toast('طلب جديد وارد! 🔔', 'success');
+    if (currentPage === 'orders') loadOrdersData();
   }
-  const enriched = customers.map(u => {
-    const region = data.regions.find(r => r.id === u.regionId);
-    const orders = data.orders.filter(o => o.customerPhone === u.phone);
-    const lastOrder = orders.length ? orders.reduce((latest, o) => new Date(o.createdAt) > new Date(latest.createdAt) ? o : latest) : null;
-    return { id: u.id, name: u.name, phone: u.phone, regionId: u.regionId || '', regionName: region ? region.name : '—', regionFee: region ? region.fee : 0, address: u.address || '—', totalOrders: orders.length, lastOrderDate: lastOrder ? lastOrder.createdAt : null };
-  });
-  res.json(enriched);
 });
-app.get('/api/admin/customers/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const user = data.users.find(u => u.id === req.params.id && u.role === 'CUSTOMER');
-  if (!user) return res.status(404).json({ error: 'العميل غير موجود' });
-  const region = data.regions.find(r => r.id === user.regionId);
-  const orders = data.orders.filter(o => o.customerPhone === user.phone);
-  const lastOrder = orders.length ? orders.reduce((latest, o) => new Date(o.createdAt) > new Date(latest.createdAt) ? o : latest) : null;
-  res.json({ id: user.id, name: user.name, phone: user.phone, regionId: user.regionId || '', regionName: region ? region.name : '—', regionFee: region ? region.fee : 0, address: user.address || '—', totalOrders: orders.length, lastOrderDate: lastOrder ? lastOrder.createdAt : null });
-});
-app.patch('/api/admin/customers/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const user = data.users.find(u => u.id === req.params.id && u.role === 'CUSTOMER');
-  if (!user) return res.status(404).json({ error: 'العميل غير موجود' });
-  const { name, phone, regionId, address } = req.body;
-  if (name !== undefined) { if (!name.trim()) return res.status(400).json({ error: 'الاسم لا يمكن أن يكون فارغاً' }); user.name = name.trim(); }
-  if (phone !== undefined) { if (!phone.trim()) return res.status(400).json({ error: 'الهاتف لا يمكن أن يكون فارغاً' }); const existing = data.users.find(u => u.phone === phone.trim() && u.id !== user.id); if (existing) return res.status(400).json({ error: 'الهاتف مستخدم من عميل آخر' }); user.phone = phone.trim(); }
-  if (regionId !== undefined) { if (regionId && !data.regions.find(r => r.id === regionId)) return res.status(400).json({ error: 'المنطقة غير موجودة' }); user.regionId = regionId; }
-  if (address !== undefined) user.address = address;
-  writeData(data);
-  res.json({ success: true });
-});
-
-// إيرادات المنصة
-app.get('/api/admin/platform-revenue', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const orders = data.orders.filter(o => o.status === 'DELIVERED' && o.platformFee);
-  const totalPlatform = orders.reduce((s, o) => s + (o.platformFee || 0), 0);
-  const today = new Date().toISOString().slice(0, 10);
-  const todayPlatform = orders.filter(o => o.deliveredAt?.startsWith(today)).reduce((s, o) => s + (o.platformFee || 0), 0);
-  res.json({ total: totalPlatform, today: todayPlatform });
-});
-
-// ==================== MARKETS & PHARMACIES ADMIN ====================
-app.get('/api/admin/markets', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  res.json(data.markets || []);
-});
-
-app.post('/api/admin/markets', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const { name, ownerPhone, ownerPassword } = req.body;
-  if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
-  if (data.users.find(u => u.phone === ownerPhone)) return res.status(400).json({ error: 'الهاتف مستخدم' });
-  const userId = 'usr_' + Date.now();
-  const marketId = 'market_' + Date.now();
-  const hashed = bcrypt.hashSync(ownerPassword, 10);
-  data.users.push({ id: userId, name, phone: ownerPhone, password: hashed, role: 'MARKET' });
-  data.markets.push({ id: marketId, userId, name, logo: '', isOpen: true });
-  writeData(data);
-  res.json({ id: marketId, name });
-});
-
-app.patch('/api/admin/markets/:id/toggle', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const market = data.markets.find(m => m.id === req.params.id);
-  if (!market) return res.status(404).json({ error: 'غير موجود' });
-  market.isOpen = !market.isOpen;
-  writeData(data);
-  res.json({ success: true });
-});
-
-app.patch('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const market = data.markets.find(m => m.id === req.params.id);
-  if (!market) return res.status(404).json({ error: 'غير موجود' });
-  const { name, ownerPhone } = req.body;
-  if (name) market.name = name;
-  if (ownerPhone) {
-    const user = data.users.find(u => u.id === market.userId);
-    if (user) user.phone = ownerPhone;
-  }
-  writeData(data);
-  res.json({ success: true });
-});
-
-app.delete('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const idx = data.markets.findIndex(m => m.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: 'غير موجود' });
-  const market = data.markets[idx];
-  const userIndex = data.users.findIndex(u => u.id === market.userId);
-  if (userIndex !== -1) data.users.splice(userIndex, 1);
-  data.markets.splice(idx, 1);
-  writeData(data);
-  res.json({ success: true });
-});
-
-// ========== MARKET PROFILE (لمالك الماركت) ==========
-app.get('/api/market/profile', requireAuth, (req, res) => {
-  if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const market = data.markets.find(m => m.userId === req.user.id);
-  if (!market) return res.status(404).json({ error: 'الماركت غير موجود' });
-  const owner = data.users.find(u => u.id === market.userId);
-  res.json({ id: market.id, name: market.name, logo: market.logo || '', ownerPhone: owner?.phone });
-});
-
-app.patch('/api/market/profile', requireAuth, upload.single('logo'), (req, res) => {
-  if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const market = data.markets.find(m => m.userId === req.user.id);
-  if (!market) return res.status(404).json({ error: 'الماركت غير موجود' });
-  if (req.body.name) market.name = req.body.name;
-  if (req.file) {
-    market.logo = '/uploads/' + req.file.filename;
-  }
-  writeData(data);
-  res.json({ name: market.name, logo: market.logo });
-});
-
-// إدارة الصيدليات (أدمن)
-app.get('/api/admin/pharmacies', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  res.json(data.pharmacies || []);
-});
-
-app.post('/api/admin/pharmacies', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const { name, ownerPhone, ownerPassword } = req.body;
-  if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
-  if (data.users.find(u => u.phone === ownerPhone)) return res.status(400).json({ error: 'الهاتف مستخدم' });
-  const userId = 'usr_' + Date.now();
-  const pharmacyId = 'pharm_' + Date.now();
-  const hashed = bcrypt.hashSync(ownerPassword, 10);
-  data.users.push({ id: userId, name, phone: ownerPhone, password: hashed, role: 'PHARMACY' });
-  data.pharmacies.push({ id: pharmacyId, userId, name, logo: '', isOpen: true });
-  writeData(data);
-  res.json({ id: pharmacyId, name });
-});
-
-app.patch('/api/admin/pharmacies/:id/toggle', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const pharmacy = data.pharmacies.find(p => p.id === req.params.id);
-  if (!pharmacy) return res.status(404).json({ error: 'غير موجود' });
-  pharmacy.isOpen = !pharmacy.isOpen;
-  writeData(data);
-  res.json({ success: true });
-});
-
-app.patch('/api/admin/pharmacies/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const pharmacy = data.pharmacies.find(p => p.id === req.params.id);
-  if (!pharmacy) return res.status(404).json({ error: 'غير موجود' });
-  const { name, ownerPhone } = req.body;
-  if (name) pharmacy.name = name;
-  if (ownerPhone) {
-    const user = data.users.find(u => u.id === pharmacy.userId);
-    if (user) user.phone = ownerPhone;
-  }
-  writeData(data);
-  res.json({ success: true });
-});
-
-app.delete('/api/admin/pharmacies/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const idx = data.pharmacies.findIndex(p => p.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: 'غير موجود' });
-  const pharm = data.pharmacies[idx];
-  const userIndex = data.users.findIndex(u => u.id === pharm.userId);
-  if (userIndex !== -1) data.users.splice(userIndex, 1);
-  data.pharmacies.splice(idx, 1);
-  writeData(data);
-  res.json({ success: true });
-});
-
-// ==================== MARKET ORDERS API ====================
-app.get('/api/market/orders', requireAuth, (req, res) => {
-  if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const market = data.markets.find(m => m.userId === req.user.id);
-  if (!market) return res.status(404).json({ error: 'السوق غير موجود' });
-  const orders = data.orders.filter(o => o.type === 'special' && o.storeId === market.id);
-  res.json(orders);
-});
-
-app.patch('/api/market/orders/:id/items', requireAuth, (req, res) => {
-  if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const order = data.orders.find(o => o.id === req.params.id);
-  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
-  const market = data.markets.find(m => m.userId === req.user.id);
-  if (!market || order.storeId !== market.id) return res.status(403).json({ error: 'ليس طلبك' });
-  const { items, total } = req.body;
-  if (items) order.items = items;
-  if (total !== undefined) order.total = total;
-  writeData(data);
-  io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
-  res.json({ success: true });
-});
-
-app.patch('/api/market/orders/:id/accept', requireAuth, (req, res) => {
-  if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const order = data.orders.find(o => o.id === req.params.id);
-  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
-  const market = data.markets.find(m => m.userId === req.user.id);
-  if (!market || order.storeId !== market.id) return res.status(403).json({ error: 'ليس طلبك' });
-  order.status = 'ACCEPTED';
-  writeData(data);
-  io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
-  res.json({ success: true });
-});
-
-app.patch('/api/market/orders/:id/invoice', requireAuth, (req, res) => {
-  if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const order = data.orders.find(o => o.id === req.params.id);
-  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
-  const market = data.markets.find(m => m.userId === req.user.id);
-  if (!market || order.storeId !== market.id) return res.status(403).json({ error: 'ليس طلبك' });
-  const { invoiceAmount } = req.body;
-  order.invoiceAmount = invoiceAmount;
-  order.invoiceBy = market.name;
-  order.total = parseFloat(invoiceAmount) + (order.deliveryFee || 0);
-  order.status = 'INVOICE_ADDED';
-  writeData(data);
-  io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
-  res.json({ success: true });
-});
-
-app.patch('/api/market/orders/:id/ready', requireAuth, (req, res) => {
-  if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const order = data.orders.find(o => o.id === req.params.id);
-  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
-  const market = data.markets.find(m => m.userId === req.user.id);
-  if (!market || order.storeId !== market.id) return res.status(403).json({ error: 'ليس طلبك' });
-  order.status = 'READY';
-  writeData(data);
-  io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
-  res.json({ success: true });
-});
-
-// ==================== PHARMACY ORDERS API ====================
-app.get('/api/pharmacy/orders', requireAuth, (req, res) => {
-  if (req.user.role !== 'PHARMACY') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const pharmacy = data.pharmacies.find(p => p.userId === req.user.id);
-  if (!pharmacy) return res.status(404).json({ error: 'الصيدلية غير موجودة' });
-  const orders = data.orders.filter(o => o.type === 'special' && o.storeId === pharmacy.id);
-  res.json(orders);
-});
-
-app.patch('/api/pharmacy/orders/:id/items', requireAuth, (req, res) => {
-  if (req.user.role !== 'PHARMACY') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const order = data.orders.find(o => o.id === req.params.id);
-  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
-  const pharmacy = data.pharmacies.find(p => p.userId === req.user.id);
-  if (!pharmacy || order.storeId !== pharmacy.id) return res.status(403).json({ error: 'ليس طلبك' });
-  const { items, total } = req.body;
-  if (items) order.items = items;
-  if (total !== undefined) order.total = total;
-  writeData(data);
-  io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
-  res.json({ success: true });
-});
-
-app.patch('/api/pharmacy/orders/:id/accept', requireAuth, (req, res) => {
-  if (req.user.role !== 'PHARMACY') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const order = data.orders.find(o => o.id === req.params.id);
-  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
-  const pharmacy = data.pharmacies.find(p => p.userId === req.user.id);
-  if (!pharmacy || order.storeId !== pharmacy.id) return res.status(403).json({ error: 'ليس طلبك' });
-  order.status = 'ACCEPTED';
-  writeData(data);
-  io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
-  res.json({ success: true });
-});
-
-app.patch('/api/pharmacy/orders/:id/invoice', requireAuth, (req, res) => {
-  if (req.user.role !== 'PHARMACY') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const order = data.orders.find(o => o.id === req.params.id);
-  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
-  const pharmacy = data.pharmacies.find(p => p.userId === req.user.id);
-  if (!pharmacy || order.storeId !== pharmacy.id) return res.status(403).json({ error: 'ليس طلبك' });
-  const { invoiceAmount } = req.body;
-  order.invoiceAmount = invoiceAmount;
-  order.invoiceBy = pharmacy.name;
-  order.total = parseFloat(invoiceAmount) + (order.deliveryFee || 0);
-  order.status = 'INVOICE_ADDED';
-  writeData(data);
-  io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
-  res.json({ success: true });
-});
-
-app.patch('/api/pharmacy/orders/:id/ready', requireAuth, (req, res) => {
-  if (req.user.role !== 'PHARMACY') return res.status(403).json({ error: 'غير مسموح' });
-  const data = readData();
-  const order = data.orders.find(o => o.id === req.params.id);
-  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
-  const pharmacy = data.pharmacies.find(p => p.userId === req.user.id);
-  if (!pharmacy || order.storeId !== pharmacy.id) return res.status(403).json({ error: 'ليس طلبك' });
-  order.status = 'READY';
-  writeData(data);
-  io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
-  res.json({ success: true });
-});
-
-// ==================== AUTOMATIC STATUS UPDATE ====================
-setInterval(() => {
-  const data = readData();
-  const now = new Date();
-  let changed = false;
-  const updatedOrders = [];
-  data.orders.forEach(order => {
-    if (order.status === 'PREPARING' && order.preparingAt) {
-      const preparingTime = new Date(order.preparingAt);
-      const diffMinutes = (now - preparingTime) / 1000 / 60;
-      if (diffMinutes >= 25) {
-        order.status = 'READY';
-        changed = true;
-        updatedOrders.push(order);
-      }
-    }
-  });
-  if (changed) {
-    writeData(data);
-    updatedOrders.forEach(o => io.emit('orderStatusUpdate', { orderId: o.id, status: o.status }));
-    const readyCount = data.orders.filter(o => o.status === 'READY' && !o.driverId).length;
-    io.emit('driver:newJob', { count: readyCount });
-  }
-}, 60000);
-
-// معالج أخطاء multer
-app.use((err, req, res, next) => {
-  if (err instanceof multer.MulterError) {
-    return res.status(400).json({ error: 'خطأ في رفع الملف: ' + err.message });
-  } else if (err) {
-    return res.status(500).json({ error: err.message });
-  }
-  next();
-});
-
-io.on('connection', (socket) => {
-  console.log('عميل متصل:', socket.id);
-});
-
-const PORT = process.env.PORT || 4000;
-server.listen(PORT, () => console.log(`Drako server on port ${PORT}`));
+socket.on('orderStatusUpdate', () => { if (currentPage === 'orders') loadOrdersData(); });
+socket.on('driverArrived', () => { playSound('driverArrived'); toast('الطيار وصل لاستلام طلب 🛵', 'success'); });
+socket.on('orderCancelled', () => { playSound('orderCancelled'); toast('تم إلغاء طلب ❌', 'error'); if (currentPage === 'orders') loadOrdersData(); });
+</script>
+</body>
+</html>
