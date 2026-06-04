@@ -12,6 +12,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// مساعدة لتفعيل secure تلقائياً حتى خلف proxy
+app.set('trust proxy', 1);
+
 // إعداد multer لرفع الملفات
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -39,20 +42,22 @@ const DATA_DIR = process.env.DATA_DIR || __dirname;
 const DATA_FILE = path.join(DATA_DIR, 'data.json');
 const JWT_SECRET = process.env.JWT_SECRET || 'drako_secret_key_fallback';
 
-// تجديد الكوكي تلقائياً (مرة واحدة فقط، بعد تعريف JWT_SECRET)
+// دالة مساعدة لتحديد secure تلقائياً
+const isSecure = (req) => req.secure || req.headers['x-forwarded-proto'] === 'https';
+
+// تجديد الكوكي تلقائياً
 app.use((req, res, next) => {
   const token = req.cookies?.token;
   if (token) {
     try {
       jwt.verify(token, JWT_SECRET);
-      // إعادة تعيين الكوكي لمدة سنة من الآن
-      res.cookie('token', token, { 
-        httpOnly: true, 
-        sameSite: 'lax', 
-        secure: true,                // ← تمت الإضافة
-        maxAge: 365 * 24 * 60 * 60 * 1000 
+      res.cookie('token', token, {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: isSecure(req),
+        maxAge: 365 * 24 * 60 * 60 * 1000
       });
-    } catch (e) { /* منتهي، لا نفعل شيئاً */ }
+    } catch (e) { /* منتهي */ }
   }
   next();
 });
@@ -139,7 +144,7 @@ app.get('/driver', rolePageAuth('DRIVER'), (req, res) => res.sendFile(path.join(
 app.get('/market', rolePageAuth('MARKET'), (req, res) => res.sendFile(path.join(__dirname, 'market.html')));
 app.get('/pharmacy', rolePageAuth('PHARMACY'), (req, res) => res.sendFile(path.join(__dirname, 'pharmacy.html')));
 
-// تسجيل الدخول (يدعم إعادة التوجيه)
+// تسجيل الدخول
 app.post('/login', (req, res) => {
   const { phone, password, redirect } = req.body;
   const data = readData();
@@ -148,11 +153,11 @@ app.post('/login', (req, res) => {
     return res.redirect('/login.html?error=1');
   }
   const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '365d' });
-  res.cookie('token', token, { 
-    httpOnly: true, 
-    sameSite: 'lax', 
-    secure: true,                // ← تمت الإضافة
-    maxAge: 365 * 24 * 60 * 60 * 1000 
+  res.cookie('token', token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isSecure(req),
+    maxAge: 365 * 24 * 60 * 60 * 1000
   });
   let target = '/';
   switch (user.role) {
@@ -221,7 +226,6 @@ app.patch('/api/admin/restaurants/:id/toggle', requireAuth, adminOnly, (req, res
   writeData(data);
   res.json({ isOpen: restaurant.isOpen });
 });
-// تعديل وحذف مطعم
 app.patch('/api/admin/restaurants/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const restaurant = data.restaurants.find(r => r.id === req.params.id);
@@ -287,7 +291,6 @@ app.patch('/api/admin/drivers/:id/block', requireAuth, adminOnly, (req, res) => 
   writeData(data);
   res.json({ isActive: user.isActive });
 });
-// تعديل وحذف طيار
 app.patch('/api/admin/drivers/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const user = data.users.find(u => u.id === req.params.id && u.role === 'DRIVER');
@@ -949,7 +952,7 @@ app.get('/api/pharmacies', (req, res) => {
   res.json(openPharmacies);
 });
 
-// الطلب الخاص (ماركت، صيدلية، طلب مفتوح) مع رفع الملفات
+// الطلب الخاص
 app.post('/api/orders/special', upload.array('files', 10), async (req, res) => {
   let { orderData } = req.body;
   try { orderData = JSON.parse(orderData); } catch(e) { return res.status(400).json({ error: 'بيانات الطلب غير صحيحة' }); }
@@ -1074,11 +1077,11 @@ app.post('/api/customer/register', (req, res) => {
   data.users.push({ id: userId, name, phone, password: hashed, role: 'CUSTOMER', regionId: regionId || '', address: address || '' });
   writeData(data);
   const token = jwt.sign({ id: userId, role: 'CUSTOMER' }, JWT_SECRET, { expiresIn: '365d' });
-  res.cookie('token', token, { 
-    httpOnly: true, 
-    sameSite: 'lax', 
-    secure: true,                // ← تمت الإضافة
-    maxAge: 365 * 24 * 60 * 60 * 1000 
+  res.cookie('token', token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isSecure(req),
+    maxAge: 365 * 24 * 60 * 60 * 1000
   });
   res.json({ success: true, token, name, phone, regionId: regionId || '', address: address || '' });
 });
@@ -1088,11 +1091,11 @@ app.post('/api/customer/login', (req, res) => {
   const user = data.users.find(u => u.phone === phone && u.role === 'CUSTOMER');
   if (!user || !bcrypt.compareSync(password, user.password)) return res.status(401).json({ error: 'رقم الهاتف أو كلمة المرور غير صحيحة' });
   const token = jwt.sign({ id: user.id, role: 'CUSTOMER' }, JWT_SECRET, { expiresIn: '365d' });
-  res.cookie('token', token, { 
-    httpOnly: true, 
-    sameSite: 'lax', 
-    secure: true,                // ← تمت الإضافة
-    maxAge: 365 * 24 * 60 * 60 * 1000 
+  res.cookie('token', token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isSecure(req),
+    maxAge: 365 * 24 * 60 * 60 * 1000
   });
   res.json({ success: true, token, name: user.name, phone: user.phone, regionId: user.regionId || '', address: user.address || '' });
 });
@@ -1201,7 +1204,7 @@ app.delete('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
   res.json({ success: true });
 });
 
-// ========== MARKET PROFILE (لمالك الماركت) ==========
+// ========== MARKET PROFILE ==========
 app.get('/api/market/profile', requireAuth, (req, res) => {
   if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
@@ -1224,7 +1227,7 @@ app.patch('/api/market/profile', requireAuth, upload.single('logo'), (req, res) 
   res.json({ name: market.name, logo: market.logo });
 });
 
-// إدارة الصيدليات (أدمن)
+// صيدليات
 app.get('/api/admin/pharmacies', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   res.json(data.pharmacies || []);
