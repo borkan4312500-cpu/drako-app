@@ -46,7 +46,12 @@ app.use((req, res, next) => {
     try {
       jwt.verify(token, JWT_SECRET);
       // إعادة تعيين الكوكي لمدة سنة من الآن
-      res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 365 * 24 * 60 * 60 * 1000 });
+      res.cookie('token', token, { 
+        httpOnly: true, 
+        sameSite: 'lax', 
+        secure: true,                // ← تمت الإضافة
+        maxAge: 365 * 24 * 60 * 60 * 1000 
+      });
     } catch (e) { /* منتهي، لا نفعل شيئاً */ }
   }
   next();
@@ -143,7 +148,12 @@ app.post('/login', (req, res) => {
     return res.redirect('/login.html?error=1');
   }
   const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '365d' });
-  res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 365 * 24 * 60 * 60 * 1000 });
+  res.cookie('token', token, { 
+    httpOnly: true, 
+    sameSite: 'lax', 
+    secure: true,                // ← تمت الإضافة
+    maxAge: 365 * 24 * 60 * 60 * 1000 
+  });
   let target = '/';
   switch (user.role) {
     case 'ADMIN': target = '/admin'; break;
@@ -1064,7 +1074,12 @@ app.post('/api/customer/register', (req, res) => {
   data.users.push({ id: userId, name, phone, password: hashed, role: 'CUSTOMER', regionId: regionId || '', address: address || '' });
   writeData(data);
   const token = jwt.sign({ id: userId, role: 'CUSTOMER' }, JWT_SECRET, { expiresIn: '365d' });
-  res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 365 * 24 * 60 * 60 * 1000 });
+  res.cookie('token', token, { 
+    httpOnly: true, 
+    sameSite: 'lax', 
+    secure: true,                // ← تمت الإضافة
+    maxAge: 365 * 24 * 60 * 60 * 1000 
+  });
   res.json({ success: true, token, name, phone, regionId: regionId || '', address: address || '' });
 });
 app.post('/api/customer/login', (req, res) => {
@@ -1073,7 +1088,12 @@ app.post('/api/customer/login', (req, res) => {
   const user = data.users.find(u => u.phone === phone && u.role === 'CUSTOMER');
   if (!user || !bcrypt.compareSync(password, user.password)) return res.status(401).json({ error: 'رقم الهاتف أو كلمة المرور غير صحيحة' });
   const token = jwt.sign({ id: user.id, role: 'CUSTOMER' }, JWT_SECRET, { expiresIn: '365d' });
-  res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 365 * 24 * 60 * 60 * 1000 });
+  res.cookie('token', token, { 
+    httpOnly: true, 
+    sameSite: 'lax', 
+    secure: true,                // ← تمت الإضافة
+    maxAge: 365 * 24 * 60 * 60 * 1000 
+  });
   res.json({ success: true, token, name: user.name, phone: user.phone, regionId: user.regionId || '', address: user.address || '' });
 });
 
