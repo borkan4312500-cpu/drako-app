@@ -6,6 +6,7 @@
   <title>دراكو - لوحة الماركت</title>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
+    /* جميع التنسيقات دون تغيير */
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
     body { background: #F7F7F7; color: #1A1A1A; max-width: 430px; margin: auto; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
     :root { --brand: #FF6B00; --brand-dark: #E55D00; --brand-light: #FFF3EB; --bg: #F7F7F7; --card: #FFFFFF; --text: #1A1A1A; --text-muted: #7A7A7A; --border: #EBEBEB; --radius: 18px; --radius-sm: 12px; }
@@ -96,7 +97,9 @@
     let ordersData = [];
     let currentOrderTab = 'active';
     let autoRefreshInterval = null;
+    let sessionRefresher = null;
 
+    // ---------- Toast & Modal ----------
     function showToast(msg, error = false) {
       const t = document.getElementById('toast');
       t.textContent = msg; t.style.background = error ? '#F05252' : '#1A1A1A';
@@ -109,60 +112,87 @@
     }
     function closeModal() { document.getElementById('modal').classList.remove('open'); }
 
-    // ---------- apiFetch (معدلة: بدون إعادة توجيه) ----------
-   async function apiFetch(url, options = {}) {
-  const res = await fetch(url, {
-    ...options,
-    credentials: 'include',
-    headers: {
-      ...(options.headers || {}),
-      // لو بتبعت JSON بس، ومش FormData
-      'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
-    }
-  });
-  // لا نقوم بتحويل لأي مكان عند أي خطأ
-  return res;
-}
-
-    // ---------- checkSession (تعرض رسالة فقط) ----------
-    async function checkSession() {
+    // ---------- آلية تجديد الجلسة الصامتة ----------
+    async function refreshSession() {
       try {
-        const res = await fetch(API + '/market/orders', { credentials: 'include' });
-        if (res.status === 401 || res.status === 403) {
-          document.getElementById('mainContent').innerHTML = `
-            <div class="error-box">
-              <p>انتهت الجلسة أو ليس لديك صلاحية.</p>
-              <button class="btn" style="margin-top:16px" onclick="window.location.href='/login.html'">تسجيل الدخول</button>
-            </div>
-          `;
-          return false;
-        }
+        await fetch(API + '/market/profile', { credentials: 'include' });
         return true;
-      } catch(e) {
-        document.getElementById('mainContent').innerHTML = `
-          <div class="error-box">
-            <p>فشل الاتصال بالسيرفر.</p>
-            <button class="btn" style="margin-top:16px" onclick="location.reload()">إعادة المحاولة</button>
-          </div>
-        `;
-        return false;
-      }
+      } catch (e) { return false; }
     }
 
+    // ---------- apiFetch محسنة (تعيد المحاولة تلقائياً عند 401) ----------
+    async function apiFetch(url, options = {}) {
+      let res = await fetch(url, {
+        ...options,
+        credentials: 'include',
+        headers: {
+          ...(options.headers || {}),
+          'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
+        }
+      });
+
+      // إذا كانت 401، نحاول تجديد الكوكي وإعادة المحاولة مرة واحدة
+      if (res.status === 401 || res.status === 403) {
+        const refreshed = await refreshSession();
+        if (refreshed) {
+          // إعادة المحاولة الأصلية
+          res = await fetch(url, {
+            ...options,
+            credentials: 'include',
+            headers: {
+              ...(options.headers || {}),
+              'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
+            }
+          });
+          if (!res.ok) {
+            // فشل بعد التجديد => عرض رسالة
+            if (res.status === 401 || res.status === 403) {
+              showSessionExpired();
+              throw new Error('SESSION_EXPIRED');
+            }
+          }
+        } else {
+          // لم نتمكن من تجديد الجلسة
+          showSessionExpired();
+          throw new Error('SESSION_EXPIRED');
+        }
+      }
+      return res;
+    }
+
+    // عرض شاشة انتهاء الجلسة بدون إعادة توجيه تلقائية
+    function showSessionExpired() {
+      document.getElementById('mainContent').innerHTML = `
+        <div class="error-box">
+          <p>انتهت الجلسة أو ليس لديك صلاحية.</p>
+          <button class="btn" style="margin-top:16px" onclick="window.location.href='/login.html'">تسجيل الدخول</button>
+        </div>
+      `;
+    }
+
+    // ---------- تحميل البروفايل (أول ما تفتح الصفحة) ----------
     async function loadProfile() {
       try {
         const res = await apiFetch(API + '/market/profile');
-        if (!res.ok) return;
+        if (!res.ok) {
+          // إذا فشل البروفايل أساساً، قد تكون الجلسة منتهية
+          showSessionExpired();
+          return false;
+        }
         currentMarketProfile = await res.json();
         document.getElementById('headerName').textContent = currentMarketProfile.name || 'الماركت';
         if (currentMarketProfile.logo) {
           document.getElementById('headerLogo').src = currentMarketProfile.logo;
         }
+        return true;
       } catch(e) {
-        if (e.message !== 'SESSION_EXPIRED') console.error(e);
+        if (e.message === 'SESSION_EXPIRED') showSessionExpired();
+        else showSessionExpired();
+        return false;
       }
     }
 
+    // ---------- التنقل والصفحات ----------
     function navigate(page) {
       currentPage = page;
       if (autoRefreshInterval) { clearInterval(autoRefreshInterval); autoRefreshInterval = null; }
@@ -180,7 +210,6 @@
         if (page === 'dashboard') await renderDashboard();
         else if (page === 'orders') await renderOrders();
         else if (page === 'profile') await renderProfile();
-        // بدء التحديث الدوري (كل 30 ثانية) للطلبات أو dashboard
         if (page === 'orders' || page === 'dashboard') {
           autoRefreshInterval = setInterval(() => {
             if (page === 'orders') loadOrderList();
@@ -302,10 +331,6 @@
       container.innerHTML = '<div style="text-align:center;padding:32px;color:#888;">⏳ جاري التحميل...</div>';
       try {
         const res = await apiFetch(API + '/market/orders');
-        if (res.status === 401 || res.status === 403) {
-          container.innerHTML = '<div class="error-box">انتهت الجلسة</div>';
-          return;
-        }
         const orders = await res.json();
         ordersData = orders;
         const filtered = currentOrderTab === 'active' 
@@ -373,6 +398,7 @@
       } catch(e) { if (e.message !== 'SESSION_EXPIRED') showToast('فشل', true); }
     }
 
+    // ---------- تفاصيل الطلب والدوال الجديدة ----------
     function openOrderDetails(id) {
       const order = ordersData.find(o => o.id === id);
       if (!order) return;
@@ -413,20 +439,84 @@
       `);
     }
 
-    // دوال المنتجات الأخرى تبقى كما هي (مع إضافة try/catch للتعامل مع SESSION_EXPIRED)
+    // ========== دوال إضافة وتعديل وحذف المنتجات ==========
+    async function addProductToOrder(orderId) {
+      openModal('إضافة منتج', `
+        <div class="field"><label>اسم المنتج</label><input id="newItemName"></div>
+        <div class="field"><label>الكمية</label><input id="newItemQty" type="number" value="1"></div>
+        <div class="field"><label>السعر (ج)</label><input id="newItemPrice" type="number" value="0"></div>
+        <button class="btn btn-block" onclick="saveNewProduct('${orderId}')">إضافة</button>
+      `);
+    }
+    async function saveNewProduct(orderId) {
+      const name = document.getElementById('newItemName').value.trim();
+      const qty = parseInt(document.getElementById('newItemQty').value) || 1;
+      const price = parseFloat(document.getElementById('newItemPrice').value) || 0;
+      if (!name) return showToast('اسم المنتج مطلوب', true);
+      const order = ordersData.find(o => o.id === orderId);
+      if (!order) return;
+      const newItems = [...(order.items||[]), { name, quantity: qty, price }];
+      const newTotal = newItems.reduce((sum, i) => sum + (i.price * i.quantity), 0) + (order.deliveryFee||0);
+      try {
+        const res = await apiFetch(API + '/market/orders/' + orderId + '/items', {
+          method: 'PATCH', body: JSON.stringify({ items: newItems, total: newTotal })
+        });
+        if (res.ok) { showToast('تمت الإضافة'); closeModal(); loadOrderList(); }
+        else showToast('فشل', true);
+      } catch(e) { if (e.message !== 'SESSION_EXPIRED') showToast('فشل', true); }
+    }
+    function editProductItem(orderId, index) {
+      const order = ordersData.find(o => o.id === orderId);
+      if (!order) return;
+      const item = order.items[index];
+      openModal('تعديل منتج', `
+        <div class="field"><label>الاسم</label><input id="editItemName" value="${item.name}"></div>
+        <div class="field"><label>الكمية</label><input id="editItemQty" type="number" value="${item.quantity}"></div>
+        <div class="field"><label>السعر (ج)</label><input id="editItemPrice" type="number" value="${item.price}"></div>
+        <button class="btn btn-block" onclick="saveEditProduct('${orderId}',${index})">حفظ</button>
+      `);
+    }
+    async function saveEditProduct(orderId, index) {
+      const name = document.getElementById('editItemName').value.trim();
+      const qty = parseInt(document.getElementById('editItemQty').value) || 1;
+      const price = parseFloat(document.getElementById('editItemPrice').value) || 0;
+      if (!name) return showToast('الاسم مطلوب', true);
+      const order = ordersData.find(o => o.id === orderId);
+      if (!order) return;
+      const items = [...order.items];
+      items[index] = { ...items[index], name, quantity: qty, price };
+      const newTotal = items.reduce((sum, i) => sum + (i.price * i.quantity), 0) + (order.deliveryFee||0);
+      try {
+        const res = await apiFetch(API + '/market/orders/' + orderId + '/items', {
+          method: 'PATCH', body: JSON.stringify({ items, total: newTotal })
+        });
+        if (res.ok) { showToast('تم التعديل'); closeModal(); loadOrderList(); }
+        else showToast('فشل', true);
+      } catch(e) { if (e.message !== 'SESSION_EXPIRED') showToast('فشل', true); }
+    }
+    async function deleteProductItem(orderId, index) {
+      const order = ordersData.find(o => o.id === orderId);
+      if (!order) return;
+      const items = order.items.filter((_, i) => i !== index);
+      const newTotal = items.reduce((sum, i) => sum + (i.price * i.quantity), 0) + (order.deliveryFee||0);
+      try {
+        const res = await apiFetch(API + '/market/orders/' + orderId + '/items', {
+          method: 'PATCH', body: JSON.stringify({ items, total: newTotal })
+        });
+        if (res.ok) { showToast('تم الحذف'); closeModal(); loadOrderList(); }
+        else showToast('فشل', true);
+      } catch(e) { if (e.message !== 'SESSION_EXPIRED') showToast('فشل', true); }
+    }
 
-    // ---------- بدء التشغيل ----------
+    // ---------- بدء التشغيل (بدون checkSession صارمة) ----------
     (async function() {
-      const ok = await checkSession();
-      if (!ok) return;
-      await loadProfile();
+      const profileLoaded = await loadProfile();
+      if (!profileLoaded) return; // سيظهر زر تسجيل الدخول
       navigate('dashboard');
-    })();
 
-    // ---------- تجديد الجلسة بصمت كل 5 دقائق ----------
-    setInterval(async () => {
-      try { await fetch(API + '/market/profile', { credentials: 'include' }); } catch(e) {}
-    }, 5 * 60 * 1000);
+      // بدء تجديد الجلسة الصامت كل 4 دقائق
+      sessionRefresher = setInterval(refreshSession, 4 * 60 * 1000);
+    })();
 
     // ---------- Socket.IO ----------
     const socket = io();
