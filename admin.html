@@ -110,6 +110,8 @@
     <div class="nav-item" id="nav-regions" onclick="navigate('regions')"><div class="nav-icon">📍</div>المناطق</div>
     <div class="nav-item" id="nav-customers" onclick="navigate('customers')"><div class="nav-icon">👥</div>العملاء</div>
     <div class="nav-item" id="nav-reports" onclick="navigate('reports')"><div class="nav-icon">💰</div>التقارير</div>
+    <div class="nav-item" id="nav-markets" onclick="navigate('markets')"><div class="nav-icon">🛒</div>الماركت</div>
+    <div class="nav-item" id="nav-pharmacies" onclick="navigate('pharmacies')"><div class="nav-icon">💊</div>الصيدليات</div>
   </div>
   <div class="sb-footer"><div class="sb-user"><div class="sb-avatar">A</div><div><div class="sb-user-name" id="adminName">الأدمن</div></div><a href="/logout" class="sb-logout">⏻</a></div></div>
 </div>
@@ -128,6 +130,8 @@
   const PAGE_ROLE = 'ADMIN';
   const TOKEN_KEY = 'auth_token';
   let currentPage = 'dashboard';
+  let currentMarketsData = [];
+  let currentPharmaciesData = [];
 
   // ========== إدارة التوكن ==========
   function getToken() {
@@ -190,7 +194,9 @@
       drivers: 'الطيارين',
       regions: 'المناطق',
       customers: 'العملاء',
-      reports: 'التقارير'
+      reports: 'التقارير',
+      markets: 'الماركت',
+      pharmacies: 'الصيدليات'
     };
     document.getElementById('topbar-title').textContent = titles[page] || page;
     renderPage(page);
@@ -207,6 +213,8 @@
       else if (page === 'regions') await renderRegions();
       else if (page === 'customers') await renderCustomers();
       else if (page === 'reports') await renderReports();
+      else if (page === 'markets') await renderMarkets();
+      else if (page === 'pharmacies') await renderPharmacies();
     } catch (e) {
       if (e.message !== 'NO_TOKEN' && e.message !== 'TOKEN_EXPIRED') {
         c.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><div>حدث خطأ أثناء التحميل</div></div>';
@@ -383,6 +391,7 @@
                   <td>${r.ownerPhone || '-'}</td>
                   <td>${r.isOpen ? '<span class="badge badge-green">مفتوح</span>' : '<span class="badge badge-red">مغلق</span>'}</td>
                   <td>
+                    <button class="btn btn-sm btn-ghost" onclick="toggleRestaurant('${r.id}')">${r.isOpen ? 'إغلاق' : 'فتح'}</button>
                     <button class="btn btn-sm btn-ghost" onclick="editRestaurant('${r.id}')">✏️</button>
                     <button class="btn btn-sm btn-danger" onclick="deleteRestaurant('${r.id}')">🗑️</button>
                   </td>
@@ -411,6 +420,12 @@
     await apiFetch(API + '/admin/restaurants', { method: 'POST', body: JSON.stringify({ name, ownerPhone, ownerPassword }) });
     showToast('تمت الإضافة');
     closeModal();
+    renderRestaurants();
+  }
+
+  async function toggleRestaurant(id) {
+    await apiFetch(API + '/admin/restaurants/' + id + '/toggle', { method: 'PATCH' });
+    showToast('تم تغيير الحالة');
     renderRestaurants();
   }
 
@@ -449,6 +464,7 @@
                   <td>${d.isAvailable ? '<span class="badge badge-green">نعم</span>' : '<span class="badge badge-red">لا</span>'}</td>
                   <td>${d.isActive ? '<span class="badge badge-green">نعم</span>' : '<span class="badge badge-red">محظور</span>'}</td>
                   <td>
+                    <button class="btn btn-sm btn-ghost" onclick="toggleDriver('${d.id}')">${d.isAvailable ? 'إيقاف' : 'تفعيل'}</button>
                     <button class="btn btn-sm btn-ghost" onclick="editDriver('${d.id}')">✏️</button>
                     <button class="btn btn-sm btn-danger" onclick="deleteDriver('${d.id}')">🗑️</button>
                   </td>
@@ -477,6 +493,12 @@
     await apiFetch(API + '/admin/drivers', { method: 'POST', body: JSON.stringify({ name, phone, password }) });
     showToast('تمت الإضافة');
     closeModal();
+    renderDrivers();
+  }
+
+  async function toggleDriver(id) {
+    await apiFetch(API + '/admin/drivers/' + id + '/toggle', { method: 'PATCH' });
+    showToast('تم تغيير الحالة');
     renderDrivers();
   }
 
@@ -604,7 +626,187 @@
         <div class="stat-card"><div class="sc-value">${data.daily.platformFee} ج</div><div class="sc-label">رسوم منصة اليوم</div></div>
         <div class="stat-card"><div class="sc-value">${data.total.productRevenue + data.total.deliveryRevenue} ج</div><div class="sc-label">الإجمالي الكلي</div></div>
       </div>
+      <div class="section">
+        <div class="sec-head"><div class="sec-title">إيرادات حسب المطعم (شهرياً)</div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>المطعم</th><th>عدد الطلبات</th><th>الإيرادات</th><th>رسوم المنصة</th><th>الصافي</th></tr></thead>
+            <tbody>
+              ${data.restaurants.month.map(r => `
+                <tr>
+                  <td>${r.name}</td>
+                  <td>${r.count}</td>
+                  <td>${r.productRevenue} ج</td>
+                  <td>${r.platformFee} ج</td>
+                  <td>${r.netRevenue} ج</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="section">
+        <div class="sec-head"><div class="sec-title">إيرادات الطيارين (شهرياً)</div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>الطيار</th><th>عدد الطلبات</th><th>الإيرادات</th></tr></thead>
+            <tbody>
+              ${data.drivers.month.map(d => `
+                <tr>
+                  <td>${d.name}</td>
+                  <td>${d.count}</td>
+                  <td>${d.revenue} ج</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
     `;
+  }
+
+  // ==================== MARKETS ====================
+  async function renderMarkets() {
+    const res = await apiFetch(API + '/admin/markets');
+    const markets = await res.json();
+    currentMarketsData = markets;
+    document.getElementById('content').innerHTML = `
+      <button class="btn btn-primary" onclick="addMarketModal()">+ إضافة ماركت</button>
+      <div class="section" style="margin-top:16px;">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>الاسم</th><th>رقم المالك</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+            <tbody>
+              ${markets.map(m => `
+                <tr>
+                  <td>${m.name}</td>
+                  <td>${m.ownerPhone || '-'}</td>
+                  <td>${m.isOpen !== false ? '<span class="badge badge-green">مفتوح</span>' : '<span class="badge badge-red">مغلق</span>'}</td>
+                  <td>
+                    <button class="btn btn-sm btn-ghost" onclick="toggleMarket('${m.id}')">${m.isOpen !== false ? 'إغلاق' : 'فتح'}</button>
+                    <button class="btn btn-sm btn-ghost" onclick="editMarket('${m.id}')">✏️</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteMarket('${m.id}')">🗑️</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  function addMarketModal() {
+    openModal('إضافة ماركت', `
+      <div class="field"><label>الاسم</label><input id="marketName"></div>
+      <div class="field"><label>رقم هاتف المالك</label><input id="marketPhone"></div>
+      <div class="field"><label>كلمة مرور المالك</label><input id="marketPass" type="password"></div>
+    `, `<button class="btn btn-primary" onclick="addMarket()">إضافة</button>`);
+  }
+
+  async function addMarket() {
+    const name = document.getElementById('marketName').value;
+    const ownerPhone = document.getElementById('marketPhone').value;
+    const ownerPassword = document.getElementById('marketPass').value;
+    if (!name || !ownerPhone || !ownerPassword) return showToast('بيانات ناقصة', true);
+    await apiFetch(API + '/admin/markets', { method: 'POST', body: JSON.stringify({ name, ownerPhone, ownerPassword }) });
+    showToast('تمت الإضافة');
+    closeModal();
+    renderMarkets();
+  }
+
+  async function toggleMarket(id) {
+    await apiFetch(API + '/admin/markets/' + id + '/toggle', { method: 'PATCH' });
+    showToast('تم تغيير الحالة');
+    renderMarkets();
+  }
+
+  function editMarket(id) {
+    const newName = prompt('الاسم الجديد:');
+    if (newName) {
+      apiFetch(API + '/admin/markets/' + id, { method: 'PATCH', body: JSON.stringify({ name: newName }) })
+        .then(() => { showToast('تم التعديل'); renderMarkets(); });
+    }
+  }
+
+  async function deleteMarket(id) {
+    if (confirm('هل أنت متأكد؟')) {
+      await apiFetch(API + '/admin/markets/' + id, { method: 'DELETE' });
+      showToast('تم الحذف');
+      renderMarkets();
+    }
+  }
+
+  // ==================== PHARMACIES ====================
+  async function renderPharmacies() {
+    const res = await apiFetch(API + '/admin/pharmacies');
+    const pharmacies = await res.json();
+    currentPharmaciesData = pharmacies;
+    document.getElementById('content').innerHTML = `
+      <button class="btn btn-primary" onclick="addPharmacyModal()">+ إضافة صيدلية</button>
+      <div class="section" style="margin-top:16px;">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>الاسم</th><th>رقم المالك</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+            <tbody>
+              ${pharmacies.map(p => `
+                <tr>
+                  <td>${p.name}</td>
+                  <td>${p.ownerPhone || '-'}</td>
+                  <td>${p.isOpen !== false ? '<span class="badge badge-green">مفتوح</span>' : '<span class="badge badge-red">مغلق</span>'}</td>
+                  <td>
+                    <button class="btn btn-sm btn-ghost" onclick="togglePharmacy('${p.id}')">${p.isOpen !== false ? 'إغلاق' : 'فتح'}</button>
+                    <button class="btn btn-sm btn-ghost" onclick="editPharmacy('${p.id}')">✏️</button>
+                    <button class="btn btn-sm btn-danger" onclick="deletePharmacy('${p.id}')">🗑️</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  function addPharmacyModal() {
+    openModal('إضافة صيدلية', `
+      <div class="field"><label>الاسم</label><input id="pharmacyName"></div>
+      <div class="field"><label>رقم هاتف المالك</label><input id="pharmacyPhone"></div>
+      <div class="field"><label>كلمة مرور المالك</label><input id="pharmacyPass" type="password"></div>
+    `, `<button class="btn btn-primary" onclick="addPharmacy()">إضافة</button>`);
+  }
+
+  async function addPharmacy() {
+    const name = document.getElementById('pharmacyName').value;
+    const ownerPhone = document.getElementById('pharmacyPhone').value;
+    const ownerPassword = document.getElementById('pharmacyPass').value;
+    if (!name || !ownerPhone || !ownerPassword) return showToast('بيانات ناقصة', true);
+    await apiFetch(API + '/admin/pharmacies', { method: 'POST', body: JSON.stringify({ name, ownerPhone, ownerPassword }) });
+    showToast('تمت الإضافة');
+    closeModal();
+    renderPharmacies();
+  }
+
+  async function togglePharmacy(id) {
+    await apiFetch(API + '/admin/pharmacies/' + id + '/toggle', { method: 'PATCH' });
+    showToast('تم تغيير الحالة');
+    renderPharmacies();
+  }
+
+  function editPharmacy(id) {
+    const newName = prompt('الاسم الجديد:');
+    if (newName) {
+      apiFetch(API + '/admin/pharmacies/' + id, { method: 'PATCH', body: JSON.stringify({ name: newName }) })
+        .then(() => { showToast('تم التعديل'); renderPharmacies(); });
+    }
+  }
+
+  async function deletePharmacy(id) {
+    if (confirm('هل أنت متأكد؟')) {
+      await apiFetch(API + '/admin/pharmacies/' + id, { method: 'DELETE' });
+      showToast('تم الحذف');
+      renderPharmacies();
+    }
   }
 
   // ========== بدء التشغيل ==========
