@@ -292,15 +292,19 @@ let myOrders = [];
 let historySelectedDate = new Date().toISOString().slice(0, 10);
 
 /* ── API FETCH (معدلة: لا إعادة توجيه تلقائي) ───────────────── */
-async function apiFetch(path, opts = {}) {
-  const res = await fetch(path, {
-    ...opts,
+async function apiFetch(url, options = {}) {
+  const res = await fetch(url, {
+    ...options,
     credentials: 'include',
     headers: {
-      ...(opts.headers || {}),
-      'Content-Type': opts.body instanceof FormData ? undefined : 'application/json'
+      ...(options.headers || {}),
+      // لو بتبعت JSON بس، ومش FormData
+      'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
     }
   });
+  // لا نقوم بتحويل لأي مكان عند أي خطأ
+  return res;
+}
   if (res.status === 401 || res.status === 403) {
     // عرض رسالة انتهاء الجلسة في الشاشة
     document.getElementById('scroll-content').innerHTML = `
@@ -315,7 +319,7 @@ async function apiFetch(path, opts = {}) {
   }
   const data = await res.json();
   return data;
-}
+
 
 /* ── TOAST ──────────────────────── */
 function toast(msg, type = 'success', dur = 3000) {
