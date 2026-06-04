@@ -91,9 +91,45 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const API = '/api';
-    const PAGE_ROLE = 'MARKET';
-    const TOKEN_KEY = 'auth_token';
+   const API = '/api';
+const PAGE_ROLE = 'MARKET'; // أو RESTAURANT, ADMIN, DRIVER
+const TOKEN_KEY = 'auth_token';
+
+function getToken() {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+async function apiFetch(url, options = {}) {
+  const token = getToken();
+  if (!token) {
+    // لا يوجد توكن – إظهار رابط تسجيل الدخول فقط (لا إعادة توجيه)
+    document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;">
+      <h2>الجلسة منتهية</h2>
+      <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
+    </div>`;
+    throw new Error('NO_TOKEN');
+  }
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      ...options.headers,
+      'Authorization': 'Bearer ' + token,
+      'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
+    }
+  });
+  if (res.status === 401) {
+    // التوكن غير صالح – مسحه وعرض تسجيل الدخول
+    localStorage.removeItem(TOKEN_KEY);
+    document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;">
+      <h2>الجلسة منتهية</h2>
+      <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
+    </div>`;
+    throw new Error('TOKEN_EXPIRED');
+  }
+  return res;
+}
+
+// باقي الدوال (loadProfile, renderDashboard, ...) تستخدم apiFetch كما هي
     let currentMarketProfile = null;
     let ordersData = [];
     let currentPage = 'dashboard';
