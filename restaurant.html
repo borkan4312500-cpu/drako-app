@@ -688,7 +688,7 @@ async function loadOrdersData() {
         <div class="order-body">
           <div class="customer-info">
             <div class="customer-name"><i class="fas fa-user"></i> ${order.customerName || '—'}</div>
-            ${order.address ? `<div class="customer-address"><i class="fas fa-map-marker-alt"></i> ${order.address}</div>` : ''}
+
           </div>
           <div class="items-list">
             <div class="items-title"><i class="fas fa-receipt"></i> المنتجات</div>
@@ -698,10 +698,7 @@ async function loadOrdersData() {
             <span class="total-label">إجمالي المنتجات</span>
             <span class="total-value">${productTotal} ج</span>
           </div>
-          <div class="order-total" style="border-top:none; margin-top:4px;">
-            <span class="total-label">رسوم التوصيل</span>
-            <span class="total-value">${order.deliveryFee || 0} ج</span>
-          </div>
+         
           <div class="order-total" style="margin-top:4px;">
             <span class="total-label">الإجمالي النهائي</span>
             <span class="total-value">${order.total} ج</span>
@@ -719,7 +716,6 @@ async function loadOrdersData() {
   container.innerHTML = html;
 }
 
-// دالة عرض الفاتورة المفصلة
 async function showOrderInvoice(orderId) {
   const res = await apiFetch(API + '/restaurant/orders');
   const orders = await res.json();
