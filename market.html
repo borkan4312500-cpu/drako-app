@@ -6,7 +6,6 @@
   <title>دراكو - لوحة الماركت</title>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
-    /* جميع التنسيقات كما هي دون تغيير */
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
     body { background: #F7F7F7; color: #1A1A1A; max-width: 430px; margin: auto; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
     :root { --brand: #FF6B00; --brand-dark: #E55D00; --brand-light: #FFF3EB; --bg: #F7F7F7; --card: #FFFFFF; --text: #1A1A1A; --text-muted: #7A7A7A; --border: #EBEBEB; --radius: 18px; --radius-sm: 12px; }
@@ -98,6 +97,7 @@
     let currentOrderTab = 'active';
     let autoRefreshInterval = null;
 
+    // ---------- دوال مساعدة ----------
     function showToast(msg, error = false) {
       const t = document.getElementById('toast');
       t.textContent = msg; t.style.background = error ? '#F05252' : '#1A1A1A';
@@ -110,9 +110,17 @@
     }
     function closeModal() { document.getElementById('modal').classList.remove('open'); }
 
-    // ---------- apiFetch (تمامًا مثل واجهة العميل، لا فحص ولا تحويل) ----------
+    // ---------- تجديد الجلسة بصمت (بدون أي رسائل) ----------
+    async function refreshSession() {
+      try {
+        await fetch(API + '/market/profile', { credentials: 'include' });
+        return true;
+      } catch (e) { return false; }
+    }
+
+    // ---------- apiFetch معدلة: لا ترمي أبداً عند 401/403، ولا تظهر رسائل خطأ ----------
     async function apiFetch(url, options = {}) {
-      const res = await fetch(url, {
+      let res = await fetch(url, {
         ...options,
         credentials: 'include',
         headers: {
@@ -120,30 +128,47 @@
           'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
         }
       });
-      return res; // لا فحص على status أبدًا
+
+      // إذا كان هناك خطأ في المصادقة، نحاول تجديد الجلسة بصمت مرة واحدة
+      if (res.status === 401 || res.status === 403) {
+        const refreshed = await refreshSession();
+        if (refreshed) {
+          // نعيد المحاولة مرة واحدة فقط
+          res = await fetch(url, {
+            ...options,
+            credentials: 'include',
+            headers: {
+              ...(options.headers || {}),
+              'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
+            }
+          });
+        }
+        // إذا فشل التجديد أو ظل الخطأ، نُعيد كائن استجابة وهمي آمن
+        if (res.status === 401 || res.status === 403) {
+          console.warn('Session renewal failed, ignoring.');
+          // نعيد استجابة وهمية بـ ok: false حتى لا نعطل التطبيق
+          return { ok: false, status: 401, json: async () => ({}), text: async () => '' };
+        }
+      }
+
+      return res;
     }
 
-    // ---------- محاولة تحميل البروفايل (بدون checkSession) ----------
+    // ---------- تحميل البروفايل ----------
     async function loadProfile() {
-      try {
-        const res = await apiFetch(API + '/market/profile');
-        if (!res.ok) {
-          // لو الصفحة اتحملت فعلًا، فالجلسة موجودة، مجرد خطأ مؤقت
-          console.warn('فشل تحميل البروفايل مؤقتًا');
-          return false;
-        }
+      const res = await apiFetch(API + '/market/profile');
+      if (res.ok) {
         currentMarketProfile = await res.json();
         document.getElementById('headerName').textContent = currentMarketProfile.name || 'الماركت';
         if (currentMarketProfile.logo) {
           document.getElementById('headerLogo').src = currentMarketProfile.logo;
         }
-        return true;
-      } catch(e) {
-        console.warn('خطأ في الاتصال');
-        return false;
+      } else {
+        console.warn('Could not load profile, ignoring.');
       }
     }
 
+    // ---------- التنقل ----------
     function navigate(page) {
       currentPage = page;
       if (autoRefreshInterval) { clearInterval(autoRefreshInterval); autoRefreshInterval = null; }
@@ -164,52 +189,72 @@
         if (page === 'orders' || page === 'dashboard') {
           autoRefreshInterval = setInterval(() => {
             if (page === 'orders') loadOrderList();
-            else if (page === 'dashboard') renderDashboard();
+            else if (page === 'dashboard') refreshDashboardSilent();
           }, 30000);
         }
       } catch(e) {
-        showToast('خطأ في التحميل', true);
+        // لا نظهر أي خطأ للمستخدم
+        console.error(e);
       }
     }
 
-    // ---------- Dashboard ----------
+    // ---------- Dashboard (مع تحديث صامت) ----------
     async function renderDashboard() {
+      const orders = await fetchOrdersSafely();
+      const pending = orders.filter(o => o.status === 'PENDING').length;
+      const accepted = orders.filter(o => ['ACCEPTED','INVOICE_ADDED'].includes(o.status)).length;
+      const ready = orders.filter(o => o.status === 'READY').length;
+      document.getElementById('mainContent').innerHTML = `
+        <div class="stats-grid">
+          <div class="stat-card" onclick="navigate('orders');currentOrderTab='active'">
+            <div class="stat-value">${pending}</div>
+            <div class="stat-label">جديد</div>
+          </div>
+          <div class="stat-card" onclick="navigate('orders');currentOrderTab='active'">
+            <div class="stat-value">${accepted}</div>
+            <div class="stat-label">تحضير</div>
+          </div>
+          <div class="stat-card" onclick="navigate('orders');currentOrderTab='active'">
+            <div class="stat-value">${ready}</div>
+            <div class="stat-label">جاهز</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${orders.length}</div>
+            <div class="stat-label">الإجمالي</div>
+          </div>
+        </div>
+        <div class="section-card">
+          <div class="section-title">آخر التحديثات</div>
+          <p style="color:#888;">يتم التحديث تلقائياً كل 30 ثانية</p>
+        </div>
+      `;
+    }
+
+    // تحديث صامت للوحة التحكم (لا يغير شاشة التحميل)
+    async function refreshDashboardSilent() {
+      const orders = await fetchOrdersSafely();
+      // تحديث البطاقات فقط إن كانت موجودة
+      const cards = document.querySelectorAll('.stat-value');
+      if (cards.length >= 4) {
+        cards[0].textContent = orders.filter(o => o.status === 'PENDING').length;
+        cards[1].textContent = orders.filter(o => ['ACCEPTED','INVOICE_ADDED'].includes(o.status)).length;
+        cards[2].textContent = orders.filter(o => o.status === 'READY').length;
+        cards[3].textContent = orders.length;
+      }
+    }
+
+    // ---------- دالة مساعدة لجلب الطلبات بدون أخطاء ----------
+    async function fetchOrdersSafely() {
       try {
         const res = await apiFetch(API + '/market/orders');
-        const orders = await res.json();
-        const pending = orders.filter(o => o.status === 'PENDING').length;
-        const accepted = orders.filter(o => ['ACCEPTED','INVOICE_ADDED'].includes(o.status)).length;
-        const ready = orders.filter(o => o.status === 'READY').length;
-        document.getElementById('mainContent').innerHTML = `
-          <div class="stats-grid">
-            <div class="stat-card" onclick="navigate('orders');currentOrderTab='active'">
-              <div class="stat-value">${pending}</div>
-              <div class="stat-label">جديد</div>
-            </div>
-            <div class="stat-card" onclick="navigate('orders');currentOrderTab='active'">
-              <div class="stat-value">${accepted}</div>
-              <div class="stat-label">تحضير</div>
-            </div>
-            <div class="stat-card" onclick="navigate('orders');currentOrderTab='active'">
-              <div class="stat-value">${ready}</div>
-              <div class="stat-label">جاهز</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value">${orders.length}</div>
-              <div class="stat-label">الإجمالي</div>
-            </div>
-          </div>
-          <div class="section-card">
-            <div class="section-title">آخر التحديثات</div>
-            <p style="color:#888;">يتم التحديث تلقائياً كل 30 ثانية</p>
-          </div>
-        `;
+        if (res.ok) return await res.json();
+        else return []; // تجاهل الأخطاء
       } catch(e) {
-        document.getElementById('mainContent').innerHTML = '<div class="error-box">فشل تحميل البيانات</div>';
+        return [];
       }
     }
 
-    // ---------- Profile (مثل السابق) ----------
+    // ---------- Profile ----------
     async function renderProfile() {
       if (!currentMarketProfile) await loadProfile();
       const profile = currentMarketProfile || {};
@@ -269,7 +314,7 @@
       }
     }
 
-    // ---------- Orders (مع دوال المنتجات) ----------
+    // ---------- Orders (مع تحديث صامت) ----------
     async function renderOrders() {
       document.getElementById('mainContent').innerHTML = `
         <div style="display:flex; gap:10px; margin-bottom:16px;">
@@ -286,21 +331,16 @@
       const container = document.getElementById('ordersList');
       if (!container) return;
       container.innerHTML = '<div style="text-align:center;padding:32px;color:#888;">⏳ جاري التحميل...</div>';
-      try {
-        const res = await apiFetch(API + '/market/orders');
-        const orders = await res.json();
-        ordersData = orders;
-        const filtered = currentOrderTab === 'active' 
-          ? orders.filter(o => !['DELIVERED','CANCELLED'].includes(o.status))
-          : orders.filter(o => ['DELIVERED','CANCELLED'].includes(o.status));
-        if (!filtered.length) {
-          container.innerHTML = '<div class="empty-state">لا توجد طلبات</div>';
-          return;
-        }
-        container.innerHTML = filtered.map(o => buildOrderCard(o)).join('');
-      } catch(e) {
-        container.innerHTML = '<div class="error-box">فشل تحميل الطلبات</div>';
+      const orders = await fetchOrdersSafely();
+      ordersData = orders;
+      const filtered = currentOrderTab === 'active' 
+        ? orders.filter(o => !['DELIVERED','CANCELLED'].includes(o.status))
+        : orders.filter(o => ['DELIVERED','CANCELLED'].includes(o.status));
+      if (!filtered.length) {
+        container.innerHTML = '<div class="empty-state">لا توجد طلبات</div>';
+        return;
       }
+      container.innerHTML = filtered.map(o => buildOrderCard(o)).join('');
     }
 
     function buildOrderCard(o) {
@@ -351,7 +391,7 @@
       else showToast('فشل', true);
     }
 
-    // ---------- تفاصيل الطلب وإدارة المنتجات ----------
+    // ---------- دوال المنتجات ----------
     function openOrderDetails(id) {
       const order = ordersData.find(o => o.id === id);
       if (!order) return;
@@ -454,12 +494,13 @@
       else showToast('فشل', true);
     }
 
-    // ---------- بدء التشغيل (دون checkSession) ----------
+    // ---------- بدء التشغيل ----------
     (async function() {
       await loadProfile();
       navigate('dashboard');
     })();
 
+    // ---------- Socket.IO ----------
     const socket = io();
     socket.on('orderStatusUpdate', () => { if (currentPage === 'orders') loadOrderList(); });
     socket.on('newSpecialOrder', () => { showToast('طلب جديد!'); if (currentPage === 'orders') loadOrderList(); });
