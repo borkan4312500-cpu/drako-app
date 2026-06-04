@@ -8,7 +8,6 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
 <style>
-/* جميع التنسيقات كما هي بدون تغيير */
 :root{
   --bg:#0D0F14; --surface:#161B24; --surface2:#1E2535; --surface3:#252D40;
   --border:#2A3348; --orange:#FF6B00; --orange2:#FF8C3A;
@@ -183,7 +182,6 @@ tbody tr:hover{background:var(--surface2);}
   gap: 8px;
 }
 
-/* تنسيقات بطاقات الطلبات */
 .orders-filter-bar {
   display: flex;
   flex-wrap: wrap;
@@ -338,37 +336,81 @@ tbody tr:hover{background:var(--surface2);}
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-// ========== آلية المصادقة الجديدة ==========
+// ========== إدارة الجلسة الذكية ==========
 const TOKEN_KEY = 'auth_token';
-function getToken() { return localStorage.getItem(TOKEN_KEY); }
+
+function getToken() {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+async function refreshTokenFromCookie() {
+  try {
+    const res = await fetch('/api/whoami', { credentials: 'include' });
+    if (res.ok) {
+      const data = await res.json();
+      localStorage.setItem(TOKEN_KEY, data.token);
+      return data.token;
+    }
+  } catch(e) {}
+  return null;
+}
 
 async function apiFetch(url, options = {}) {
   let token = getToken();
+
   if (!token) {
-    document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;color:white;background:#0D0F14;height:100vh;padding-top:80px">
-      <h2>الجلسة منتهية</h2>
-      <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
-    </div>`;
-    throw new Error('NO_TOKEN');
-  }
-  let res = await fetch(url, {
-    ...options,
-    headers: {
-      ...(options.headers || {}),
-      'Authorization': 'Bearer ' + token,
-      'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
+    token = await refreshTokenFromCookie();
+    if (!token) {
+      document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;color:white;background:#0D0F14;height:100vh;padding-top:80px">
+        <h2>الجلسة منتهية</h2>
+        <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
+      </div>`;
+      throw new Error('NO_TOKEN');
     }
-  });
-  if (res.status === 401) {
-    localStorage.removeItem(TOKEN_KEY);
-    document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;color:white;background:#0D0F14;height:100vh;padding-top:80px">
-      <h2>انتهت صلاحية الجلسة</h2>
-      <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
-    </div>`;
-    throw new Error('TOKEN_EXPIRED');
   }
+
+  const headers = {
+    ...(options.headers || {}),
+    'Authorization': 'Bearer ' + token
+  };
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  let res = await fetch(url, { ...options, headers });
+
+  if (res.status === 401 || res.status === 403) {
+    const newToken = await refreshTokenFromCookie();
+    if (newToken) {
+      headers['Authorization'] = 'Bearer ' + newToken;
+      res = await fetch(url, { ...options, headers });
+      if (res.status === 401 || res.status === 403) {
+        localStorage.removeItem(TOKEN_KEY);
+        document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;color:white;background:#0D0F14;height:100vh;padding-top:80px">
+          <h2>انتهت صلاحية الجلسة</h2>
+          <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
+        </div>`;
+        throw new Error('AUTH_ERROR');
+      }
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+      document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;color:white;background:#0D0F14;height:100vh;padding-top:80px">
+        <h2>انتهت صلاحية الجلسة</h2>
+        <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
+      </div>`;
+      throw new Error('AUTH_ERROR');
+    }
+  }
+
   return res;
 }
+
+// تجديد دوري كل 30 دقيقة
+setInterval(async () => {
+  if (getToken()) {
+    await refreshTokenFromCookie();
+  }
+}, 30 * 60 * 1000);
 
 // ========== SOUND ENGINE ==========
 function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
@@ -1051,7 +1093,7 @@ function addQuickGroup(type) {
 
 // ========== بدء التشغيل ==========
 (async function init() {
-  if (!getToken()) return; // سيظهر رابط تسجيل الدخول
+  if (!getToken()) return;
   await loadCategoriesOptions();
   navigate('profile');
 })();
