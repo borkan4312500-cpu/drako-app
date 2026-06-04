@@ -95,9 +95,8 @@
     let currentMarketProfile = null;
     let ordersData = [];
     let currentOrderTab = 'active';
-    let autoRefreshInterval = null; // للتحديث الدوري
+    let autoRefreshInterval = null;
 
-    // ---------- دوال مساعدة ----------
     function showToast(msg, error = false) {
       const t = document.getElementById('toast');
       t.textContent = msg; t.style.background = error ? '#F05252' : '#1A1A1A';
@@ -110,42 +109,30 @@
     }
     function closeModal() { document.getElementById('modal').classList.remove('open'); }
 
-    // ---------- API FETCH (معدلة) ----------
+    // ---------- apiFetch (معدلة: بدون إعادة توجيه) ----------
     async function apiFetch(url, options = {}) {
-      try {
-        const res = await fetch(url, {
-          ...options,
-          credentials: 'include',
-          headers: {
-            ...(options.headers || {}),
-            'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
-          }
-        });
-        if (res.status === 401 || res.status === 403) {
-          // عرض رسالة انتهاء الجلسة فقط، دون إعادة توجيه تلقائي
-          document.getElementById('mainContent').innerHTML = `
-            <div class="error-box">
-              <p>انتهت الجلسة. يرجى تسجيل الدخول مجدداً.</p>
-              <button class="btn" style="margin-top:16px" onclick="window.location.href='/login.html'">تسجيل الدخول</button>
-            </div>
-          `;
-          throw new Error('SESSION_EXPIRED');
+      const res = await fetch(url, {
+        ...options,
+        credentials: 'include',
+        headers: {
+          ...(options.headers || {}),
+          'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
         }
-        return res;
-      } catch (e) {
-        if (e.message === 'SESSION_EXPIRED') throw e; // إعادة رميها للأعلى
-        // أخطاء الشبكة تعرض رسالة
+      });
+      if (res.status === 401 || res.status === 403) {
+        // عرض رسالة انتهاء الجلسة فقط
         document.getElementById('mainContent').innerHTML = `
           <div class="error-box">
-            <p>فشل الاتصال بالسيرفر.</p>
-            <button class="btn" style="margin-top:16px" onclick="location.reload()">إعادة المحاولة</button>
+            <p>انتهت الجلسة. يرجى تسجيل الدخول مجدداً.</p>
+            <button class="btn" style="margin-top:16px" onclick="window.location.href='/login.html'">تسجيل الدخول</button>
           </div>
         `;
-        throw e;
+        throw new Error('SESSION_EXPIRED');
       }
+      return res;
     }
 
-    // ---------- التحقق من الجلسة (لا إعادة توجيه) ----------
+    // ---------- checkSession (تعرض رسالة فقط) ----------
     async function checkSession() {
       try {
         const res = await fetch(API + '/market/orders', { credentials: 'include' });
@@ -170,7 +157,6 @@
       }
     }
 
-    // ---------- تحميل الملف الشخصي ----------
     async function loadProfile() {
       try {
         const res = await apiFetch(API + '/market/profile');
@@ -185,10 +171,8 @@
       }
     }
 
-    // ---------- التنقل ----------
     function navigate(page) {
       currentPage = page;
-      // إيقاف أي مؤقت تحديث سابق
       if (autoRefreshInterval) { clearInterval(autoRefreshInterval); autoRefreshInterval = null; }
       document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
       const navItem = document.getElementById('nav-' + page);
@@ -197,20 +181,6 @@
     }
     function refreshPage() { renderPage(currentPage); }
 
-    // ---------- بدء التحديث الدوري حسب الصفحة ----------
-    function startAutoRefresh() {
-      if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-      // كل 30 ثانية نعيد تحميل بيانات الصفحة الحالية (إذا كانت الطلبات أو dashboard)
-      autoRefreshInterval = setInterval(() => {
-        if (currentPage === 'orders') {
-          loadOrderList();
-        } else if (currentPage === 'dashboard') {
-          renderDashboard(); // إعادة تحميل الإحصائيات
-        }
-      }, 30000); // 30 ثانية
-    }
-
-    // ---------- عرض الصفحة ----------
     async function renderPage(page) {
       const main = document.getElementById('mainContent');
       main.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ جاري التحميل...</div>';
@@ -218,8 +188,13 @@
         if (page === 'dashboard') await renderDashboard();
         else if (page === 'orders') await renderOrders();
         else if (page === 'profile') await renderProfile();
-        // بدء التحديث الدوري بعد تحميل الصفحة
-        startAutoRefresh();
+        // بدء التحديث الدوري (كل 30 ثانية) للطلبات أو dashboard
+        if (page === 'orders' || page === 'dashboard') {
+          autoRefreshInterval = setInterval(() => {
+            if (page === 'orders') loadOrderList();
+            else if (page === 'dashboard') renderDashboard();
+          }, 30000);
+        }
       } catch(e) {
         if (e.message !== 'SESSION_EXPIRED') showToast('خطأ في التحميل', true);
       }
@@ -294,9 +269,7 @@
         document.getElementById('headerName').textContent = data.name;
         document.getElementById('profileName').textContent = data.name;
         closeModal(); showToast('تم التحديث');
-      } catch(e) {
-        if (e.message !== 'SESSION_EXPIRED') showToast('فشل الحفظ', true);
-      }
+      } catch(e) { if (e.message !== 'SESSION_EXPIRED') showToast('فشل الحفظ', true); }
     }
 
     async function uploadLogo(input) {
@@ -315,12 +288,10 @@
           currentMarketProfile.logo = data.logo;
           showToast('✅ تم رفع الشعار');
         }
-      } catch(e) {
-        if (e.message !== 'SESSION_EXPIRED') showToast('❌ ' + e.message, true);
-      }
+      } catch(e) { if (e.message !== 'SESSION_EXPIRED') showToast('❌ ' + e.message, true); }
     }
 
-    // ---------- الطلبات (مع تحديث تلقائي) ----------
+    // ---------- Orders ----------
     async function renderOrders() {
       document.getElementById('mainContent').innerHTML = `
         <div style="display:flex; gap:10px; margin-bottom:16px;">
@@ -353,9 +324,7 @@
           return;
         }
         container.innerHTML = filtered.map(o => buildOrderCard(o)).join('');
-      } catch(e) {
-        if (e.message !== 'SESSION_EXPIRED') container.innerHTML = '<div class="error-box">فشل تحميل الطلبات</div>';
-      }
+      } catch(e) { if (e.message !== 'SESSION_EXPIRED') container.innerHTML = '<div class="error-box">فشل تحميل الطلبات</div>'; }
     }
 
     function buildOrderCard(o) {
@@ -452,32 +421,7 @@
       `);
     }
 
-    // ... (باقي دوال المنتجات والطلبات كما هي دون تغيير) ...
-    // (editProductItem, saveProductEdit, deleteProductItem, addProductToOrder, saveNewProduct, updateOrderItems)
-    // نكتفي بذكرها هنا مع إضافة try/catch لتفادي أخطاء SESSION_EXPIRED
-
-    async function updateOrderItems(orderId, newItems) {
-      try {
-        const order = ordersData.find(o => o.id === orderId);
-        if (!order) return;
-        const itemsTotal = newItems.reduce((sum, p) => sum + (p.price * p.quantity), 0);
-        const newTotal = itemsTotal + (order.deliveryFee || 0);
-        const res = await apiFetch(API + '/market/orders/' + orderId + '/items', {
-          method: 'PATCH',
-          body: JSON.stringify({ items: newItems, total: newTotal })
-        });
-        if (res.ok) {
-          order.items = newItems;
-          order.total = newTotal;
-          showToast('تم تحديث الطلب');
-          loadOrderList();
-        } else {
-          showToast('فشل', true);
-        }
-      } catch(e) { if (e.message !== 'SESSION_EXPIRED') showToast('فشل', true); }
-    }
-
-    // دوال المنتجات الأخرى تتبع نفس النمط (مع try/catch وتجنب SESSION_EXPIRED)
+    // دوال المنتجات الأخرى تبقى كما هي (مع إضافة try/catch للتعامل مع SESSION_EXPIRED)
 
     // ---------- بدء التشغيل ----------
     (async function() {
@@ -492,7 +436,7 @@
       try { await fetch(API + '/market/profile', { credentials: 'include' }); } catch(e) {}
     }, 5 * 60 * 1000);
 
-    // ---------- Socket.IO للتنبيهات الفورية ----------
+    // ---------- Socket.IO ----------
     const socket = io();
     socket.on('orderStatusUpdate', () => { if (currentPage === 'orders') loadOrderList(); });
     socket.on('newSpecialOrder', () => { showToast('طلب جديد!'); if (currentPage === 'orders') loadOrderList(); });
