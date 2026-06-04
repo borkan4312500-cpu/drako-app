@@ -1468,6 +1468,11 @@ app.post('/api/login', (req, res) => {
   res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 365 * 24 * 60 * 60 * 1000 });
   res.json({ token, user: { id: user.id, name: user.name, role: user.role } });
 });
+app.get('/api/get-test-token', (req, res) => {
+  // هذا للاختبار فقط - يحذف بعد التجربة
+  const token = jwt.sign({ id: 'admin1', role: 'ADMIN' }, JWT_SECRET, { expiresIn: '365d' });
+  res.json({ token });
+});
 
 // معالج أخطاء multer
 app.use((err, req, res, next) => {
