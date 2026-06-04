@@ -559,10 +559,7 @@ async function loadDashboard() {
   if (profile.logo) localStorage.setItem('restaurantLogo', profile.logo);
   document.getElementById('rest-name-side').innerHTML = profile.name || 'مطعمي';
   document.getElementById('content').innerHTML = `
-    <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;background:var(--surface);padding:20px;border-radius:var(--radius-lg);border:1px solid var(--border)">
-      <img src="${profile.logo || 'https://via.placeholder.com/80'}" style="width:80px;height:80px;border-radius:16px;object-fit:cover" id="logo-preview">
-      <div><h3>🖼️ شعار المطعم</h3><input type="file" id="logo-file" accept="image/*" style="color:var(--text2);margin-top:8px"><button class="btn btn-primary btn-sm" onclick="uploadLogoDashboard()" style="margin-top:8px">رفع الشعار</button></div>
-    </div>
+  
     <div class="stats-grid">
       <div class="stat-card" onclick="navigate('orders');setOrdersTab('new')"><div class="sc-top"><div><div class="sc-value">${stats.pending || 0}</div><div class="sc-label">طلبات جديدة</div></div><div class="sc-icon" style="background:var(--orange-dim)">📦</div></div></div>
       <div class="stat-card" onclick="navigate('orders');setOrdersTab('accepted')"><div class="sc-top"><div><div class="sc-value">${stats.accepted || 0}</div><div class="sc-label">مقبولة</div></div><div class="sc-icon" style="background:rgba(59,130,246,.12)">✅</div></div></div>
@@ -753,7 +750,6 @@ async function showOrderInvoice(orderId) {
     <div style="direction:rtl;">
       <div style="background:var(--surface2); padding:12px; border-radius:12px; margin-bottom:16px;">
         <div><i class="fas fa-user"></i> <strong>العميل:</strong> ${order.customerName || '—'}</div>
-        <div><i class="fas fa-map-marker-alt"></i> <strong>العنوان:</strong> ${order.address || '—'}</div>
         <div><i class="fas fa-credit-card"></i> <strong>طريقة الدفع:</strong> ${order.paymentMethod === 'CASH' ? 'كاش' : 'فودافون كاش'}</div>
         <div><i class="fas fa-clock"></i> <strong>وقت الطلب:</strong> ${new Date(order.createdAt).toLocaleString('ar-EG')}</div>
         <div><i class="fas fa-info-circle"></i> <strong>الحالة:</strong> ${STATUS_AR[order.status] || order.status}</div>
@@ -764,10 +760,6 @@ async function showOrderInvoice(orderId) {
         <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
           <span>إجمالي المنتجات:</span>
           <span>${productTotal} ج</span>
-        </div>
-        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-          <span>رسوم التوصيل:</span>
-          <span>${order.deliveryFee || 0} ج</span>
         </div>
         <div style="display:flex; justify-content:space-between; font-weight:800; font-size:16px; color:var(--orange);">
           <span>الإجمالي النهائي:</span>
