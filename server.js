@@ -12,13 +12,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// ⚠️ تجاوز المصادقة مؤقتًا للتجربة
-app.use((req, res, next) => {
-  // تعيين مستخدم افتراضي (أدمن) لجميع الطلبات
-  req.user = { id: 'admin1', role: 'ADMIN' };
-  next();
-});
-
 // مساعدة لتفعيل secure تلقائياً حتى خلف proxy
 app.set('trust proxy', 1);
 
@@ -52,7 +45,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'drako_secret_key_fallback';
 // دالة مساعدة لتحديد secure تلقائياً
 const isSecure = (req) => req.secure || req.headers['x-forwarded-proto'] === 'https';
 
-// تجديد الكوكي تلقائياً
+// تجديد الكوكي تلقائياً (اختياري، لا يؤثر على التوكن)
 app.use((req, res, next) => {
   const token = req.cookies?.token;
   if (token) {
@@ -113,7 +106,7 @@ function writeData(data) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 }
 
-// Middlewares الأصلية (لن تُستخدم الآن بسبب التجاوز، لكنها تبقى للمستقبل)
+// Middlewares
 function requireAuth(req, res, next) {
   const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'غير مصرح' });
@@ -172,12 +165,12 @@ app.post('/login', (req, res) => {
 app.get('/logout', (req, res) => { res.clearCookie('token'); res.redirect('/'); });
 
 // ==================== ADMIN ====================
-app.get('/api/admin/stats', (req, res) => {
+app.get('/api/admin/stats', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   res.json({ users: data.users.length, restaurants: data.restaurants.length, drivers: data.drivers.length, orders: data.orders.length, totalRevenue: data.orders.reduce((s, o) => s + (o.total || 0), 0) });
 });
 
-app.get('/api/admin/dashboard', (req, res) => {
+app.get('/api/admin/dashboard', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const today = new Date().toISOString().slice(0, 10);
   const todayOrders = data.orders.filter(o => o.createdAt?.startsWith(today));
@@ -191,7 +184,7 @@ app.get('/api/admin/dashboard', (req, res) => {
 });
 
 // مطاعم (أدمن)
-app.get('/api/admin/restaurants', (req, res) => {
+app.get('/api/admin/restaurants', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const list = data.restaurants.map(r => {
     const owner = data.users.find(u => u.id === r.userId);
@@ -199,7 +192,7 @@ app.get('/api/admin/restaurants', (req, res) => {
   });
   res.json(list);
 });
-app.post('/api/admin/restaurants', (req, res) => {
+app.post('/api/admin/restaurants', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const { name, ownerPhone, ownerPassword } = req.body;
   if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
@@ -212,7 +205,7 @@ app.post('/api/admin/restaurants', (req, res) => {
   writeData(data);
   res.json({ id: restaurantId, name });
 });
-app.patch('/api/admin/restaurants/:id/toggle', (req, res) => {
+app.patch('/api/admin/restaurants/:id/toggle', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const restaurant = data.restaurants.find(r => r.id === req.params.id);
   if (!restaurant) return res.status(404).json({ error: 'غير موجود' });
@@ -220,7 +213,7 @@ app.patch('/api/admin/restaurants/:id/toggle', (req, res) => {
   writeData(data);
   res.json({ isOpen: restaurant.isOpen });
 });
-app.patch('/api/admin/restaurants/:id', (req, res) => {
+app.patch('/api/admin/restaurants/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const restaurant = data.restaurants.find(r => r.id === req.params.id);
   if (!restaurant) return res.status(404).json({ error: 'غير موجود' });
@@ -233,7 +226,7 @@ app.patch('/api/admin/restaurants/:id', (req, res) => {
   writeData(data);
   res.json({ success: true });
 });
-app.delete('/api/admin/restaurants/:id', (req, res) => {
+app.delete('/api/admin/restaurants/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const idx = data.restaurants.findIndex(r => r.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'غير موجود' });
@@ -246,7 +239,7 @@ app.delete('/api/admin/restaurants/:id', (req, res) => {
 });
 
 // طيارين (أدمن)
-app.get('/api/admin/drivers', (req, res) => {
+app.get('/api/admin/drivers', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const list = data.users.filter(u => u.role === 'DRIVER').map(u => {
     const dp = data.drivers.find(d => d.userId === u.id) || {};
@@ -255,7 +248,7 @@ app.get('/api/admin/drivers', (req, res) => {
   });
   res.json(list);
 });
-app.post('/api/admin/drivers', (req, res) => {
+app.post('/api/admin/drivers', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const { name, phone, password } = req.body;
   if (!name || !phone || !password) return res.status(400).json({ error: 'بيانات ناقصة' });
@@ -268,7 +261,7 @@ app.post('/api/admin/drivers', (req, res) => {
   writeData(data);
   res.json({ id: userId, name });
 });
-app.patch('/api/admin/drivers/:id/toggle', (req, res) => {
+app.patch('/api/admin/drivers/:id/toggle', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const user = data.users.find(u => u.id === req.params.id && u.role === 'DRIVER');
   if (!user) return res.status(404).json({ error: 'غير موجود' });
@@ -277,7 +270,7 @@ app.patch('/api/admin/drivers/:id/toggle', (req, res) => {
   writeData(data);
   res.json({ isAvailable: dp?.isAvailable ?? false });
 });
-app.patch('/api/admin/drivers/:id/block', (req, res) => {
+app.patch('/api/admin/drivers/:id/block', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const user = data.users.find(u => u.id === req.params.id && u.role === 'DRIVER');
   if (!user) return res.status(404).json({ error: 'غير موجود' });
@@ -285,7 +278,7 @@ app.patch('/api/admin/drivers/:id/block', (req, res) => {
   writeData(data);
   res.json({ isActive: user.isActive });
 });
-app.patch('/api/admin/drivers/:id', (req, res) => {
+app.patch('/api/admin/drivers/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const user = data.users.find(u => u.id === req.params.id && u.role === 'DRIVER');
   if (!user) return res.status(404).json({ error: 'غير موجود' });
@@ -296,7 +289,7 @@ app.patch('/api/admin/drivers/:id', (req, res) => {
   writeData(data);
   res.json({ success: true });
 });
-app.delete('/api/admin/drivers/:id', (req, res) => {
+app.delete('/api/admin/drivers/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const userIndex = data.users.findIndex(u => u.id === req.params.id && u.role === 'DRIVER');
   if (userIndex === -1) return res.status(404).json({ error: 'غير موجود' });
@@ -308,7 +301,7 @@ app.delete('/api/admin/drivers/:id', (req, res) => {
 });
 
 // تفاصيل الطيار
-app.get('/api/admin/drivers/:id/details', (req, res) => {
+app.get('/api/admin/drivers/:id/details', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const user = data.users.find(u => u.id === req.params.id && u.role === 'DRIVER');
   if (!user) return res.status(404).json({ error: 'الطيار غير موجود' });
@@ -344,8 +337,8 @@ app.get('/api/admin/drivers/:id/details', (req, res) => {
 });
 
 // مناطق (أدمن)
-app.get('/api/admin/regions', (req, res) => { const data = readData(); res.json(data.regions); });
-app.post('/api/admin/regions', (req, res) => {
+app.get('/api/admin/regions', requireAuth, adminOnly, (req, res) => { const data = readData(); res.json(data.regions); });
+app.post('/api/admin/regions', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const { name, fee } = req.body;
   if (!name || fee == null) return res.status(400).json({ error: 'بيانات ناقصة' });
@@ -353,7 +346,7 @@ app.post('/api/admin/regions', (req, res) => {
   writeData(data);
   res.json(data.regions);
 });
-app.patch('/api/admin/regions/:id', (req, res) => {
+app.patch('/api/admin/regions/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const region = data.regions.find(r => r.id === req.params.id);
   if (!region) return res.status(404).json({ error: 'غير موجود' });
@@ -362,7 +355,7 @@ app.patch('/api/admin/regions/:id', (req, res) => {
   writeData(data);
   res.json(region);
 });
-app.delete('/api/admin/regions/:id', (req, res) => {
+app.delete('/api/admin/regions/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const idx = data.regions.findIndex(r => r.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'غير موجود' });
@@ -372,7 +365,7 @@ app.delete('/api/admin/regions/:id', (req, res) => {
 });
 
 // منتجات وتصنيفات (أدمن)
-app.get('/api/admin/products', (req, res) => {
+app.get('/api/admin/products', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const enriched = data.products.map(p => {
     const restaurant = data.restaurants.find(r => r.id === p.restaurantId);
@@ -380,7 +373,7 @@ app.get('/api/admin/products', (req, res) => {
   });
   res.json(enriched);
 });
-app.post('/api/admin/products', upload.single('image'), (req, res) => {
+app.post('/api/admin/products', requireAuth, adminOnly, upload.single('image'), (req, res) => {
   const data = readData();
   const { name, description, price, category, restaurantId } = req.body;
   if (!name || !price) return res.status(400).json({ error: 'الاسم والسعر مطلوبان' });
@@ -390,7 +383,7 @@ app.post('/api/admin/products', upload.single('image'), (req, res) => {
   writeData(data);
   res.json(product);
 });
-app.delete('/api/admin/products/:id', (req, res) => {
+app.delete('/api/admin/products/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const idx = data.products.findIndex(p => p.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'غير موجود' });
@@ -398,12 +391,12 @@ app.delete('/api/admin/products/:id', (req, res) => {
   writeData(data);
   res.json({ success: true });
 });
-app.get('/api/admin/categories', (req, res) => {
+app.get('/api/admin/categories', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const enriched = data.categories.map(c => ({ ...c, restaurantName: data.restaurants.find(r => r.id === c.restaurantId)?.name }));
   res.json(enriched);
 });
-app.post('/api/admin/categories', (req, res) => {
+app.post('/api/admin/categories', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const { name } = req.body;
   if (!name) return res.status(400).json({ error: 'الاسم مطلوب' });
@@ -411,7 +404,7 @@ app.post('/api/admin/categories', (req, res) => {
   writeData(data);
   res.json({ success: true });
 });
-app.delete('/api/admin/categories/:id', (req, res) => {
+app.delete('/api/admin/categories/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const idx = data.categories.findIndex(c => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'غير موجود' });
@@ -431,7 +424,7 @@ app.get('/api/orders', (req, res) => {
   }));
   res.json(enriched);
 });
-app.patch('/api/admin/orders/:id/assign-driver', (req, res) => {
+app.patch('/api/admin/orders/:id/assign-driver', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const order = data.orders.find(o => o.id === req.params.id);
   if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
@@ -440,7 +433,7 @@ app.patch('/api/admin/orders/:id/assign-driver', (req, res) => {
   writeData(data);
   res.json({ success: true });
 });
-app.post('/api/admin/test-order', (req, res) => {
+app.post('/api/admin/test-order', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const { restaurantId } = req.body;
   if (!restaurantId) return res.status(400).json({ error: 'اختر مطعماً' });
@@ -465,7 +458,7 @@ app.post('/api/admin/test-order', (req, res) => {
   writeData(data);
   res.json({ success: true, order });
 });
-app.get('/api/admin/reports/full', (req, res) => {
+app.get('/api/admin/reports/full', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const orders = data.orders.filter(o => o.status === 'DELIVERED');
   const today = new Date().toISOString().slice(0, 10);
@@ -535,7 +528,7 @@ app.get('/api/admin/reports/full', (req, res) => {
 });
 
 // مسارات تحكم الأدمن في الطلبات
-app.patch('/api/admin/orders/:id/approve', (req, res) => {
+app.patch('/api/admin/orders/:id/approve', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const order = data.orders.find(o => o.id === req.params.id);
   if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
@@ -544,7 +537,7 @@ app.patch('/api/admin/orders/:id/approve', (req, res) => {
   res.json({ success: true });
 });
 
-app.patch('/api/admin/orders/:id/reject', (req, res) => {
+app.patch('/api/admin/orders/:id/reject', requireAuth, adminOnly, (req, res) => {
   const { reason } = req.body;
   const data = readData();
   const order = data.orders.find(o => o.id === req.params.id);
@@ -557,7 +550,7 @@ app.patch('/api/admin/orders/:id/reject', (req, res) => {
   res.json({ success: true });
 });
 
-app.patch('/api/admin/orders/:id', (req, res) => {
+app.patch('/api/admin/orders/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const order = data.orders.find(o => o.id === req.params.id);
   if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
@@ -571,13 +564,15 @@ app.patch('/api/admin/orders/:id', (req, res) => {
 });
 
 // ==================== RESTAURANT ====================
-app.get('/api/restaurant/profile', (req, res) => {
+app.get('/api/restaurant/profile', requireAuth, (req, res) => {
+  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const restaurant = data.restaurants.find(r => r.userId === req.user.id);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
   res.json({ id: restaurant.id, name: restaurant.name, logo: restaurant.logo || '' });
 });
-app.patch('/api/restaurant/profile', upload.single('logo'), (req, res) => {
+app.patch('/api/restaurant/profile', requireAuth, upload.single('logo'), (req, res) => {
+  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const restaurant = data.restaurants.find(r => r.userId === req.user.id);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
@@ -586,7 +581,8 @@ app.patch('/api/restaurant/profile', upload.single('logo'), (req, res) => {
   res.json({ logo: restaurant.logo });
 });
 
-app.get('/api/restaurant/orders', (req, res) => {
+app.get('/api/restaurant/orders', requireAuth, (req, res) => {
+  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const restaurant = data.restaurants.find(r => r.userId === req.user.id);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
@@ -602,7 +598,8 @@ app.get('/api/restaurant/orders', (req, res) => {
   res.json(enriched);
 });
 
-app.patch('/api/restaurant/orders/:id', (req, res) => {
+app.patch('/api/restaurant/orders/:id', requireAuth, (req, res) => {
+  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const order = data.orders.find(o => o.id === req.params.id);
   if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
@@ -620,14 +617,16 @@ app.patch('/api/restaurant/orders/:id', (req, res) => {
 });
 
 // تصنيفات المطعم
-app.get('/api/restaurant/categories', (req, res) => {
+app.get('/api/restaurant/categories', requireAuth, (req, res) => {
+  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const restaurant = data.restaurants.find(r => r.userId === req.user.id);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
   const categories = data.categories.filter(c => c.restaurantId === restaurant.id);
   res.json(categories);
 });
-app.post('/api/restaurant/categories', (req, res) => {
+app.post('/api/restaurant/categories', requireAuth, (req, res) => {
+  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const restaurant = data.restaurants.find(r => r.userId === req.user.id);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
@@ -638,7 +637,8 @@ app.post('/api/restaurant/categories', (req, res) => {
   writeData(data);
   res.json(category);
 });
-app.delete('/api/restaurant/categories/:id', (req, res) => {
+app.delete('/api/restaurant/categories/:id', requireAuth, (req, res) => {
+  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const restaurant = data.restaurants.find(r => r.userId === req.user.id);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
@@ -648,7 +648,8 @@ app.delete('/api/restaurant/categories/:id', (req, res) => {
   writeData(data);
   res.json({ success: true });
 });
-app.patch('/api/restaurant/categories/:id', (req, res) => {
+app.patch('/api/restaurant/categories/:id', requireAuth, (req, res) => {
+  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const restaurant = data.restaurants.find(r => r.userId === req.user.id);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
@@ -660,7 +661,8 @@ app.patch('/api/restaurant/categories/:id', (req, res) => {
 });
 
 // منتجات المطعم
-app.get('/api/restaurant/products', (req, res) => {
+app.get('/api/restaurant/products', requireAuth, (req, res) => {
+  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const restaurant = data.restaurants.find(r => r.userId === req.user.id);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
@@ -668,7 +670,8 @@ app.get('/api/restaurant/products', (req, res) => {
   res.json(products);
 });
 
-app.post('/api/restaurant/products', upload.single('image'), (req, res) => {
+app.post('/api/restaurant/products', requireAuth, upload.single('image'), (req, res) => {
+  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const restaurant = data.restaurants.find(r => r.userId === req.user.id);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
@@ -694,7 +697,8 @@ app.post('/api/restaurant/products', upload.single('image'), (req, res) => {
   res.json(product);
 });
 
-app.patch('/api/restaurant/products/:id', upload.single('image'), (req, res) => {
+app.patch('/api/restaurant/products/:id', requireAuth, upload.single('image'), (req, res) => {
+  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const restaurant = data.restaurants.find(r => r.userId === req.user.id);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
@@ -712,7 +716,8 @@ app.patch('/api/restaurant/products/:id', upload.single('image'), (req, res) => 
   res.json(product);
 });
 
-app.delete('/api/restaurant/products/:id', (req, res) => {
+app.delete('/api/restaurant/products/:id', requireAuth, (req, res) => {
+  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const restaurant = data.restaurants.find(r => r.userId === req.user.id);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
@@ -724,7 +729,8 @@ app.delete('/api/restaurant/products/:id', (req, res) => {
 });
 
 // تقارير وإحصائيات المطعم
-app.get('/api/restaurant/reports', (req, res) => {
+app.get('/api/restaurant/reports', requireAuth, (req, res) => {
+  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const restaurant = data.restaurants.find(r => r.userId === req.user.id);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
@@ -747,7 +753,8 @@ app.get('/api/restaurant/reports', (req, res) => {
   });
 });
 
-app.get('/api/restaurant/stats', (req, res) => {
+app.get('/api/restaurant/stats', requireAuth, (req, res) => {
+  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const restaurant = data.restaurants.find(r => r.userId === req.user.id);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
@@ -783,7 +790,8 @@ function getStoreNameForOrder(order, data) {
   return null;
 }
 
-app.get('/api/driver/available-orders', (req, res) => {
+app.get('/api/driver/available-orders', requireAuth, (req, res) => {
+  if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const orders = data.orders.filter(o => o.status === 'READY' && !o.driverId).map(o => {
     const restaurant = data.restaurants.find(r => r.id === o.restaurantId);
@@ -793,7 +801,8 @@ app.get('/api/driver/available-orders', (req, res) => {
   res.json(orders);
 });
 
-app.get('/api/driver/my-orders', (req, res) => {
+app.get('/api/driver/my-orders', requireAuth, (req, res) => {
+  if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const orders = data.orders.filter(o => o.driverId === req.user.id && ['DRIVER_ASSIGNED', 'ON_THE_WAY'].includes(o.status)).map(o => {
     const restaurant = data.restaurants.find(r => r.id === o.restaurantId);
@@ -803,7 +812,8 @@ app.get('/api/driver/my-orders', (req, res) => {
   res.json(orders);
 });
 
-app.patch('/api/driver/orders/:id/accept', (req, res) => {
+app.patch('/api/driver/orders/:id/accept', requireAuth, (req, res) => {
+  if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const order = data.orders.find(o => o.id === req.params.id && o.status === 'READY' && !o.driverId);
   if (!order) return res.status(404).json({ error: 'الطلب غير متاح' });
@@ -815,7 +825,8 @@ app.patch('/api/driver/orders/:id/accept', (req, res) => {
   res.json({ success: true });
 });
 
-app.patch('/api/driver/orders/:id/status', (req, res) => {
+app.patch('/api/driver/orders/:id/status', requireAuth, (req, res) => {
+  if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const order = data.orders.find(o => o.id === req.params.id && o.driverId === req.user.id);
   if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
@@ -834,7 +845,8 @@ app.patch('/api/driver/orders/:id/status', (req, res) => {
   res.json({ success: true });
 });
 
-app.get('/api/driver/earnings', (req, res) => {
+app.get('/api/driver/earnings', requireAuth, (req, res) => {
+  if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const driver = data.drivers.find(d => d.userId === req.user.id);
   const totalAllTime = driver?.earnings || 0;
@@ -847,7 +859,8 @@ app.get('/api/driver/earnings', (req, res) => {
   res.json({ total: totalAllTime });
 });
 
-app.get('/api/driver/profile', (req, res) => {
+app.get('/api/driver/profile', requireAuth, (req, res) => {
+  if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const user = data.users.find(u => u.id === req.user.id);
   if (!user) return res.status(404).json({ error: 'المستخدم غير موجود' });
@@ -855,7 +868,8 @@ app.get('/api/driver/profile', (req, res) => {
   res.json({ name: user.name, phone: user.phone, isAvailable: dp.isAvailable !== false, earnings: dp.earnings || 0 });
 });
 
-app.patch('/api/driver/toggle-status', (req, res) => {
+app.patch('/api/driver/toggle-status', requireAuth, (req, res) => {
+  if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const dp = data.drivers.find(d => d.userId === req.user.id);
   if (!dp) return res.status(404).json({ error: 'لم يتم العثور على ملف الطيار' });
@@ -864,7 +878,8 @@ app.patch('/api/driver/toggle-status', (req, res) => {
   res.json({ isAvailable: dp.isAvailable });
 });
 
-app.get('/api/driver/history', (req, res) => {
+app.get('/api/driver/history', requireAuth, (req, res) => {
+  if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   let orders = data.orders.filter(o => o.driverId === req.user.id && o.status === 'DELIVERED');
   if (req.query.date) orders = orders.filter(o => o.deliveredAt && o.deliveredAt.startsWith(req.query.date));
@@ -1073,7 +1088,7 @@ app.post('/api/customer/login', (req, res) => {
 });
 
 // العملاء (أدمن)
-app.get('/api/admin/customers', (req, res) => {
+app.get('/api/admin/customers', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const search = req.query.search || '';
   let customers = data.users.filter(u => u.role === 'CUSTOMER');
@@ -1089,7 +1104,7 @@ app.get('/api/admin/customers', (req, res) => {
   });
   res.json(enriched);
 });
-app.get('/api/admin/customers/:id', (req, res) => {
+app.get('/api/admin/customers/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const user = data.users.find(u => u.id === req.params.id && u.role === 'CUSTOMER');
   if (!user) return res.status(404).json({ error: 'العميل غير موجود' });
@@ -1098,7 +1113,7 @@ app.get('/api/admin/customers/:id', (req, res) => {
   const lastOrder = orders.length ? orders.reduce((latest, o) => new Date(o.createdAt) > new Date(latest.createdAt) ? o : latest) : null;
   res.json({ id: user.id, name: user.name, phone: user.phone, regionId: user.regionId || '', regionName: region ? region.name : '—', regionFee: region ? region.fee : 0, address: user.address || '—', totalOrders: orders.length, lastOrderDate: lastOrder ? lastOrder.createdAt : null });
 });
-app.patch('/api/admin/customers/:id', (req, res) => {
+app.patch('/api/admin/customers/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const user = data.users.find(u => u.id === req.params.id && u.role === 'CUSTOMER');
   if (!user) return res.status(404).json({ error: 'العميل غير موجود' });
@@ -1112,7 +1127,7 @@ app.patch('/api/admin/customers/:id', (req, res) => {
 });
 
 // إيرادات المنصة
-app.get('/api/admin/platform-revenue', (req, res) => {
+app.get('/api/admin/platform-revenue', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const orders = data.orders.filter(o => o.status === 'DELIVERED' && o.platformFee);
   const totalPlatform = orders.reduce((s, o) => s + (o.platformFee || 0), 0);
@@ -1122,12 +1137,12 @@ app.get('/api/admin/platform-revenue', (req, res) => {
 });
 
 // ==================== MARKETS & PHARMACIES ADMIN ====================
-app.get('/api/admin/markets', (req, res) => {
+app.get('/api/admin/markets', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   res.json(data.markets || []);
 });
 
-app.post('/api/admin/markets', (req, res) => {
+app.post('/api/admin/markets', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const { name, ownerPhone, ownerPassword } = req.body;
   if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
@@ -1141,7 +1156,7 @@ app.post('/api/admin/markets', (req, res) => {
   res.json({ id: marketId, name });
 });
 
-app.patch('/api/admin/markets/:id/toggle', (req, res) => {
+app.patch('/api/admin/markets/:id/toggle', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const market = data.markets.find(m => m.id === req.params.id);
   if (!market) return res.status(404).json({ error: 'غير موجود' });
@@ -1150,7 +1165,7 @@ app.patch('/api/admin/markets/:id/toggle', (req, res) => {
   res.json({ success: true });
 });
 
-app.patch('/api/admin/markets/:id', (req, res) => {
+app.patch('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const market = data.markets.find(m => m.id === req.params.id);
   if (!market) return res.status(404).json({ error: 'غير موجود' });
@@ -1164,7 +1179,7 @@ app.patch('/api/admin/markets/:id', (req, res) => {
   res.json({ success: true });
 });
 
-app.delete('/api/admin/markets/:id', (req, res) => {
+app.delete('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const idx = data.markets.findIndex(m => m.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'غير موجود' });
@@ -1177,7 +1192,8 @@ app.delete('/api/admin/markets/:id', (req, res) => {
 });
 
 // ========== MARKET PROFILE ==========
-app.get('/api/market/profile', (req, res) => {
+app.get('/api/market/profile', requireAuth, (req, res) => {
+  if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const market = data.markets.find(m => m.userId === req.user.id);
   if (!market) return res.status(404).json({ error: 'الماركت غير موجود' });
@@ -1185,7 +1201,8 @@ app.get('/api/market/profile', (req, res) => {
   res.json({ id: market.id, name: market.name, logo: market.logo || '', ownerPhone: owner?.phone });
 });
 
-app.patch('/api/market/profile', upload.single('logo'), (req, res) => {
+app.patch('/api/market/profile', requireAuth, upload.single('logo'), (req, res) => {
+  if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const market = data.markets.find(m => m.userId === req.user.id);
   if (!market) return res.status(404).json({ error: 'الماركت غير موجود' });
@@ -1198,12 +1215,12 @@ app.patch('/api/market/profile', upload.single('logo'), (req, res) => {
 });
 
 // صيدليات
-app.get('/api/admin/pharmacies', (req, res) => {
+app.get('/api/admin/pharmacies', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   res.json(data.pharmacies || []);
 });
 
-app.post('/api/admin/pharmacies', (req, res) => {
+app.post('/api/admin/pharmacies', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const { name, ownerPhone, ownerPassword } = req.body;
   if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
@@ -1217,7 +1234,7 @@ app.post('/api/admin/pharmacies', (req, res) => {
   res.json({ id: pharmacyId, name });
 });
 
-app.patch('/api/admin/pharmacies/:id/toggle', (req, res) => {
+app.patch('/api/admin/pharmacies/:id/toggle', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const pharmacy = data.pharmacies.find(p => p.id === req.params.id);
   if (!pharmacy) return res.status(404).json({ error: 'غير موجود' });
@@ -1226,7 +1243,7 @@ app.patch('/api/admin/pharmacies/:id/toggle', (req, res) => {
   res.json({ success: true });
 });
 
-app.patch('/api/admin/pharmacies/:id', (req, res) => {
+app.patch('/api/admin/pharmacies/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const pharmacy = data.pharmacies.find(p => p.id === req.params.id);
   if (!pharmacy) return res.status(404).json({ error: 'غير موجود' });
@@ -1240,7 +1257,7 @@ app.patch('/api/admin/pharmacies/:id', (req, res) => {
   res.json({ success: true });
 });
 
-app.delete('/api/admin/pharmacies/:id', (req, res) => {
+app.delete('/api/admin/pharmacies/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const idx = data.pharmacies.findIndex(p => p.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'غير موجود' });
@@ -1253,7 +1270,8 @@ app.delete('/api/admin/pharmacies/:id', (req, res) => {
 });
 
 // ==================== MARKET ORDERS API ====================
-app.get('/api/market/orders', (req, res) => {
+app.get('/api/market/orders', requireAuth, (req, res) => {
+  if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const market = data.markets.find(m => m.userId === req.user.id);
   if (!market) return res.status(404).json({ error: 'السوق غير موجود' });
@@ -1261,7 +1279,8 @@ app.get('/api/market/orders', (req, res) => {
   res.json(orders);
 });
 
-app.patch('/api/market/orders/:id/items', (req, res) => {
+app.patch('/api/market/orders/:id/items', requireAuth, (req, res) => {
+  if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const order = data.orders.find(o => o.id === req.params.id);
   if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
@@ -1275,7 +1294,8 @@ app.patch('/api/market/orders/:id/items', (req, res) => {
   res.json({ success: true });
 });
 
-app.patch('/api/market/orders/:id/accept', (req, res) => {
+app.patch('/api/market/orders/:id/accept', requireAuth, (req, res) => {
+  if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const order = data.orders.find(o => o.id === req.params.id);
   if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
@@ -1287,7 +1307,8 @@ app.patch('/api/market/orders/:id/accept', (req, res) => {
   res.json({ success: true });
 });
 
-app.patch('/api/market/orders/:id/invoice', (req, res) => {
+app.patch('/api/market/orders/:id/invoice', requireAuth, (req, res) => {
+  if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const order = data.orders.find(o => o.id === req.params.id);
   if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
@@ -1303,7 +1324,8 @@ app.patch('/api/market/orders/:id/invoice', (req, res) => {
   res.json({ success: true });
 });
 
-app.patch('/api/market/orders/:id/ready', (req, res) => {
+app.patch('/api/market/orders/:id/ready', requireAuth, (req, res) => {
+  if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const order = data.orders.find(o => o.id === req.params.id);
   if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
@@ -1316,7 +1338,8 @@ app.patch('/api/market/orders/:id/ready', (req, res) => {
 });
 
 // ==================== PHARMACY ORDERS API ====================
-app.get('/api/pharmacy/orders', (req, res) => {
+app.get('/api/pharmacy/orders', requireAuth, (req, res) => {
+  if (req.user.role !== 'PHARMACY') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const pharmacy = data.pharmacies.find(p => p.userId === req.user.id);
   if (!pharmacy) return res.status(404).json({ error: 'الصيدلية غير موجودة' });
@@ -1324,7 +1347,8 @@ app.get('/api/pharmacy/orders', (req, res) => {
   res.json(orders);
 });
 
-app.patch('/api/pharmacy/orders/:id/items', (req, res) => {
+app.patch('/api/pharmacy/orders/:id/items', requireAuth, (req, res) => {
+  if (req.user.role !== 'PHARMACY') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const order = data.orders.find(o => o.id === req.params.id);
   if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
@@ -1338,7 +1362,8 @@ app.patch('/api/pharmacy/orders/:id/items', (req, res) => {
   res.json({ success: true });
 });
 
-app.patch('/api/pharmacy/orders/:id/accept', (req, res) => {
+app.patch('/api/pharmacy/orders/:id/accept', requireAuth, (req, res) => {
+  if (req.user.role !== 'PHARMACY') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const order = data.orders.find(o => o.id === req.params.id);
   if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
@@ -1350,7 +1375,8 @@ app.patch('/api/pharmacy/orders/:id/accept', (req, res) => {
   res.json({ success: true });
 });
 
-app.patch('/api/pharmacy/orders/:id/invoice', (req, res) => {
+app.patch('/api/pharmacy/orders/:id/invoice', requireAuth, (req, res) => {
+  if (req.user.role !== 'PHARMACY') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const order = data.orders.find(o => o.id === req.params.id);
   if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
@@ -1366,7 +1392,8 @@ app.patch('/api/pharmacy/orders/:id/invoice', (req, res) => {
   res.json({ success: true });
 });
 
-app.patch('/api/pharmacy/orders/:id/ready', (req, res) => {
+app.patch('/api/pharmacy/orders/:id/ready', requireAuth, (req, res) => {
+  if (req.user.role !== 'PHARMACY') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
   const order = data.orders.find(o => o.id === req.params.id);
   if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
@@ -1416,7 +1443,7 @@ app.post('/api/login', (req, res) => {
   res.json({ token, user: { id: user.id, name: user.name, role: user.role } });
 });
 
-app.get('/api/whoami', (req, res) => {
+app.get('/api/whoami', requireAuth, (req, res) => {
   const data = readData();
   const user = data.users.find(u => u.id === req.user.id);
   if (!user) return res.status(404).json({ error: 'مستخدم غير موجود' });
