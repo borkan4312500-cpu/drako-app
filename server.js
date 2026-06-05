@@ -45,7 +45,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'drako_secret_key_fallback';
 // دالة مساعدة لتحديد secure تلقائياً
 const isSecure = (req) => req.secure || req.headers['x-forwarded-proto'] === 'https';
 
-// تجديد الكوكي تلقائياً (اختياري، لا يؤثر على التوكن)
+// تجديد الكوكي تلقائياً
 app.use((req, res, next) => {
   const token = req.cookies?.token;
   if (token) {
@@ -119,6 +119,19 @@ function requireAuth(req, res, next) {
 function adminOnly(req, res, next) {
   if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'صلاحيات غير كافية' });
   next();
+}
+
+function rolePageAuth(requiredRole) {
+  return (req, res, next) => {
+    const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
+    if (!token) return res.redirect('/login.html?redirect=' + encodeURIComponent(req.originalUrl));
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      if (decoded.role !== requiredRole) return res.redirect('/login.html?error=role');
+      req.user = decoded;
+      next();
+    } catch { return res.redirect('/login.html?redirect=' + encodeURIComponent(req.originalUrl)); }
+  };
 }
 
 // الصفحات الثابتة
@@ -1429,8 +1442,21 @@ setInterval(() => {
     io.emit('driver:newJob', { count: readyCount });
   }
 }, 60000);
-
-// ========== API LOGIN & WHOAMI ==========
+// أضف هذا قبل نهاية app.use(...)
+app.get('/api/whoami', requireAuth, (req, res) => {
+  const data = readData();
+  const user = data.users.find(u => u.id === req.user.id);
+  if (!user) return res.status(404).json({ error: 'مستخدم غير موجود' });
+  res.json({ token: jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '365d' }), user: { id: user.id, name: user.name, role: user.role } });
+});
+function setTokenCookie(res, token) {
+  res.cookie('token', token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production', // true فقط في الإنتاج
+    maxAge: 365 * 24 * 60 * 60 * 1000
+  });
+}
 app.post('/api/login', (req, res) => {
   const { phone, password } = req.body;
   const data = readData();
@@ -1441,13 +1467,6 @@ app.post('/api/login', (req, res) => {
   const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '365d' });
   res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 365 * 24 * 60 * 60 * 1000 });
   res.json({ token, user: { id: user.id, name: user.name, role: user.role } });
-});
-
-app.get('/api/whoami', requireAuth, (req, res) => {
-  const data = readData();
-  const user = data.users.find(u => u.id === req.user.id);
-  if (!user) return res.status(404).json({ error: 'مستخدم غير موجود' });
-  res.json({ token: jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '365d' }), user: { id: user.id, name: user.name, role: user.role } });
 });
 
 // معالج أخطاء multer
