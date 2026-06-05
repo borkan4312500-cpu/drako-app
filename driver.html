@@ -7,6 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
   <style>
+    /* نفس التنسيقات التي أرسلتها، لم تتغير */
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
     body { background: #F7F7F7; color: #1A1A1A; max-width: 480px; margin: auto; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
     :root { --brand: #FF6B00; --brand-dark: #E55D00; --brand-light: #FFF3EB; --bg: #F7F7F7; --card: #FFFFFF; --text: #1A1A1A; --text-muted: #7A7A7A; --border: #EBEBEB; --radius: 18px; --radius-sm: 12px; --green: #00D68F; --red: #F05252; --yellow: #FBBF24; --blue: #3B82F6; }
@@ -138,7 +139,6 @@
       return res;
     }
 
-    // توجيه إلى تسجيل الدخول إذا لم يكن هناك توكن
     if (!getToken()) {
       window.location.href = '/login.html?redirect=' + encodeURIComponent(window.location.pathname);
     }
@@ -207,7 +207,12 @@
 
     async function loadProfile() {
       const res = await apiFetch(API + '/driver/profile');
-      if (!res.ok) return;
+      if (!res.ok) {
+        // فشل تحميل البروفايل – ربما التوكن ليس لـ Driver
+        document.getElementById('headerName').textContent = 'خطأ في الصلاحية';
+        updateStatusUI(false);
+        return;
+      }
       const data = await res.json();
       driverName = data.name || '';
       document.getElementById('headerName').textContent = 'Drako Rider - ' + driverName;
@@ -421,7 +426,15 @@
     // ========== حسابي ==========
     async function renderProfile() {
       const res = await apiFetch(API + '/driver/profile');
-      if (!res.ok) return;
+      if (!res.ok) {
+        document.getElementById('mainContent').innerHTML = `
+          <div class="empty-state">
+            <div>🚫 تعذر تحميل حساب الطيار</div>
+            <div class="sub" style="font-size:13px;color:var(--text-muted)">قد يكون الحساب ليس طيارًا</div>
+            <button class="btn btn-primary" style="margin-top:20px" onclick="localStorage.clear();location.href='/login.html'">تسجيل الدخول</button>
+          </div>`;
+        return;
+      }
       const profile = await res.json();
       document.getElementById('mainContent').innerHTML = `
         <div class="order-card" style="text-align:center">
@@ -446,7 +459,6 @@
 
     initApp();
 
-    // ========== Socket.IO ==========
     const socket = io();
     socket.on('driver:newJob', (data) => {
       playSound('newJob');
