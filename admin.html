@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>دراكو - لوحة تحكم الأدمن</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
     :root {
@@ -16,6 +16,7 @@
     }
     body { background: var(--bg); color: var(--text); direction: rtl; min-height: 100vh; }
     .app-layout { display: flex; min-height: 100vh; }
+
     /* Sidebar */
     .sidebar {
       width: var(--sidebar-width); background: #1f2937; color: white; display: flex;
@@ -28,12 +29,13 @@
     .nav-item {
       display: flex; align-items: center; gap: 12px; padding: 12px 24px;
       color: #d1d5db; cursor: pointer; transition: 0.2s; font-size: 15px; font-weight: 500;
+      border-right: 3px solid transparent;
     }
-    .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.08); color: white; border-right: 3px solid var(--brand); }
+    .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.08); color: white; border-right-color: var(--brand); }
     .sidebar-footer { padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.1); }
     .btn-logout { background: rgba(255,255,255,0.1); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; }
 
-    /* Main Content */
+    /* Main */
     .main { flex: 1; margin-right: var(--sidebar-width); display: flex; flex-direction: column; }
     .topbar {
       background: var(--card); padding: 16px 24px; display: flex; justify-content: space-between;
@@ -71,6 +73,7 @@
     .btn-success { background: #10b981; color: white; }
     .btn-danger { background: #ef4444; color: white; }
     .btn-warning { background: #f59e0b; color: white; }
+    .btn-info { background: #3b82f6; color: white; }
 
     .form-group { margin-bottom: 16px; }
     .form-label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted); }
@@ -84,9 +87,17 @@
     .badge-success { background: #d1fae5; color: #065f46; }
     .badge-warning { background: #fef3c7; color: #92400e; }
     .badge-danger { background: #fee2e2; color: #991b1b; }
+    .badge-info { background: #dbeafe; color: #1e40af; }
 
     .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: none; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: white; border-radius: 20px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; padding: 24px; animation: modalFadeIn 0.3s ease; }
+    @keyframes modalFadeIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .modal-close { float: left; background: none; border: none; font-size: 24px; cursor: pointer; }
 
     .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(80px);
       background: #1f2937; color: white; padding: 12px 30px; border-radius: 100px; z-index: 9999;
@@ -136,19 +147,39 @@
     <div class="content" id="mainContent"></div>
   </main>
 </div>
+
+<!-- Modal عام -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box" id="modalBox"></div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const API = '/api';
 let currentUser = null;
+let allRegions = []; // لتخزين المناطق لاستخدامها في نماذج أخرى
 
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 3000);
 }
+
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+
+function openModal(html) {
+  document.getElementById('modalBox').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+
+// إغلاق المودال عند النقر خارج الصندوق
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
 function navigate(section) {
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
   document.querySelector(`[data-section="${section}"]`).classList.add('active');
@@ -165,6 +196,8 @@ async function checkAuth() {
     const data = await res.json();
     if (data.user.role !== 'ADMIN') return window.location.href = '/login.html';
     currentUser = data.user;
+    // تحميل المناطق مسبقاً
+    fetch(API+'/regions').then(r=>r.json()).then(d=>{ allRegions = d; });
     navigate('dashboard');
   } catch (e) { window.location.href = '/login.html'; }
 }
@@ -175,7 +208,6 @@ function logout() {
 
 // ========== Section Loader ==========
 function loadSection(section) {
-  const container = document.getElementById('mainContent');
   switch (section) {
     case 'dashboard': loadDashboard(); break;
     case 'restaurants': loadRestaurants(); break;
@@ -194,95 +226,159 @@ function loadSection(section) {
 
 // ========== Dashboard ==========
 async function loadDashboard() {
-  const res = await fetch(API + '/admin/dashboard', { credentials: 'include' });
-  const data = await res.json();
-  document.getElementById('mainContent').innerHTML = `
-    <div class="stats-grid">
-      <div class="stat-card"><h4>طلبات اليوم</h4><div class="value">${data.todayOrders}</div></div>
-      <div class="stat-card"><h4>طلبات نشطة</h4><div class="value">${data.activeOrders}</div></div>
-      <div class="stat-card"><h4>المطاعم</h4><div class="value">${data.restaurants}</div></div>
-      <div class="stat-card"><h4>الطيارين</h4><div class="value">${data.drivers}</div></div>
-      <div class="stat-card"><h4>إجمالي الإيرادات</h4><div class="value">${data.totalRevenue} ج</div></div>
-    </div>
-    <div class="card"><h3>الطيارين المتاحين</h3>
-      <div class="table-responsive"><table><thead><tr><th>الاسم</th><th>الهاتف</th><th>الأرباح</th><th>متاح</th><th>طلبات نشطة</th></tr></thead><tbody>
-        ${data.availableDrivers.map(d => `<tr><td>${d.name}</td><td>${d.phone}</td><td>${d.earnings} ج</td><td>${d.isAvailable?'✅':'❌'}</td><td>${d.activeOrdersCount}</td></tr>`).join('')}
-      </tbody></table></div>
-    </div>
-    <div class="card"><h3>أحدث الطلبات</h3>
-      ${data.recentOrders.map(o => `<div class="flex-between" style="margin-bottom:8px"><span>#${o.id.slice(-6)}</span><span>${o.customerName}</span><span>${o.total} ج</span><span class="badge badge-warning">${o.status}</span></div>`).join('')}
-    </div>`;
+  try {
+    const res = await fetch(API + '/admin/dashboard', { credentials: 'include' });
+    const data = await res.json();
+    document.getElementById('mainContent').innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-card"><h4>طلبات اليوم</h4><div class="value">${data.todayOrders}</div></div>
+        <div class="stat-card"><h4>طلبات نشطة</h4><div class="value">${data.activeOrders}</div></div>
+        <div class="stat-card"><h4>المطاعم</h4><div class="value">${data.restaurants}</div></div>
+        <div class="stat-card"><h4>الطيارين</h4><div class="value">${data.drivers}</div></div>
+        <div class="stat-card"><h4>إجمالي الإيرادات</h4><div class="value">${data.totalRevenue} ج</div></div>
+      </div>
+      <div class="card"><h3>الطيارين المتاحين</h3>
+        <div class="table-responsive"><table><thead><tr><th>الاسم</th><th>الهاتف</th><th>الأرباح</th><th>متاح</th><th>طلبات نشطة</th></tr></thead><tbody>
+          ${data.availableDrivers.map(d => `<tr><td>${d.name}</td><td>${d.phone}</td><td>${d.earnings} ج</td><td>${d.isAvailable?'✅':'❌'}</td><td>${d.activeOrdersCount}</td></tr>`).join('')}
+        </tbody></table></div>
+      </div>
+      <div class="card"><h3>أحدث الطلبات</h3>
+        ${data.recentOrders.map(o => `<div class="flex-between" style="margin-bottom:8px"><span>#${o.id.slice(-6)}</span><span>${o.customerName}</span><span>${o.total} ج</span><span class="badge badge-warning">${o.status}</span></div>`).join('')}
+      </div>`;
+  } catch(e) { document.getElementById('mainContent').innerHTML = '<div class="empty">خطأ في التحميل</div>'; }
 }
 
 // ========== Restaurants ==========
 async function loadRestaurants() {
   const res = await fetch(API + '/admin/restaurants', { credentials: 'include' });
   const list = await res.json();
-  let html = `<div class="flex-between"><h3>المطاعم</h3><button class="btn btn-primary" onclick="showAddRestaurant()">+ إضافة مطعم</button></div>
+  let html = `<div class="flex-between"><h3>المطاعم</h3><button class="btn btn-primary" onclick="showAddRestaurantModal()">+ إضافة مطعم</button></div>
     <div class="card"><div class="table-responsive"><table><thead><tr><th>الاسم</th><th>المالك</th><th>الهاتف</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>
-      ${list.map(r => `<tr><td>${r.name}</td><td>${r.ownerName||''}</td><td>${r.ownerPhone||''}</td><td>${r.isOpen?'🟢 مفتوح':'🔴 مغلق'}</td>
+      ${list.map(r => `<tr><td>${r.name}</td><td>${r.ownerName||''}</td><td>${r.ownerPhone||''}</td><td>${r.isOpen?'<span class="badge badge-success">مفتوح</span>':'<span class="badge badge-danger">مغلق</span>'}</td>
         <td><button class="btn btn-sm btn-outline" onclick="toggleRestaurant('${r.id}')">تبديل</button>
-        <button class="btn btn-sm btn-warning" onclick="editRestaurant('${r.id}','${r.name}')">تعديل</button>
+        <button class="btn btn-sm btn-warning" onclick="editRestaurantModal('${r.id}','${r.name}')">تعديل</button>
         <button class="btn btn-sm btn-danger" onclick="deleteRestaurant('${r.id}')">حذف</button></td></tr>`).join('')}
     </tbody></table></div></div>`;
   document.getElementById('mainContent').innerHTML = html;
 }
 async function toggleRestaurant(id) { await fetch(API+'/admin/restaurants/'+id+'/toggle',{method:'PATCH',credentials:'include'}); loadRestaurants(); }
 async function deleteRestaurant(id) { if(confirm('حذف المطعم؟')){ await fetch(API+'/admin/restaurants/'+id,{method:'DELETE',credentials:'include'}); loadRestaurants(); } }
-function showAddRestaurant() {
-  const name = prompt('اسم المطعم:'); if(!name) return;
-  const phone = prompt('هاتف المالك:'); if(!phone) return;
-  const pass = prompt('كلمة مرور المالك:'); if(!pass) return;
-  fetch(API+'/admin/restaurants',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name,ownerPhone:phone,ownerPassword:pass})}).then(r=>r.json()).then(d=>{showToast('تمت الإضافة');loadRestaurants();});
+
+function showAddRestaurantModal() {
+  const html = `
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3>إضافة مطعم جديد</h3>
+    <div class="form-group"><label class="form-label">اسم المطعم</label><input class="form-input" id="restName"></div>
+    <div class="form-group"><label class="form-label">هاتف المالك</label><input class="form-input" id="restPhone"></div>
+    <div class="form-group"><label class="form-label">كلمة مرور المالك</label><input class="form-input" type="password" id="restPass"></div>
+    <button class="btn btn-primary" onclick="addRestaurant()">حفظ</button>
+  `;
+  openModal(html);
 }
-function editRestaurant(id, oldName) {
-  const name = prompt('الاسم الجديد:', oldName); if(!name) return;
-  fetch(API+'/admin/restaurants/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name})}).then(r=>r.json()).then(()=>{showToast('تم التعديل');loadRestaurants();});
+async function addRestaurant() {
+  const name = document.getElementById('restName').value;
+  const phone = document.getElementById('restPhone').value;
+  const pass = document.getElementById('restPass').value;
+  if(!name||!phone||!pass) return showToast('أكمل البيانات');
+  await fetch(API+'/admin/restaurants',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name,ownerPhone:phone,ownerPassword:pass})});
+  closeModal(); loadRestaurants(); showToast('تمت الإضافة');
+}
+function editRestaurantModal(id, oldName) {
+  const html = `
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3>تعديل المطعم</h3>
+    <div class="form-group"><label class="form-label">اسم المطعم</label><input class="form-input" id="editRestName" value="${oldName}"></div>
+    <button class="btn btn-primary" onclick="editRestaurant('${id}')">حفظ</button>
+  `;
+  openModal(html);
+}
+async function editRestaurant(id) {
+  const name = document.getElementById('editRestName').value;
+  if(!name) return;
+  await fetch(API+'/admin/restaurants/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name})});
+  closeModal(); loadRestaurants(); showToast('تم التعديل');
 }
 
 // ========== Drivers ==========
 async function loadDrivers() {
   const res = await fetch(API+'/admin/drivers',{credentials:'include'}); const list = await res.json();
   document.getElementById('mainContent').innerHTML = `
-    <div class="flex-between"><h3>الطيارين</h3><button class="btn btn-primary" onclick="showAddDriver()">+ إضافة طيار</button></div>
-    <div class="card"><div class="table-responsive"><table><thead><tr><th>الاسم</th><th>الهاتف</th><th>الأرباح</th><th>متاح</th><th>نشط</th><th>إجراءات</th></tr></thead><tbody>
-      ${list.map(d => `<tr><td>${d.name}</td><td>${d.phone}</td><td>${d.earnings} ج</td><td>${d.isAvailable?'✅':'❌'}</td><td>${d.isActive?'✅':'🚫'}</td>
+    <div class="flex-between"><h3>الطيارين</h3><button class="btn btn-primary" onclick="showAddDriverModal()">+ إضافة طيار</button></div>
+    <div class="card"><div class="table-responsive"><table><thead><tr><th>الاسم</th><th>الهاتف</th><th>الأرباح</th><th>متاح</th><th>نشط</th><th>طلبات نشطة</th><th>إجراءات</th></tr></thead><tbody>
+      ${list.map(d => `<tr><td>${d.name}</td><td>${d.phone}</td><td>${d.earnings} ج</td><td>${d.isAvailable?'✅':'❌'}</td><td>${d.isActive?'✅':'🚫'}</td><td>${d.activeOrdersCount}</td>
         <td><button class="btn btn-sm btn-outline" onclick="toggleDriver('${d.id}')">توفر</button>
         <button class="btn btn-sm btn-warning" onclick="blockDriver('${d.id}')">${d.isActive?'حظر':'فك الحظر'}</button>
         <button class="btn btn-sm btn-danger" onclick="deleteDriver('${d.id}')">حذف</button>
-        <button class="btn btn-sm btn-primary" onclick="driverDetails('${d.id}')">تفاصيل</button></td></tr>`).join('')}
+        <button class="btn btn-sm btn-info" onclick="driverDetails('${d.id}')">تفاصيل</button></td></tr>`).join('')}
     </tbody></table></div></div>`;
 }
 async function toggleDriver(id) { await fetch(API+'/admin/drivers/'+id+'/toggle',{method:'PATCH',credentials:'include'}); loadDrivers(); }
 async function blockDriver(id) { await fetch(API+'/admin/drivers/'+id+'/block',{method:'PATCH',credentials:'include'}); loadDrivers(); }
 async function deleteDriver(id) { if(confirm('حذف الطيار؟')){ await fetch(API+'/admin/drivers/'+id,{method:'DELETE',credentials:'include'}); loadDrivers(); } }
-function showAddDriver() {
-  const name = prompt('اسم الطيار:'); if(!name) return;
-  const phone = prompt('الهاتف:'); if(!phone) return;
-  const pass = prompt('كلمة المرور:'); if(!pass) return;
-  fetch(API+'/admin/drivers',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name,phone,password:pass})}).then(()=>{showToast('تمت الإضافة');loadDrivers();});
+function showAddDriverModal() {
+  const html = `
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3>إضافة طيار جديد</h3>
+    <div class="form-group"><label class="form-label">الاسم</label><input class="form-input" id="driverName"></div>
+    <div class="form-group"><label class="form-label">الهاتف</label><input class="form-input" id="driverPhone"></div>
+    <div class="form-group"><label class="form-label">كلمة المرور</label><input class="form-input" type="password" id="driverPass"></div>
+    <button class="btn btn-primary" onclick="addDriver()">حفظ</button>
+  `;
+  openModal(html);
+}
+async function addDriver() {
+  const name = document.getElementById('driverName').value;
+  const phone = document.getElementById('driverPhone').value;
+  const pass = document.getElementById('driverPass').value;
+  if(!name||!phone||!pass) return showToast('أكمل البيانات');
+  await fetch(API+'/admin/drivers',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name,phone,password:pass})});
+  closeModal(); loadDrivers(); showToast('تمت الإضافة');
 }
 async function driverDetails(id) {
   const res = await fetch(API+'/admin/drivers/'+id+'/details',{credentials:'include'}); const d = await res.json();
-  alert(`الطيار: ${d.name}\nالهاتف: ${d.phone}\nالأرباح: ${d.earnings} ج\nطلبات اليوم: ${d.todayOrdersCount}\nإيراد اليوم: ${d.todayRevenue} ج`);
+  const html = `
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3>تفاصيل الطيار</h3>
+    <p><strong>الاسم:</strong> ${d.name}</p>
+    <p><strong>الهاتف:</strong> ${d.phone}</p>
+    <p><strong>الأرباح الكلية:</strong> ${d.earnings} ج</p>
+    <p><strong>طلبات اليوم:</strong> ${d.todayOrdersCount}</p>
+    <p><strong>إيراد اليوم:</strong> ${d.todayRevenue} ج</p>
+    <h4>طلبات اليوم</h4>
+    ${d.todayOrders.length ? d.todayOrders.map(o => `<div>#${o.id.slice(-6)} - ${o.restaurantName} - ${o.total} ج</div>`).join('') : 'لا يوجد'}
+  `;
+  openModal(html);
 }
 
-// ========== Markets & Pharmacies (similar pattern) ==========
+// ========== Markets & Pharmacies ==========
 async function loadMarkets() {
   const res = await fetch(API+'/admin/markets',{credentials:'include'}); const list = await res.json();
   document.getElementById('mainContent').innerHTML = `
-    <div class="flex-between"><h3>الأسواق</h3><button class="btn btn-primary" onclick="showAddMarket()">+ إضافة سوق</button></div>
+    <div class="flex-between"><h3>الأسواق</h3><button class="btn btn-primary" onclick="showAddMarketModal()">+ إضافة سوق</button></div>
     <div class="card"><div class="table-responsive"><table><thead><tr><th>الاسم</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>
-      ${list.map(m => `<tr><td>${m.name}</td><td>${m.isOpen?'🟢':'🔴'}</td>
+      ${list.map(m => `<tr><td>${m.name}</td><td>${m.isOpen?'<span class="badge badge-success">مفتوح</span>':'<span class="badge badge-danger">مغلق</span>'}</td>
         <td><button class="btn btn-sm btn-outline" onclick="toggleMarket('${m.id}')">تبديل</button>
         <button class="btn btn-sm btn-danger" onclick="deleteMarket('${m.id}')">حذف</button></td></tr>`).join('')}
     </tbody></table></div></div>`;
 }
-function showAddMarket() {
-  const name = prompt('اسم السوق:'); if(!name) return;
-  const phone = prompt('هاتف المالك:'); if(!phone) return;
-  const pass = prompt('كلمة المرور:'); if(!pass) return;
-  fetch(API+'/admin/markets',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name,ownerPhone:phone,ownerPassword:pass})}).then(()=>{showToast('تم');loadMarkets();});
+function showAddMarketModal() {
+  const html = `
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3>إضافة سوق جديد</h3>
+    <div class="form-group"><label class="form-label">اسم السوق</label><input class="form-input" id="marketName"></div>
+    <div class="form-group"><label class="form-label">هاتف المالك</label><input class="form-input" id="marketPhone"></div>
+    <div class="form-group"><label class="form-label">كلمة المرور</label><input class="form-input" type="password" id="marketPass"></div>
+    <button class="btn btn-primary" onclick="addMarket()">حفظ</button>
+  `;
+  openModal(html);
+}
+async function addMarket() {
+  const name = document.getElementById('marketName').value;
+  const phone = document.getElementById('marketPhone').value;
+  const pass = document.getElementById('marketPass').value;
+  if(!name||!phone||!pass) return showToast('أكمل البيانات');
+  await fetch(API+'/admin/markets',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name,ownerPhone:phone,ownerPassword:pass})});
+  closeModal(); loadMarkets(); showToast('تمت الإضافة');
 }
 async function toggleMarket(id) { await fetch(API+'/admin/markets/'+id+'/toggle',{method:'PATCH',credentials:'include'}); loadMarkets(); }
 async function deleteMarket(id) { if(confirm('حذف؟')){ await fetch(API+'/admin/markets/'+id,{method:'DELETE',credentials:'include'}); loadMarkets(); } }
@@ -290,18 +386,31 @@ async function deleteMarket(id) { if(confirm('حذف؟')){ await fetch(API+'/adm
 async function loadPharmacies() {
   const res = await fetch(API+'/admin/pharmacies',{credentials:'include'}); const list = await res.json();
   document.getElementById('mainContent').innerHTML = `
-    <div class="flex-between"><h3>الصيدليات</h3><button class="btn btn-primary" onclick="showAddPharmacy()">+ إضافة صيدلية</button></div>
+    <div class="flex-between"><h3>الصيدليات</h3><button class="btn btn-primary" onclick="showAddPharmacyModal()">+ إضافة صيدلية</button></div>
     <div class="card"><div class="table-responsive"><table><thead><tr><th>الاسم</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>
-      ${list.map(p => `<tr><td>${p.name}</td><td>${p.isOpen?'🟢':'🔴'}</td>
+      ${list.map(p => `<tr><td>${p.name}</td><td>${p.isOpen?'<span class="badge badge-success">مفتوح</span>':'<span class="badge badge-danger">مغلق</span>'}</td>
         <td><button class="btn btn-sm btn-outline" onclick="togglePharmacy('${p.id}')">تبديل</button>
         <button class="btn btn-sm btn-danger" onclick="deletePharmacy('${p.id}')">حذف</button></td></tr>`).join('')}
     </tbody></table></div></div>`;
 }
-function showAddPharmacy() {
-  const name = prompt('اسم الصيدلية:'); if(!name) return;
-  const phone = prompt('هاتف المالك:'); if(!phone) return;
-  const pass = prompt('كلمة المرور:'); if(!pass) return;
-  fetch(API+'/admin/pharmacies',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name,ownerPhone:phone,ownerPassword:pass})}).then(()=>{showToast('تم');loadPharmacies();});
+function showAddPharmacyModal() {
+  const html = `
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3>إضافة صيدلية جديدة</h3>
+    <div class="form-group"><label class="form-label">اسم الصيدلية</label><input class="form-input" id="pharmName"></div>
+    <div class="form-group"><label class="form-label">هاتف المالك</label><input class="form-input" id="pharmPhone"></div>
+    <div class="form-group"><label class="form-label">كلمة المرور</label><input class="form-input" type="password" id="pharmPass"></div>
+    <button class="btn btn-primary" onclick="addPharmacy()">حفظ</button>
+  `;
+  openModal(html);
+}
+async function addPharmacy() {
+  const name = document.getElementById('pharmName').value;
+  const phone = document.getElementById('pharmPhone').value;
+  const pass = document.getElementById('pharmPass').value;
+  if(!name||!phone||!pass) return showToast('أكمل البيانات');
+  await fetch(API+'/admin/pharmacies',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name,ownerPhone:phone,ownerPassword:pass})});
+  closeModal(); loadPharmacies(); showToast('تمت الإضافة');
 }
 async function togglePharmacy(id) { await fetch(API+'/admin/pharmacies/'+id+'/toggle',{method:'PATCH',credentials:'include'}); loadPharmacies(); }
 async function deletePharmacy(id) { if(confirm('حذف؟')){ await fetch(API+'/admin/pharmacies/'+id,{method:'DELETE',credentials:'include'}); loadPharmacies(); } }
@@ -310,41 +419,83 @@ async function deletePharmacy(id) { if(confirm('حذف؟')){ await fetch(API+'/a
 async function loadCustomers() {
   const search = document.getElementById('customerSearch')?.value || '';
   const res = await fetch(API+'/admin/customers?search='+search,{credentials:'include'}); const list = await res.json();
-  let html = `<div class="flex-between"><h3>العملاء</h3><div><input id="customerSearch" class="form-input" placeholder="بحث..." oninput="loadCustomers()" style="width:200px;"></div></div>
-    <div class="card"><div class="table-responsive"><table><thead><tr><th>الاسم</th><th>الهاتف</th><th>المنطقة</th><th>العنوان</th><th>إجراءات</th></tr></thead><tbody>
-      ${list.map(c => `<tr><td>${c.name}</td><td>${c.phone}</td><td>${c.regionName}</td><td>${c.address}</td>
-        <td><button class="btn btn-sm btn-warning" onclick="editCustomer('${c.id}','${c.name}','${c.phone}','${c.regionId}','${c.address}')">تعديل</button></td></tr>`).join('')}
+  document.getElementById('mainContent').innerHTML = `
+    <div class="flex-between"><h3>العملاء</h3><div><input id="customerSearch" class="form-input" placeholder="بحث..." oninput="loadCustomers()" style="width:200px;"></div></div>
+    <div class="card"><div class="table-responsive"><table><thead><tr><th>الاسم</th><th>الهاتف</th><th>المنطقة</th><th>العنوان</th><th>الطلبات</th><th>آخر طلب</th><th>إجراءات</th></tr></thead><tbody>
+      ${list.map(c => `<tr><td>${c.name}</td><td>${c.phone}</td><td>${c.regionName}</td><td>${c.address}</td><td>${c.totalOrders}</td><td>${c.lastOrderDate?new Date(c.lastOrderDate).toLocaleDateString('ar-EG'):'—'}</td>
+        <td><button class="btn btn-sm btn-warning" onclick="editCustomerModal('${c.id}','${c.name}','${c.phone}','${c.regionId||''}','${c.address||''}')">تعديل</button></td></tr>`).join('')}
     </tbody></table></div></div>`;
-  document.getElementById('mainContent').innerHTML = html;
 }
-function editCustomer(id, name, phone, regionId, address) {
-  const newName = prompt('الاسم:', name); if(!newName) return;
-  const newPhone = prompt('الهاتف:', phone); if(!newPhone) return;
-  fetch(API+'/admin/customers/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name:newName,phone:newPhone})}).then(()=>{showToast('تم');loadCustomers();});
+function editCustomerModal(id, name, phone, regionId, address) {
+  const regionOptions = allRegions.map(r => `<option value="${r.id}" ${r.id===regionId?'selected':''}>${r.name}</option>`).join('');
+  const html = `
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3>تعديل بيانات العميل</h3>
+    <div class="form-group"><label class="form-label">الاسم</label><input class="form-input" id="editCustName" value="${name}"></div>
+    <div class="form-group"><label class="form-label">الهاتف</label><input class="form-input" id="editCustPhone" value="${phone}"></div>
+    <div class="form-group"><label class="form-label">المنطقة</label><select class="form-select" id="editCustRegion">${regionOptions}</select></div>
+    <div class="form-group"><label class="form-label">العنوان</label><input class="form-input" id="editCustAddress" value="${address}"></div>
+    <button class="btn btn-primary" onclick="editCustomer('${id}')">حفظ</button>
+  `;
+  openModal(html);
+}
+async function editCustomer(id) {
+  const name = document.getElementById('editCustName').value;
+  const phone = document.getElementById('editCustPhone').value;
+  const regionId = document.getElementById('editCustRegion').value;
+  const address = document.getElementById('editCustAddress').value;
+  if(!name||!phone) return showToast('الاسم والهاتف مطلوبان');
+  await fetch(API+'/admin/customers/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name,phone,regionId,address})});
+  closeModal(); loadCustomers(); showToast('تم التعديل');
 }
 
 // ========== Regions ==========
 async function loadRegions() {
   const res = await fetch(API+'/admin/regions',{credentials:'include'}); const list = await res.json();
-  let html = `<div class="flex-between"><h3>المناطق</h3><button class="btn btn-primary" onclick="addRegion()">+ إضافة</button></div>
+  allRegions = list; // update local
+  document.getElementById('mainContent').innerHTML = `
+    <div class="flex-between"><h3>المناطق</h3><button class="btn btn-primary" onclick="showAddRegionModal()">+ إضافة</button></div>
     <div class="card"><table><thead><tr><th>الاسم</th><th>رسوم التوصيل</th><th>إجراءات</th></tr></thead><tbody>
       ${list.map(r => `<tr><td>${r.name}</td><td>${r.fee} ج</td>
-        <td><button class="btn btn-sm btn-warning" onclick="editRegion('${r.id}','${r.name}',${r.fee})">تعديل</button>
+        <td><button class="btn btn-sm btn-warning" onclick="editRegionModal('${r.id}','${r.name}',${r.fee})">تعديل</button>
         <button class="btn btn-sm btn-danger" onclick="deleteRegion('${r.id}')">حذف</button></td></tr>`).join('')}
     </tbody></table></div>`;
-  document.getElementById('mainContent').innerHTML = html;
 }
-function addRegion() {
-  const name = prompt('اسم المنطقة:'); if(!name) return;
-  const fee = prompt('رسوم التوصيل:'); if(!fee) return;
-  fetch(API+'/admin/regions',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name,fee:Number(fee)})}).then(()=>{showToast('تم');loadRegions();});
+function showAddRegionModal() {
+  const html = `
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3>إضافة منطقة</h3>
+    <div class="form-group"><label class="form-label">اسم المنطقة</label><input class="form-input" id="regionName"></div>
+    <div class="form-group"><label class="form-label">رسوم التوصيل</label><input class="form-input" type="number" id="regionFee"></div>
+    <button class="btn btn-primary" onclick="addRegion()">حفظ</button>
+  `;
+  openModal(html);
 }
-function editRegion(id, name, fee) {
-  const n = prompt('الاسم:', name); if(!n) return;
-  const f = prompt('الرسوم:', fee); if(!f) return;
-  fetch(API+'/admin/regions/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name:n,fee:Number(f)})}).then(()=>{showToast('تم');loadRegions();});
+async function addRegion() {
+  const name = document.getElementById('regionName').value;
+  const fee = document.getElementById('regionFee').value;
+  if(!name||!fee) return;
+  await fetch(API+'/admin/regions',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name,fee:Number(fee)})});
+  closeModal(); loadRegions(); showToast('تمت الإضافة');
 }
-async function deleteRegion(id) { if(confirm('حذف؟')){ await fetch(API+'/admin/regions/'+id,{method:'DELETE',credentials:'include'}); loadRegions(); } }
+function editRegionModal(id, name, fee) {
+  const html = `
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3>تعديل منطقة</h3>
+    <div class="form-group"><label class="form-label">اسم المنطقة</label><input class="form-input" id="editRegionName" value="${name}"></div>
+    <div class="form-group"><label class="form-label">رسوم التوصيل</label><input class="form-input" type="number" id="editRegionFee" value="${fee}"></div>
+    <button class="btn btn-primary" onclick="editRegion('${id}')">حفظ</button>
+  `;
+  openModal(html);
+}
+async function editRegion(id) {
+  const name = document.getElementById('editRegionName').value;
+  const fee = document.getElementById('editRegionFee').value;
+  if(!name||!fee) return;
+  await fetch(API+'/admin/regions/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name,fee:Number(fee)})});
+  closeModal(); loadRegions(); showToast('تم التعديل');
+}
+async function deleteRegion(id) { if(confirm('حذف المنطقة؟')){ await fetch(API+'/admin/regions/'+id,{method:'DELETE',credentials:'include'}); loadRegions(); } }
 
 // ========== Orders ==========
 async function loadOrders() {
@@ -352,47 +503,116 @@ async function loadOrders() {
   document.getElementById('mainContent').innerHTML = `
     <h3>جميع الطلبات</h3>
     <div class="card"><div class="table-responsive"><table><thead><tr><th>رقم</th><th>المطعم</th><th>العميل</th><th>الإجمالي</th><th>الحالة</th><th>الطيار</th><th>إجراءات</th></tr></thead><tbody>
-      ${orders.map(o => `<tr><td>#${o.id.slice(-6)}</td><td>${o.restaurantName||'—'}</td><td>${o.customerName}</td><td>${o.total} ج</td><td><span class="badge badge-${o.status==='DELIVERED'?'success':(o.status==='CANCELLED'?'danger':'warning')}">${o.status}</span></td><td>${o.driverName||'—'}</td>
+      ${orders.map(o => `<tr>
+        <td>#${o.id.slice(-6)}</td><td>${o.restaurantName||'—'}</td><td>${o.customerName}</td><td>${o.total} ج</td>
+        <td><span class="badge badge-${o.status==='DELIVERED'?'success':(o.status==='CANCELLED'?'danger':'warning')}">${o.status}</span></td>
+        <td>${o.driverName||'—'}</td>
         <td>
           <button class="btn btn-sm btn-success" onclick="approveOrder('${o.id}')" ${o.adminApproved?'disabled':''}>موافقة</button>
           <button class="btn btn-sm btn-danger" onclick="rejectOrder('${o.id}')">رفض</button>
-          <button class="btn btn-sm btn-outline" onclick="assignDriver('${o.id}')">تعيين طيار</button>
+          <button class="btn btn-sm btn-info" onclick="assignDriverModal('${o.id}')">تعيين طيار</button>
+          <button class="btn btn-sm btn-warning" onclick="editOrderModal('${o.id}')">تعديل</button>
         </td></tr>`).join('')}
     </tbody></table></div></div>`;
 }
 async function approveOrder(id) { await fetch(API+'/admin/orders/'+id+'/approve',{method:'PATCH',credentials:'include'}); showToast('تمت الموافقة'); loadOrders(); }
-async function rejectOrder(id) { const reason = prompt('سبب الرفض:'); await fetch(API+'/admin/orders/'+id+'/reject',{method:'PATCH',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({reason})}); loadOrders(); }
-async function assignDriver(orderId) {
+async function rejectOrder(id) {
+  const reason = prompt('سبب الرفض:');
+  if(reason === null) return;
+  await fetch(API+'/admin/orders/'+id+'/reject',{method:'PATCH',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({reason})});
+  loadOrders();
+}
+async function assignDriverModal(orderId) {
   const driversRes = await fetch(API+'/admin/drivers',{credentials:'include'}); const drivers = await driversRes.json();
-  const driverId = prompt('أدخل معرف الطيار من القائمة:\n'+drivers.map(d=>`${d.id.slice(-6)} - ${d.name}`).join('\n'));
-  if(driverId) await fetch(API+'/admin/orders/'+orderId+'/assign-driver',{method:'PATCH',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({driverId})}); loadOrders();
+  const options = drivers.map(d => `<option value="${d.id}">${d.name} - ${d.phone}</option>`).join('');
+  const html = `
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3>تعيين طيار للطلب</h3>
+    <div class="form-group"><label class="form-label">اختر الطيار</label><select class="form-select" id="driverSelect">${options}</select></div>
+    <button class="btn btn-primary" onclick="assignDriver('${orderId}')">تعيين</button>
+  `;
+  openModal(html);
+}
+async function assignDriver(orderId) {
+  const driverId = document.getElementById('driverSelect').value;
+  await fetch(API+'/admin/orders/'+orderId+'/assign-driver',{method:'PATCH',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({driverId})});
+  closeModal(); loadOrders(); showToast('تم تعيين الطيار');
+}
+async function editOrderModal(orderId) {
+  const res = await fetch(API+'/orders/'+orderId+'/track',{credentials:'include'}); const order = await res.json();
+  const items = order.items || [];
+  let itemsHtml = items.map((item, i) => `
+    <div class="flex-between" style="margin-bottom:8px">
+      <span>${item.name}</span>
+      <span>${item.price} ج × ${item.quantity||1}</span>
+      <button class="btn btn-sm btn-danger" onclick="removeItem('${orderId}',${i})">حذف</button>
+    </div>`).join('');
+  const html = `
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3>تعديل الطلب</h3>
+    <div class="form-group"><label class="form-label">ملاحظات الأدمن</label><textarea class="form-textarea" id="adminNotes">${order.adminNotes||''}</textarea></div>
+    <div class="form-group"><label class="form-label">ملاحظات الطلب</label><textarea class="form-textarea" id="orderNotes">${order.orderNotes||''}</textarea></div>
+    <h4>المنتجات</h4>${itemsHtml}
+    <button class="btn btn-primary" onclick="saveOrderEdit('${orderId}')">حفظ</button>
+  `;
+  openModal(html);
+}
+async function saveOrderEdit(orderId) {
+  const adminNotes = document.getElementById('adminNotes').value;
+  const orderNotes = document.getElementById('orderNotes').value;
+  await fetch(API+'/admin/orders/'+orderId,{method:'PATCH',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({adminNotes,orderNotes})});
+  closeModal(); loadOrders(); showToast('تم التعديل');
 }
 
 // ========== Products & Categories ==========
 async function loadProducts() {
-  const [prodRes, catRes] = await Promise.all([fetch(API+'/admin/products',{credentials:'include'}), fetch(API+'/admin/categories',{credentials:'include'})]);
+  const [prodRes, catRes] = await Promise.all([
+    fetch(API+'/admin/products',{credentials:'include'}),
+    fetch(API+'/admin/categories',{credentials:'include'})
+  ]);
   const products = await prodRes.json(); const categories = await catRes.json();
   document.getElementById('mainContent').innerHTML = `
-    <div class="flex-between"><h3>المنتجات</h3><button class="btn btn-primary" onclick="addProduct()">+ إضافة منتج</button></div>
+    <div class="flex-between"><h3>المنتجات</h3><button class="btn btn-primary" onclick="addProductModal()">+ إضافة منتج</button></div>
     <div class="card"><div class="table-responsive"><table><thead><tr><th>الصورة</th><th>الاسم</th><th>السعر</th><th>التصنيف</th><th>المطعم</th><th>حذف</th></tr></thead><tbody>
-      ${products.map(p => `<tr><td><img src="${p.image}" width="40" height="40" style="border-radius:8px;"></td><td>${p.name}</td><td>${p.price} ج</td><td>${p.category}</td><td>${p.restaurantName||''}</td><td><button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.id}')">حذف</button></td></tr>`).join('')}
+      ${products.map(p => `<tr><td><img src="${p.image}" width="40" height="40" style="border-radius:8px;object-fit:cover;"></td><td>${p.name}</td><td>${p.price||p.basePrice} ج</td><td>${p.category}</td><td>${p.restaurantName||''}</td><td><button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.id}')">حذف</button></td></tr>`).join('')}
     </tbody></table></div></div>
-    <h3>التصنيفات</h3><button class="btn btn-primary btn-sm" onclick="addCategory()">+ إضافة تصنيف</button>
-    <div>${categories.map(c => `<span class="badge badge-warning" style="margin:4px;">${c.name} <button onclick="deleteCategory('${c.id}')">×</button></span>`).join('')}</div>`;
+    <div class="card"><h3>التصنيفات</h3>
+      <button class="btn btn-primary btn-sm" onclick="addCategory()">+ إضافة تصنيف</button>
+      <div style="margin-top:12px;">${categories.map(c => `<span class="badge badge-info" style="margin:4px;">${c.name} ${c.restaurantName?`(${c.restaurantName})`:''} <button onclick="deleteCategory('${c.id}')" style="background:none;border:none;cursor:pointer;color:red;">×</button></span>`).join('')}</div>
+    </div>`;
 }
-function addProduct() { /* يمكن تنفيذ نموذج بسيط لاحقاً */ alert('استخدم واجهة المطعم لإضافة المنتجات'); }
+function addProductModal() {
+  // هذا يتطلب رفع صورة، لذا سنستخدم نموذج بسيط أو نحيل إلى واجهة المطعم
+  alert('يمكنك إضافة المنتجات عبر واجهة المطعم أو تحميل الصورة هنا (قيد التطوير)');
+}
 async function deleteProduct(id) { if(confirm('حذف المنتج؟')){ await fetch(API+'/admin/products/'+id,{method:'DELETE',credentials:'include'}); loadProducts(); } }
-function addCategory() { const name = prompt('اسم التصنيف:'); if(name) fetch(API+'/admin/categories',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name})}).then(()=>loadProducts()); }
+function addCategory() {
+  const name = prompt('اسم التصنيف:');
+  if(name) fetch(API+'/admin/categories',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name})}).then(()=>loadProducts());
+}
 async function deleteCategory(id) { await fetch(API+'/admin/categories/'+id,{method:'DELETE',credentials:'include'}); loadProducts(); }
 
 // ========== Recharge Requests ==========
 async function loadRecharge() {
   const res = await fetch(API+'/admin/recharge-requests?status=PENDING',{credentials:'include'}); const list = await res.json();
-  document.getElementById('mainContent').innerHTML = `<h3>طلبات الشحن المعلقة</h3>
-    ${list.length ? list.map(req => `<div class="card"><div class="flex-between"><span><strong>${req.driverName}</strong> - ${req.driverPhone}</span><span>${req.amount} ج</span><span>آخر 4 أرقام: ${req.last4digits}</span><span>${new Date(req.createdAt).toLocaleString('ar-EG')}</span><div><button class="btn btn-sm btn-success" onclick="approveRecharge('${req.id}')">✅</button><button class="btn btn-sm btn-danger" onclick="rejectRecharge('${req.id}')">❌</button></div></div></div>`).join('') : '<div class="empty">لا يوجد طلبات</div>'}`;
+  document.getElementById('mainContent').innerHTML = `
+    <h3>طلبات الشحن المعلقة</h3>
+    ${list.length ? list.map(req => `<div class="card">
+      <div class="flex-between">
+        <div><strong>${req.driverName}</strong> (${req.driverPhone})</div>
+        <div>المبلغ: <strong>${req.amount} ج</strong></div>
+        <div>آخر 4 أرقام: <strong>${req.last4digits}</strong></div>
+        <div>${new Date(req.createdAt).toLocaleString('ar-EG')}</div>
+        <div>
+          <button class="btn btn-sm btn-success" onclick="approveRecharge('${req.id}')">✅ موافقة</button>
+          <button class="btn btn-sm btn-danger" onclick="rejectRecharge('${req.id}')">❌ رفض</button>
+        </div>
+      </div>
+    </div>`).join('') : '<div class="empty">لا توجد طلبات شحن معلقة</div>'}
+  `;
 }
-async function approveRecharge(id) { await fetch(API+'/admin/recharge-requests/'+id+'/approve',{method:'PATCH',credentials:'include'}); showToast('تمت الموافقة'); loadRecharge(); }
-async function rejectRecharge(id) { await fetch(API+'/admin/recharge-requests/'+id+'/reject',{method:'PATCH',credentials:'include'}); showToast('تم الرفض'); loadRecharge(); }
+async function approveRecharge(id) { if(confirm('تأكيد الموافقة؟')){ await fetch(API+'/admin/recharge-requests/'+id+'/approve',{method:'PATCH',credentials:'include'}); showToast('تمت الموافقة وإضافة الرصيد'); loadRecharge(); } }
+async function rejectRecharge(id) { if(confirm('تأكيد الرفض؟')){ await fetch(API+'/admin/recharge-requests/'+id+'/reject',{method:'PATCH',credentials:'include'}); showToast('تم الرفض'); loadRecharge(); } }
 
 // ========== Reports ==========
 async function loadReports() {
@@ -405,8 +625,10 @@ async function loadReports() {
       <div class="stat-card"><h4>شهري</h4><div class="value">${data.monthly.count} طلب</div><div>${data.monthly.totalRevenue} ج</div></div>
       <div class="stat-card"><h4>الإجمالي</h4><div class="value">${data.total.count} طلب</div><div>${data.total.totalRevenue} ج</div></div>
     </div>
-    <div class="card"><h3>أفضل المطاعم (شهري)</h3>${data.restaurants.month.map(r=>`<div class="flex-between"><span>${r.name}</span><span>${r.netRevenue} ج</span></div>`).join('')}</div>
-    <div class="card"><h3>أفضل الطيارين (شهري)</h3>${data.drivers.month.map(d=>`<div class="flex-between"><span>${d.name}</span><span>${d.revenue} ج</span></div>`).join('')}</div>`;
+    <div class="grid-2">
+      <div class="card"><h3>أفضل المطاعم (شهري)</h3>${data.restaurants.month.map(r=>`<div class="flex-between"><span>${r.name}</span><span>${r.netRevenue} ج</span></div>`).join('')}</div>
+      <div class="card"><h3>أفضل الطيارين (شهري)</h3>${data.drivers.month.map(d=>`<div class="flex-between"><span>${d.name}</span><span>${d.revenue} ج</span></div>`).join('')}</div>
+    </div>`;
 }
 
 // ========== Platform Revenue ==========
