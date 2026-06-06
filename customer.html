@@ -1,4 +1,4 @@
-v<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -350,13 +350,26 @@ function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
   const blob = new Blob([bufferArray], { type: 'audio/wav' });
   return URL.createObjectURL(blob);
 }
-const soundInstances = {};
-function createSound(name, ...tones) { soundInstances[name] = tones.map(t => new Howl({ src: [t], format: ['wav'], volume: 0.5 })); }
-function playSound(name) { if (soundInstances[name]) soundInstances[name].forEach(h => h.play()); }
-createSound('orderAccepted', generateToneWAV(600,0.2,'sine'));
-createSound('orderOnTheWay', generateToneWAV(800,0.15,'sine'), generateToneWAV(500,0.15,'sine'));
-createSound('orderDelivered', generateToneWAV(1000,0.2,'sine'));
-createSound('orderCancelled', generateToneWAV(400,0.3,'triangle'));
+// ========== نظام الصوت المخصص ==========
+const SOUNDS = {
+  newOrder: '/sounds/new_order.mp3',
+  orderAccepted: '/sounds/order_accepted.mp3',
+  orderCancelled: '/sounds/order_cancelled.mp3',
+  driverAssigned: '/sounds/driver_assigned.mp3',
+  onTheWay: '/sounds/on_the_way.mp3',
+  delivered: '/sounds/delivered.mp3',
+  adminAlert: '/sounds/admin_alert.mp3'
+};
+
+function playSound(name) {
+  try {
+    const url = SOUNDS[name];
+    if (!url) return;
+    const audio = new Audio(url);
+    audio.volume = 0.5; // مستوى الصوت
+    audio.play().catch(() => {}); // تجاهل أي خطأ بهدوء
+  } catch (e) {}
+}
 
 // ========== API Helper ==========
 async function apiFetch(url, options = {}) {
