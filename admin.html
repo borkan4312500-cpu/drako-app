@@ -129,13 +129,33 @@
     .tab-bar{display:flex;gap:8px;margin-bottom:16px;}
     .tab-btn{padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text2);transition:all .2s;}
     .tab-btn.active{background:var(--orange);color:#fff;border-color:var(--orange);}
+    .login-overlay{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;}
+    .login-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:32px 24px;width:100%;max-width:380px;text-align:center;}
+    .login-card h2{font-size:28px;font-weight:900;color:var(--text);margin-bottom:8px;}
+    .login-card p{color:var(--text2);margin-bottom:24px;font-size:14px;}
+    .login-field{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 13px;font-size:13px;font-family:'Cairo';color:var(--text);outline:none;margin-bottom:12px;}
+    .login-field:focus{border-color:var(--orange);}
+    .login-error{color:var(--red);font-size:13px;margin-top:12px;display:none;}
   </style>
 </head>
 <body>
 <div class="toast-wrap" id="toast-wrap"></div>
 
-<!-- SIDEBAR -->
-<div class="sidebar">
+<!-- شاشة تسجيل الدخول -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-card">
+    <div style="font-size:48px;margin-bottom:8px;">🛡️</div>
+    <h2>لوحة التحكم</h2>
+    <p>سجّل دخولك لإدارة المنصة</p>
+    <input type="tel" id="loginPhone" class="login-field" placeholder="رقم الهاتف" value="01000000000">
+    <input type="password" id="loginPass" class="login-field" placeholder="كلمة المرور" value="123456">
+    <button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="doAdminLogin()">دخول</button>
+    <div class="login-error" id="loginError">بيانات الدخول غير صحيحة</div>
+  </div>
+</div>
+
+<!-- SIDEBAR (يظهر بعد الدخول) -->
+<div class="sidebar" id="sidebar">
   <div class="sb-logo"><div class="sb-logo-mark">D</div><div><div class="sb-logo-name">Drako</div></div></div>
   <div class="sb-nav">
     <div class="nav-item active" id="nav-dashboard" onclick="navigate('dashboard')"><div class="nav-icon">🏠</div>لوحة التحكم</div>
@@ -156,8 +176,8 @@
   <div class="sb-footer"><div class="sb-user"><div class="sb-avatar">A</div><div><div class="sb-user-name">أدمن دراكو</div></div><a href="/logout" class="sb-logout">⏻</a></div></div>
 </div>
 
-<!-- MAIN -->
-<div class="main-wrap">
+<!-- MAIN (يظهر بعد الدخول) -->
+<div class="main-wrap" id="mainWrap">
   <div class="topbar"><div><div class="topbar-title" id="topbar-title">لوحة التحكم</div></div><div class="topbar-actions"><button class="btn btn-primary btn-sm" onclick="testOrder()">🧪 طلب تجريبي</button><div class="tb-icon-btn" onclick="refreshPage()">🔄</div></div></div>
   <div class="content" id="content"></div>
 </div>
@@ -172,20 +192,14 @@
 const API = '/api';
 const TOKEN_KEY = 'auth_token';
 
-function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
-}
+function getToken() { return localStorage.getItem(TOKEN_KEY); }
 
 async function apiFetch(url, options = {}) {
   let token = getToken();
   if (!token) {
-    document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;background:#0D0F14;color:white;height:100vh;padding-top:80px">
-      <h2>الجلسة منتهية</h2>
-      <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
-    </div>`;
+    logout();
     throw new Error('NO_TOKEN');
   }
-
   let res = await fetch(url, {
     ...options,
     headers: {
@@ -194,19 +208,49 @@ async function apiFetch(url, options = {}) {
       'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
     }
   });
-
   if (res.status === 401) {
-    localStorage.removeItem(TOKEN_KEY);
-    document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;background:#0D0F14;color:white;height:100vh;padding-top:80px">
-      <h2>انتهت صلاحية الجلسة</h2>
-      <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
-    </div>`;
+    logout();
     throw new Error('TOKEN_EXPIRED');
   }
   return res;
 }
 
-// ========== SOUND ENGINE (مختصر) ==========
+// ========== LOGIN ==========
+async function doAdminLogin() {
+  const phone = document.getElementById('loginPhone').value.trim();
+  const password = document.getElementById('loginPass').value;
+  if (!phone || !password) return;
+  try {
+    const res = await fetch(API + '/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, password })
+    });
+    const data = await res.json();
+    if (data.error || data.user.role !== 'ADMIN') {
+      document.getElementById('loginError').style.display = 'block';
+      return;
+    }
+    localStorage.setItem(TOKEN_KEY, data.token);
+    // إخفاء واجهة الدخول وإظهار التطبيق
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('sidebar').style.display = 'flex';
+    document.getElementById('mainWrap').style.display = 'flex';
+    initApp();
+  } catch (e) {
+    document.getElementById('loginError').style.display = 'block';
+  }
+}
+
+function logout() {
+  localStorage.removeItem(TOKEN_KEY);
+  document.getElementById('loginOverlay').style.display = 'flex';
+  document.getElementById('sidebar').style.display = 'none';
+  document.getElementById('mainWrap').style.display = 'none';
+  if (window._socket) window._socket.disconnect();
+}
+
+// ========== SOUND ENGINE ==========
 function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
   const sampleRate = 44100;
   const numSamples = Math.floor(sampleRate * duration);
@@ -505,7 +549,6 @@ async function addRestaurant(){
   const d=await apiFetch(API+'/admin/restaurants',{method:'POST',body:JSON.stringify({name:n,ownerPhone:p,ownerPassword:ps})}).then(r=>r.json());
   if(d.error) toast(d.error,'error'); else { toast('تمت الإضافة'); closeModal(); loadRestaurants(); }
 }
-
 async function editRestaurant(id) {
   const r = allRestaurantsCache.find(r => r.id === id);
   if (!r) return;
@@ -813,24 +856,19 @@ async function loadCustomers() {
   `;
   await renderCustomersTable();
 }
-
 async function renderCustomersTable() {
   const container = document.getElementById('customers-table');
   if (!container) return;
   container.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3)">⏳ جاري التحميل...</div>';
-
   const search = document.getElementById('cust-search')?.value || '';
   let url = API + '/admin/customers';
   if (search) url += '?search=' + encodeURIComponent(search);
-  
   const res = await apiFetch(url);
   const customers = await res.json();
-  
   if (!customers.length) {
     container.innerHTML = `<div class="empty-state"><div class="icon">👥</div><div class="msg">لا يوجد عملاء مسجلين</div></div>`;
     return;
   }
-  
   container.innerHTML = `
     <div class="section"><div class="table-wrap"><table><thead><tr>
       <th>الاسم</th><th>الهاتف</th><th>المنطقة</th><th>رسوم التوصيل</th>
@@ -851,18 +889,15 @@ async function renderCustomersTable() {
     }).join('')}
     </tbody></table></div></div>`;
 }
-
 async function editCustomer(id) {
   const res = await apiFetch(API + '/admin/customers/' + id);
   const customer = await res.json();
   if (customer.error) return toast(customer.error, 'error');
-
   const regionsRes = await apiFetch(API + '/admin/regions');
   const regions = await regionsRes.json();
   const regionOptions = regions.map(r => 
     `<option value="${r.id}" ${r.id === customer.regionId ? 'selected' : ''}>${r.name} (${r.fee} ج)</option>`
   ).join('');
-
   openModal('تعديل بيانات العميل', `
     <div class="field"><label>الاسم</label><input id="cust-name" value="${customer.name}"></div>
     <div class="field"><label>رقم الهاتف</label><input id="cust-phone" value="${customer.phone}"></div>
@@ -873,15 +908,12 @@ async function editCustomer(id) {
     <button class="btn btn-primary" onclick="saveCustomerEdit('${id}')">حفظ</button>
   `);
 }
-
 async function saveCustomerEdit(id) {
   const name = document.getElementById('cust-name').value.trim();
   const phone = document.getElementById('cust-phone').value.trim();
   const regionId = document.getElementById('cust-region').value;
   const address = document.getElementById('cust-address').value.trim();
-
   if (!name || !phone || !address) return alert('أكمل جميع الحقول');
-
   const res = await apiFetch(API + '/admin/customers/' + id, {
     method: 'PATCH',
     body: JSON.stringify({ name, phone, regionId, address })
@@ -923,7 +955,7 @@ function switchReportTab(tab){
     </div>`;
 }
 
-// ========== RECHARGE REQUESTS (NEW SECTION) ==========
+// ========== RECHARGE REQUESTS ==========
 async function loadRecharge() {
   try {
     const res = await apiFetch(API + '/admin/recharge-requests?status=PENDING');
@@ -960,7 +992,6 @@ async function loadRecharge() {
     document.getElementById('content').innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><div class="msg">فشل تحميل طلبات الشحن</div></div>';
   }
 }
-
 async function approveRecharge(id) {
   if (!confirm('الموافقة على طلب الشحن؟ سيتم إضافة الرصيد للسائق.')) return;
   try {
@@ -969,7 +1000,6 @@ async function approveRecharge(id) {
     loadRecharge();
   } catch (e) { toast('فشلت العملية', 'error'); }
 }
-
 async function rejectRecharge(id) {
   if (!confirm('رفض طلب الشحن؟')) return;
   try {
@@ -981,7 +1011,7 @@ async function rejectRecharge(id) {
 
 // ========== SETTINGS ==========
 function loadSettings(){
-  document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">⚙️ الإعدادات</div></div></div><div class="section" style="padding:20px"><p>الإصدار: Drako v2.0</p><a href="/logout" class="btn btn-danger" style="margin-top:16px">⏻ تسجيل الخروج</a></div>`;
+  document.getElementById('content').innerHTML=`<div class="page-header"><div><div class="page-title">⚙️ الإعدادات</div></div></div><div class="section" style="padding:20px"><p>الإصدار: Drako v2.0</p><a href="#" onclick="logout()" class="btn btn-danger" style="margin-top:16px">⏻ تسجيل الخروج</a></div>`;
 }
 
 // ========== TEST ORDER ==========
@@ -1015,26 +1045,37 @@ async function saveOrderEdit(id) {
 }
 
 // ========== INIT ==========
-(async function() {
-  if (!getToken()) return;
+function initApp() {
   navigate('dashboard');
-})();
+  const socket = io();
+  window._socket = socket;
+  socket.on('newOrder', data => {
+    playSound('adminNewOrder');
+    toast('طلب جديد من ' + data.customerName, 'success');
+    const badge = document.getElementById('pending-badge');
+    if (badge) badge.textContent = (parseInt(badge.textContent) || 0) + 1;
+  });
+  socket.on('orderCancelled', data => {
+    playSound('orderCancelled');
+    toast('تم إلغاء طلب #' + (data.orderId || '').slice(-6), 'error');
+  });
+  socket.on('driverArrived', data => {
+    playSound('driverArrived');
+    toast('الطيار ' + (data.driverName || '') + ' وصل لاستلام الطلب', 'info');
+  });
+}
 
-const socket = io();
-socket.on('newOrder', data => {
-  playSound('adminNewOrder');
-  toast('طلب جديد من ' + data.customerName, 'success');
-  const badge = document.getElementById('pending-badge');
-  if (badge) badge.textContent = (parseInt(badge.textContent) || 0) + 1;
-});
-socket.on('orderCancelled', data => {
-  playSound('orderCancelled');
-  toast('تم إلغاء طلب #' + (data.orderId || '').slice(-6), 'error');
-});
-socket.on('driverArrived', data => {
-  playSound('driverArrived');
-  toast('الطيار ' + (data.driverName || '') + ' وصل لاستلام الطلب', 'info');
-});
+// على التحميل: إذا كان هناك توكن صالح، ابدأ التطبيق مباشرة، وإلا أظهر شاشة الدخول
+if (getToken()) {
+  document.getElementById('loginOverlay').style.display = 'none';
+  document.getElementById('sidebar').style.display = 'flex';
+  document.getElementById('mainWrap').style.display = 'flex';
+  initApp();
+} else {
+  document.getElementById('loginOverlay').style.display = 'flex';
+  document.getElementById('sidebar').style.display = 'none';
+  document.getElementById('mainWrap').style.display = 'none';
+}
 </script>
 </body>
 </html>
