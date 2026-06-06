@@ -177,14 +177,7 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const API = '/api';
-const TOKEN_KEY = 'auth_token';
 let allRegions = [];
-
-function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); }
-function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('open'); }
-function openModal(html){ document.getElementById('modalBox').innerHTML=html; document.getElementById('modalOverlay').classList.add('open'); }
-function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); }
-document.getElementById('modalOverlay').addEventListener('click',function(e){ if(e.target===this) closeModal(); });
 
 // ========== الأصوات ==========
 function generateToneWAV(f,d,t,v=0.3){ const sr=44100; const n=Math.floor(sr*d); const b=new Float32Array(n); for(let i=0;i<n;i++){ const x=i/sr; let s=0; if(t==='sine') s=Math.sin(2*Math.PI*f*x); else if(t==='square') s=Math.sign(Math.sin(2*Math.PI*f*x)); else if(t==='triangle'){ const p=(f*x)%1; s=4*Math.abs(p-0.5)-1; } b[i]=s*v; } const l=b.length*2; const a=new ArrayBuffer(44+l); const vw=new DataView(a); function ws(o,s){ for(let i=0;i<s.length;i++) vw.setUint8(o+i,s.charCodeAt(i)); } ws(0,'RIFF'); vw.setUint32(4,36+l,true); ws(8,'WAVE'); ws(12,'fmt '); vw.setUint32(16,16,true); vw.setUint16(20,1,true); vw.setUint16(22,1,true); vw.setUint32(24,sr,true); vw.setUint32(28,sr*2,true); vw.setUint16(32,2,true); vw.setUint16(34,16,true); ws(36,'data'); vw.setUint32(40,l,true); let off=44; for(let i=0;i<b.length;i++){ const s=Math.max(-1,Math.min(1,b[i])); vw.setInt16(off,s<0?s*0x8000:s*0x7FFF,true); off+=2; } return URL.createObjectURL(new Blob([a],{type:'audio/wav'})); }
@@ -195,26 +188,33 @@ createSound('adminNewOrder', generateToneWAV(800,0.15,'square'), generateToneWAV
 createSound('orderCancelled', generateToneWAV(400,0.3,'triangle'));
 createSound('driverArrived', generateToneWAV(600,0.1,'sine'), generateToneWAV(800,0.1,'sine'));
 
-// ========== التوكن والمصادقة ==========
-function getToken() { return localStorage.getItem(TOKEN_KEY); }
-function saveToken(token) { localStorage.setItem(TOKEN_KEY, token); }
-function clearToken() { localStorage.removeItem(TOKEN_KEY); }
+// ========== دوال مساعدة ==========
+function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); }
+function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('open'); }
+function openModal(html){ document.getElementById('modalBox').innerHTML=html; document.getElementById('modalOverlay').classList.add('open'); }
+function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); }
+document.getElementById('modalOverlay').addEventListener('click',function(e){ if(e.target===this) closeModal(); });
 
+// ========== API (باستخدام الكوكيز فقط) ==========
 async function apiFetch(url, options = {}) {
-  const token = getToken();
-  if (!token) { showLogin(); throw new Error('NO_TOKEN'); }
+  // نستخدم credentials: 'include' لإرسال الكوكيز تلقائياً
   const res = await fetch(url, {
     ...options,
+    credentials: 'include',
     headers: {
       ...options.headers,
-      'Authorization': 'Bearer ' + token,
       'Content-Type': options.body instanceof FormData ? undefined : 'application/json'
     }
   });
-  if (res.status === 401) { clearToken(); showLogin(); throw new Error('TOKEN_EXPIRED'); }
+  if (res.status === 401) {
+    // الجلسة انتهت -> نعرض شاشة الدخول
+    showLogin();
+    throw new Error('SESSION_EXPIRED');
+  }
   return res;
 }
 
+// ========== إدارة الجلسة ==========
 function showLogin() {
   document.getElementById('loginOverlay').classList.remove('hidden');
   document.getElementById('sidebar').style.display = 'none';
@@ -231,18 +231,29 @@ async function adminLogin() {
   const phone = document.getElementById('loginPhone').value.trim();
   const password = document.getElementById('loginPass').value;
   if (!phone || !password) return;
+
   try {
+    // نفس نقطة API التي تستخدمها واجهة العميل
     const res = await fetch(API + '/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ phone, password })
     });
+
+    if (!res.ok) {
+      document.getElementById('loginError').style.display = 'block';
+      return;
+    }
+
     const data = await res.json();
+    // السيرفر يرجع { token, user: { id, name, role } }
     if (data.error || data.user.role !== 'ADMIN') {
       document.getElementById('loginError').style.display = 'block';
       return;
     }
-    saveToken(data.token);
+
+    // تم تسجيل الدخول بنجاح (الكوكي تم ضبطه تلقائياً)
     document.getElementById('loginError').style.display = 'none';
     hideLogin();
     initApp();
@@ -251,8 +262,10 @@ async function adminLogin() {
   }
 }
 
-function logout() {
-  clearToken();
+async function logout() {
+  try {
+    await fetch('/logout', { credentials: 'include' });
+  } catch(e) {}
   showLogin();
 }
 
@@ -516,7 +529,7 @@ async function updateRegion(id){
 }
 async function deleteRegion(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/regions/'+id,{method:'DELETE'}); loadRegions(); } }
 
-// ========== Orders with tabs & full features ==========
+// ========== Orders with tabs ==========
 let currentOrderTab = 'new';
 let filteredOrders = [];
 async function loadOrders(){
@@ -673,20 +686,23 @@ function initApp() {
   socket.on('driverArrived',data=>{ playSound('driverArrived'); showToast('الطيار '+data.driverName+' وصل'); });
 }
 
-// بدء التشغيل
-if (getToken()) {
-  apiFetch(API + '/whoami').then(res => res.json()).then(data => {
-    if (data.user?.role === 'ADMIN') {
-      hideLogin();
-      initApp();
-    } else {
-      clearToken();
-      showLogin();
+// بدء التشغيل - تحقق من الجلسة عبر /api/whoami
+async function checkSession() {
+  try {
+    const res = await fetch(API + '/whoami', { credentials: 'include' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.user?.role === 'ADMIN') {
+        hideLogin();
+        initApp();
+        return;
+      }
     }
-  }).catch(() => { clearToken(); showLogin(); });
-} else {
+  } catch (e) {}
+  // إذا لم تكن الجلسة صالحة، نعرض شاشة الدخول
   showLogin();
 }
+checkSession();
 </script>
 </body>
 </html>
