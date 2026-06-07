@@ -1478,6 +1478,7 @@ app.use((err, req, res, next) => {
   }
   next();
 });
+app.use('/sounds', express.static(path.join(__dirname, 'sounds')));
 
 io.on('connection', (socket) => {
   console.log('عميل متصل:', socket.id);
