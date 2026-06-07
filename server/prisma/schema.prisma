@@ -7,30 +7,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  CUSTOMER
-  RESTAURANT
-  DRIVER
-  ADMIN
-}
-
-enum OrderStatus {
-  PENDING
-  ACCEPTED
-  PREPARING
-  READY
-  DRIVER_ASSIGNED
-  ON_THE_WAY
-  DELIVERED
-  CANCELLED
-}
-
 model User {
   id            String    @id @default(uuid())
   name          String
   phone         String    @unique
   password      String
-  role          Role      @default(CUSTOMER)
+  role          String    @default("CUSTOMER")
   region        String?
   address       String?
   isActive      Boolean   @default(true)
@@ -69,7 +51,7 @@ model Product {
   category    Category      @relation(fields: [categoryId], references: [id])
   name        String
   description String?
-  images      String[]
+  images      String        @default("")
   basePrice   Float
   sizes       ProductSize[]
   extras      Extra[]
@@ -107,7 +89,7 @@ model Order {
   discount      Float       @default(0)
   total         Float
   paymentMethod String      @default("CASH")
-  status        OrderStatus @default(PENDING)
+  status        String      @default("PENDING")
   createdAt     DateTime    @default(now())
   statusLogs    StatusLog[]
 }
@@ -119,7 +101,7 @@ model OrderItem {
   productId String
   product   Product @relation(fields: [productId], references: [id])
   sizeId    String?
-  extras    Json    @default("[]")
+  extras    String  @default("[]")
   quantity  Int
   price     Float
 }
@@ -128,7 +110,7 @@ model StatusLog {
   id        String      @id @default(uuid())
   orderId   String
   order     Order       @relation(fields: [orderId], references: [id])
-  status    OrderStatus
+  status    String
   timestamp DateTime    @default(now())
 }
 
@@ -156,3 +138,4 @@ model Coupon {
   minOrder Float?   @default(0)
   isActive Boolean  @default(true)
 }
+
