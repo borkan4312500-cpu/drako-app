@@ -1,5 +1,5 @@
 {
-  "name": "drako-server-js",
+  "name": "drako-servers-js",
   "version": "1.0.0",
   "scripts": {
     "start": "node servers.js"
