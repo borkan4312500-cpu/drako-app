@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>دراكو - الطيار</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
+    body { background: #F7F7F7; color: #1A1A1A; max-width: 430px; margin: auto; height: 100%; overflow: hidden; }
+    :root { --brand: #E8180E; --brand-dark: #B80F09; --bg: #F7F7F7; --card: #FFFFFF; --text: #1A1A1A; --text-muted: #7A7A7A; --border: #EBEBEB; --radius: 18px; }
+    .app-container { display: flex; flex-direction: column; height: 100vh; }
+    .auth-wrapper { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--bg); }
+    .auth-wrapper.hide { display: none; }
+    .auth-card { background: white; border-radius: 24px; padding: 32px 24px; width: 90%; max-width: 360px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); text-align: center; }
+    .auth-card h1 { font-size: 32px; font-weight: 900; color: var(--brand); margin-bottom: 6px; }
+    .field-group { margin-bottom: 16px; text-align: right; }
+    .field-wrap input { width: 100%; height: 52px; background: #F9F9F9; border: 1px solid var(--border); border-radius: 12px; padding: 0 48px 0 16px; font-size: 15px; }
+    .btn { width: 100%; height: 52px; background: var(--brand); border: none; border-radius: 14px; color: white; font-size: 17px; font-weight: 700; cursor: pointer; }
+    .error-msg { color: #F44336; font-size: 13px; margin-top: 8px; display: none; }
+    .main-app { display: none; flex-direction: column; height: 100%; }
+    .main-app.active { display: flex; }
+    .header { padding: 16px; background: white; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+    .icon-btn { background: #F5F5F5; border: none; width: 40px; height: 40px; border-radius: 12px; font-size: 20px; cursor: pointer; }
+    .tabs { display: flex; padding: 12px 16px; background: white; gap: 8px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+    .tab { padding: 8px 16px; border-radius: 20px; background: #F5F5F5; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .tab.active { background: var(--brand); color: white; }
+    .content { flex: 1; overflow-y: auto; padding: 16px; }
+    .card { background: white; border-radius: 16px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+    .balance-bar { background: linear-gradient(135deg, #4CAF50, #8BC34A); color: white; border-radius: 16px; padding: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+    .balance-bar.low { background: linear-gradient(135deg, #FF9800, #FFC107); }
+    .balance-bar.critical { background: linear-gradient(135deg, #F44336, #FF5722); }
+    .order-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+    .toggle-switch { position: relative; width: 52px; height: 28px; background: #ccc; border-radius: 28px; cursor: pointer; transition: 0.3s; }
+    .toggle-switch.active { background: #4CAF50; }
+    .toggle-switch::after { content: ''; position: absolute; top: 3px; right: 3px; width: 22px; height: 22px; background: white; border-radius: 50%; transition: 0.3s; }
+    .toggle-switch.active::after { right: 27px; }
+    .date-filter { display: flex; gap: 8px; margin-bottom: 16px; }
+    .date-filter input { flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 10px; }
+    .empty { text-align: center; color: #888; margin-top: 40px; }
+    .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1A1A1A; color: white; padding: 12px 24px; border-radius: 100px; z-index: 9999; transition: 0.35s; opacity: 0; }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  </style>
+</head>
+<body>
+<div class="app-container">
+  <!-- شاشة تسجيل الدخول -->
+  <div class="auth-wrapper" id="authWrapper">
+    <div class="auth-card">
+      <div style="font-size: 48px;">🛵</div>
+      <h1>Drako Driver</h1>
+      <p>سجّل دخولك لبدء العمل</p>
+      <div class="field-group">
+        <label>رقم الهاتف</label>
+        <div class="field-wrap"><span style="position:absolute; right:14px; top:14px;">📱</span><input type="tel" id="driverPhone" placeholder="01xxxxxxxxx"></div>
+      </div>
+      <div class="field-group">
+        <label>كلمة المرور</label>
+        <div class="field-wrap"><span style="position:absolute; right:14px; top:14px;">🔒</span><input type="password" id="driverPass" placeholder="••••••••"></div>
+      </div>
+      <button class="btn" onclick="driverLogin()">دخول</button>
+      <div class="error-msg" id="loginError">بيانات الدخول خاطئة</div>
+    </div>
+  </div>
+
+  <!-- الواجهة الرئيسية -->
+  <div class="main-app" id="mainApp">
+    <div class="header">
+      <h2 id="headerTitle">الرئيسية</h2>
+      <button class="icon-btn" onclick="logout()">🚪</button>
+    </div>
+    <div class="tabs" id="mainTabs">
+      <div class="tab active" data-tab="available" onclick="switchTab('available')">🆕 متاحة</div>
+      <div class="tab" data-tab="active" onclick="switchTab('active')">📋 نشطة</div>
+      <div class="tab" data-tab="history" onclick="switchTab('history')">📜 السجل</div>
+      <div class="tab" data-tab="account" onclick="switchTab('account')">👤 حسابي</div>
+    </div>
+    <div class="content" id="tabContent"></div>
+  </div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const API = '/api';
+let currentDriver = null, socket = null, currentTab = 'available';
+let driverCredit = 0;
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ========== Auth ==========
+async function driverLogin() {
+  const phone = document.getElementById('driverPhone').value.trim();
+  const pass = document.getElementById('driverPass').value;
+  if (!phone || !pass) return showToast('⚠️ أكمل البيانات');
+  try {
+    const res = await fetch(API + '/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, password: pass })
+    });
+    const data = await res.json();
+    if (data.error || data.user.role !== 'DRIVER') {
+      document.getElementById('loginError').style.display = 'block';
+      return;
+    }
+    currentDriver = data.user;
+    document.getElementById('authWrapper').classList.add('hide');
+    document.getElementById('mainApp').classList.add('active');
+    initSocket();
+    switchTab('available');
+  } catch (e) { showToast('❌ فشل الاتصال'); }
+}
+
+function logout() {
+  if (socket) socket.disconnect();
+  fetch('/logout');
+  currentDriver = null;
+  document.getElementById('mainApp').classList.remove('active');
+  document.getElementById('authWrapper').classList.remove('hide');
+}
+
+// ========== Socket ==========
+function initSocket() {
+  if (socket) return;
+  socket = io();
+  socket.on('orderStatusUpdate', () => { if (['active','available'].includes(currentTab)) loadCurrentTab(); });
+  socket.on('driver:newJob', (data) => { showToast(`🆕 ${data.count} طلب جديد`); if (currentTab === 'available') loadCurrentTab(); });
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('#mainTabs .tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+  document.getElementById('headerTitle').innerText = { available:'الطلبات المتاحة', active:'طلباتي النشطة', history:'السجل', account:'حسابي' }[tab];
+  loadCurrentTab();
+}
+
+function loadCurrentTab() {
+  switch (currentTab) {
+    case 'available': loadAvailableOrders(); break;
+    case 'active': loadMyActiveOrders(); break;
+    case 'history': loadHistory(); break;
+    case 'account': loadAccount(); break;
+  }
+}
+
+// ========== Balance Display ==========
+async function fetchCredit() {
+  try {
+    const res = await fetch(API + '/driver/profile', { credentials: 'include' });
+    const profile = await res.json();
+    driverCredit = profile.credit || 0;
+    return driverCredit;
+  } catch(e) { return 0; }
+}
+
+function renderBalanceBar(credit) {
+  let cls = '';
+  if (credit < 10) cls = 'critical';
+  else if (credit < 30) cls = 'low';
+  return `
+    <div class="balance-bar ${cls}">
+      <div>
+        <div style="font-size:12px;">💰 رصيدي</div>
+        <div style="font-size:22px; font-weight:900;">${credit} ج</div>
+      </div>
+      <button class="btn-sm" style="background:white; color:#333; border:none; border-radius:10px; padding:8px 16px;" onclick="recharge()">⚡ شحن</button>
+    </div>`;
+}
+
+async function recharge() {
+  const amount = prompt('أدخل المبلغ المراد شحنه (ج):', '100');
+  if (!amount || isNaN(amount) || Number(amount) <= 0) return;
+  try {
+    const res = await fetch(API + '/driver/recharge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ amount: Number(amount) })
+    });
+    const data = await res.json();
+    showToast('✅ ' + data.message);
+    loadCurrentTab(); // لتحديث الرصيد
+  } catch(e) { showToast('❌ فشل الشحن'); }
+}
+
+// ========== Available Orders ==========
+async function loadAvailableOrders() {
+  const container = document.getElementById('tabContent');
+  const credit = await fetchCredit();
+  container.innerHTML = renderBalanceBar(credit);
+  try {
+    const res = await fetch(API + '/driver/available-orders', { credentials: 'include' });
+    if (res.status === 401) { logout(); return; }
+    const orders = await res.json();
+    if (!orders.length) {
+      container.innerHTML += '<div class="empty">🎉 لا توجد طلبات متاحة</div>';
+      return;
+    }
+    container.innerHTML += orders.map(order => {
+      const productVal = (order.total||0) - (order.deliveryFee||0);
+      const estCommission = Math.round(productVal * 0.20);
+      const canAccept = credit >= estCommission;
+      return `
+        <div class="card">
+          <div><strong>#${order.id.slice(-6)}</strong> <span class="badge" style="background:#FFF3E0;color:#E65100;">جاهز</span></div>
+          <p>🏪 ${order.restaurantName || '—'}</p>
+          <p>👤 ${order.customerName} | 📍 ${order.customerAddress || order.address}</p>
+          <p>💵 القيمة: ${order.total} ج | 📊 عمولة تقريبية: ${estCommission} ج</p>
+          ${canAccept ? 
+            `<button class="btn" style="margin-top:8px;" onclick="acceptOrder('${order.id}')">🚀 استلام</button>` :
+            `<div style="color:#F44336; margin-top:8px;">⚠️ رصيدك غير كافٍ (${credit} ج). <a href="#" onclick="recharge()">اشحن الآن</a></div>`
+          }
+        </div>`;
+    }).join('');
+  } catch(e) { container.innerHTML += '<div class="empty">⚠️ خطأ في التحميل</div>'; }
+}
+
+async function acceptOrder(orderId) {
+  try {
+    const res = await fetch(API + '/driver/orders/' + orderId + '/accept', { method:'PATCH', credentials:'include' });
+    if (!res.ok) {
+      const err = await res.json();
+      showToast('❌ ' + (err.error || 'فشل'));
+      if (err.error.includes('رصيدك')) loadAvailableOrders(); // تحديث الرصيد
+      return;
+    }
+    showToast('✅ تم استلام الطلب');
+    switchTab('active');
+  } catch(e) { showToast('❌ فشل الاتصال'); }
+}
+
+// ========== Active Orders ==========
+async function loadMyActiveOrders() {
+  const container = document.getElementById('tabContent');
+  const credit = await fetchCredit();
+  container.innerHTML = renderBalanceBar(credit);
+  try {
+    const res = await fetch(API + '/driver/my-orders', { credentials: 'include' });
+    const orders = await res.json();
+    if (!orders.length) { container.innerHTML += '<div class="empty">📭 لا يوجد طلبات نشطة</div>'; return; }
+    container.innerHTML += orders.map(order => `
+      <div class="card">
+        <div><strong>#${order.id.slice(-6)}</strong> <span class="badge" style="background:#E3F2FD;color:#0D47A1;">${order.status==='DRIVER_ASSIGNED'?'بانتظارك':'في الطريق'}</span></div>
+        <p>🏪 ${order.restaurantName || '—'}</p>
+        <p>👤 ${order.customerName} | 📍 ${order.customerAddress || order.address}</p>
+        ${order.status === 'DRIVER_ASSIGNED' ? 
+          `<button class="btn" style="margin-top:8px; background:#1565C0;" onclick="updateOrderStatus('${order.id}','ON_THE_WAY')">🚗 في الطريق</button>` :
+          `<button class="btn" style="margin-top:8px; background:#2E7D32;" onclick="updateOrderStatus('${order.id}','DELIVERED')">✅ تم التوصيل</button>`
+        }
+      </div>`).join('');
+  } catch(e) { container.innerHTML += '<div class="empty">⚠️ خطأ</div>'; }
+}
+
+async function updateOrderStatus(orderId, status) {
+  try {
+    const res = await fetch(API + '/driver/orders/' + orderId + '/status', {
+      method:'PATCH', headers:{'Content-Type':'application/json'}, credentials:'include',
+      body: JSON.stringify({ status })
+    });
+    if (!res.ok) { const e = await res.json(); showToast('❌ '+e.error); return; }
+    showToast('✅ تم التحديث');
+    if (status === 'DELIVERED') switchTab('history');
+    else loadMyActiveOrders();
+  } catch(e) { showToast('❌ فشل'); }
+}
+
+// ========== History with Date Filter ==========
+async function loadHistory() {
+  const container = document.getElementById('tabContent');
+  const credit = await fetchCredit();
+  container.innerHTML = renderBalanceBar(credit) + `
+    <div class="date-filter">
+      <input type="date" id="historyDate" onchange="loadHistory()">
+      <button class="btn" style="width:auto;" onclick="loadHistory()">عرض</button>
+    </div>
+    <div id="historyList"></div>`;
+  await loadHistoryList();
+}
+
+async function loadHistoryList() {
+  const listContainer = document.getElementById('historyList');
+  const date = document.getElementById('historyDate')?.value;
+  let url = API + '/driver/history';
+  if (date) url += '?date=' + date;
+  try {
+    const res = await fetch(url, { credentials: 'include' });
+    const orders = await res.json();
+    if (!orders.length) { listContainer.innerHTML = '<div class="empty">لا توجد طلبات منتهية</div>'; return; }
+    listContainer.innerHTML = orders.map(order => `
+      <div class="card">
+        <p><strong>#${order.id.slice(-6)}</strong> - <span class="badge" style="background:#E8F5E9;color:#1B5E20;">تم</span></p>
+        <p>🏪 ${order.restaurantName} | 👤 ${order.customerName}</p>
+        <p>📅 ${new Date(order.deliveredAt).toLocaleDateString('ar-EG')}</p>
+        <p>💰 القيمة: ${order.total} ج | 🛵 توصيل: ${order.deliveryFee} ج</p>
+      </div>`).join('');
+  } catch(e) { listContainer.innerHTML = '<div class="empty">⚠️ خطأ</div>'; }
+}
+
+// ========== Account ==========
+async function loadAccount() {
+  const container = document.getElementById('tabContent');
+  try {
+    const [profileRes, earningsRes] = await Promise.all([
+      fetch(API + '/driver/profile', { credentials: 'include' }),
+      fetch(API + '/driver/earnings', { credentials: 'include' })
+    ]);
+    const profile = await profileRes.json();
+    const earnings = await earningsRes.json();
+    driverCredit = profile.credit || 0;
+    container.innerHTML = `
+      <div class="balance-bar ${driverCredit<10?'critical':(driverCredit<30?'low':'')}">
+        <div><div>💰 رصيدي</div><div style="font-size:24px; font-weight:900;">${driverCredit} ج</div></div>
+        <button class="btn-sm" style="background:white; color:#333;" onclick="recharge()">⚡ شحن</button>
+      </div>
+      <div class="card">
+        <div style="text-align:center; font-size:64px;">🛵</div>
+        <h2 style="text-align:center;">${profile.name}</h2>
+        <p style="text-align:center;">📱 ${profile.phone}</p>
+        <div class="stat-row"><span>💵 إجمالي الأرباح</span><span>${earnings.total} ج</span></div>
+        <div class="stat-row" style="margin-top:12px; align-items:center;">
+          <span>🟢 متاح للعمل</span>
+          <div class="toggle-switch ${profile.isAvailable?'active':''}" onclick="toggleAvailability()"></div>
+        </div>
+        <button class="btn" style="margin-top:20px; background:#666;" onclick="logout()">🚪 خروج</button>
+      </div>`;
+  } catch(e) { container.innerHTML = '<div class="empty">⚠️ خطأ</div>'; }
+}
+
+async function toggleAvailability() {
+  const res = await fetch(API + '/driver/toggle-status', { method:'PATCH', credentials:'include' });
+  const data = await res.json();
+  document.querySelector('.toggle-switch').classList.toggle('active', data.isAvailable);
+  showToast(data.isAvailable ? 'متاح' : 'متوقف');
+}
+
+// ========== Init ==========
+async function checkSession() {
+  try {
+    const res = await fetch(API + '/whoami', { credentials: 'include' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.user.role === 'DRIVER') {
+        currentDriver = data.user;
+        document.getElementById('authWrapper').classList.add('hide');
+        document.getElementById('mainApp').classList.add('active');
+        initSocket();
+        switchTab('available');
+      }
+    }
+  } catch(e) {}
+}
+checkSession();
+</script>
+</body>
+</html>

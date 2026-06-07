@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <title>دراكو - لوحة الماركت</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
+    body { background: #F7F7F7; color: #1A1A1A; max-width: 430px; margin: auto; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    :root { --brand: #FF6B00; --brand-dark: #E55D00; --brand-light: #FFF3EB; --bg: #F7F7F7; --card: #FFFFFF; --text: #1A1A1A; --text-muted: #7A7A7A; --border: #EBEBEB; --radius: 18px; --radius-sm: 12px; }
+    .header { background: rgba(255,255,255,0.94); backdrop-filter: blur(14px); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 100; position: sticky; top: 0; }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo img { width: 38px; height: 38px; border-radius: 12px; object-fit: cover; background: var(--brand-light); }
+    .logo-text { font-size: 18px; font-weight: 800; background: linear-gradient(135deg, var(--brand), #ff8c3a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .header-actions { display: flex; gap: 10px; }
+    .icon-btn { background: #F5F5F5; border: none; color: #666; width: 40px; height: 40px; border-radius: 12px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+    .icon-btn:active { background: var(--brand); color: white; }
+    .main-content { flex: 1; overflow-y: auto; padding: 16px; padding-bottom: 80px; }
+    .section-card { background: var(--card); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--border); }
+    .section-title { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
+    .stat-card { background: var(--card); border-radius: var(--radius); padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center; border: 1px solid var(--border); }
+    .stat-value { font-size: 28px; font-weight: 800; color: var(--brand); }
+    .stat-label { font-size: 12px; color: var(--text-muted); }
+    .btn { background: var(--brand); border: none; color: white; border-radius: 14px; padding: 10px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; box-shadow: 0 4px 12px rgba(255,107,0,0.25); }
+    .btn-outline { background: transparent; border: 1.5px solid var(--brand); color: var(--brand); box-shadow: none; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+    .btn-block { width: 100%; justify-content: center; margin-top: 12px; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted); }
+    .field input, .field select { width: 100%; background: #F5F5F5; border: 1px solid var(--border); border-radius: 12px; padding: 12px; font-size: 14px; color: var(--text); }
+    .order-row { background: var(--card); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .order-id { font-weight: 700; color: var(--brand); font-size: 13px; }
+    .order-info { flex: 1; min-width: 150px; }
+    .order-meta { font-size: 12px; color: var(--text-muted); }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 30px; font-size: 11px; font-weight: 600; }
+    .badge-pending { background: #FFF3EB; color: var(--brand); }
+    .badge-accepted { background: #E0F2FE; color: #0284C7; }
+    .badge-ready { background: #DCFCE7; color: #16A34A; }
+    .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; background: rgba(255,255,255,0.96); backdrop-filter: blur(14px); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px)); z-index: 99; height: 65px; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
+    .nav-item.active { color: var(--brand); font-weight: 600; }
+    .nav-item i { font-size: 20px; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: none; align-items: center; justify-content: center; padding: 16px; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: white; border-radius: 24px; width: 100%; max-width: 360px; padding: 20px; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; text-align: center; }
+    .modal-close { float: left; background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted); }
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+    .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #1A1A1A; color: white; padding: 10px 24px; border-radius: 40px; font-size: 14px; z-index: 300; opacity: 0; pointer-events: none; transition: 0.3s; }
+    .toast.show { opacity: 1; }
+    .product-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .product-item:last-child { border-bottom: none; }
+    .error-box { background: #FFF3EB; border: 1px solid var(--brand); border-radius: 16px; padding: 20px; margin: 20px; text-align: center; }
+    .attachments { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+    .attachments img { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; cursor: pointer; border: 1px solid #eee; }
+    .order-note { background: #F9F9F9; padding: 10px; border-radius: 8px; margin-bottom: 12px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">
+      <img id="headerLogo" src="https://placehold.co/40x40/FF6B00/white?text=🛒" alt="logo">
+      <span class="logo-text" id="headerName">الماركت</span>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" onclick="refreshPage()">🔄</button>
+    </div>
+  </div>
+
+  <div class="main-content" id="mainContent"></div>
+
+  <div class="bottom-nav">
+    <div class="nav-item active" id="nav-dashboard" onclick="navigate('dashboard')"><i>📊</i><span>الرئيسية</span></div>
+    <div class="nav-item" id="nav-orders" onclick="navigate('orders')"><i>📦</i><span>الطلبات</span></div>
+    <div class="nav-item" id="nav-profile" onclick="navigate('profile')"><i>👤</i><span>حسابي</span></div>
+  </div>
+
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div class="modal-title" id="modalTitle"></div>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    // ========== إدارة الجلسة الذكية ==========
+   const TOKEN_KEY = 'auth_token';
+
+function getToken() {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+async function apiFetch(url, options = {}) {
+  const token = getToken();
+  if (!token) {
+    // لا يوجد توكن – عرض رسالة تسجيل الدخول (بدون إعادة توجيه تلقائي)
+    document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;">
+      <h2>الجلسة منتهية</h2>
+      <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
+    </div>`;
+    throw new Error('NO_TOKEN');
+  }
+
+  const headers = {
+    ...(options.headers || {}),
+    'Authorization': 'Bearer ' + token
+  };
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  const res = await fetch(url, { ...options, headers });
+
+  if (res.status === 401 || res.status === 403) {
+    // التوكن لم يعد صالحًا – مسحه وعرض تسجيل الدخول
+    localStorage.removeItem(TOKEN_KEY);
+    document.body.innerHTML = `<div style="text-align:center;margin-top:60px;font-family:Cairo;">
+      <h2>انتهت صلاحية الجلسة</h2>
+      <a href="/login.html" style="color:#FF6B00;">تسجيل الدخول</a>
+    </div>`;
+    throw new Error('AUTH_ERROR');
+  }
+
+  return res;
+}
+
+// ملاحظة: لا يوجد setInterval ولا refreshTokenFromCookie
+
+    setInterval(async () => { if (getToken()) await refreshTokenFromCookie(); }, 30 * 60 * 1000);
+
+    const API = '/api';
+    let currentPage = 'dashboard';
+    let currentMarketProfile = null;
+    let ordersData = [];
+    let currentOrderTab = 'active';
+    let autoRefreshInterval = null;
+
+    function showToast(msg, error = false) {
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.style.background = error ? '#F05252' : '#1A1A1A';
+      t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500);
+    }
+    function openModal(title, body) {
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modalBody').innerHTML = body;
+      document.getElementById('modal').classList.add('open');
+    }
+    function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+    function navigate(page) {
+      currentPage = page;
+      if (autoRefreshInterval) { clearInterval(autoRefreshInterval); autoRefreshInterval = null; }
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      document.getElementById('nav-' + page).classList.add('active');
+      renderPage(page);
+    }
+    function refreshPage() { renderPage(currentPage); }
+
+    async function renderPage(page) {
+      const main = document.getElementById('mainContent');
+      main.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ جاري التحميل...</div>';
+      try {
+        if (page === 'dashboard') await renderDashboard();
+        else if (page === 'orders') await renderOrders();
+        else if (page === 'profile') await renderProfile();
+        if (page === 'orders' || page === 'dashboard') {
+          autoRefreshInterval = setInterval(() => {
+            if (page === 'orders') loadOrderList();
+            else if (page === 'dashboard') renderDashboard();
+          }, 30000);
+        }
+      } catch(e) { console.error(e); }
+    }
+
+    async function loadProfile() {
+      try {
+        const res = await apiFetch(API + '/market/profile');
+        if (!res.ok) return;
+        currentMarketProfile = await res.json();
+        document.getElementById('headerName').textContent = currentMarketProfile.name || 'الماركت';
+        if (currentMarketProfile.logo) document.getElementById('headerLogo').src = currentMarketProfile.logo;
+      } catch(e) {}
+    }
+
+    // ---------- Dashboard ----------
+    async function renderDashboard() {
+      const res = await apiFetch(API + '/market/orders');
+      if (!res.ok) return;
+      const orders = await res.json();
+      const pending = orders.filter(o => o.status === 'PENDING').length;
+      const accepted = orders.filter(o => ['ACCEPTED','INVOICE_ADDED'].includes(o.status)).length;
+      const ready = orders.filter(o => o.status === 'READY').length;
+      document.getElementById('mainContent').innerHTML = `
+        <div class="stats-grid">
+          <div class="stat-card" onclick="navigate('orders');currentOrderTab='active'"><div class="stat-value">${pending}</div><div class="stat-label">جديد</div></div>
+          <div class="stat-card" onclick="navigate('orders');currentOrderTab='active'"><div class="stat-value">${accepted}</div><div class="stat-label">تحضير</div></div>
+          <div class="stat-card" onclick="navigate('orders');currentOrderTab='active'"><div class="stat-value">${ready}</div><div class="stat-label">جاهز</div></div>
+          <div class="stat-card"><div class="stat-value">${orders.length}</div><div class="stat-label">الإجمالي</div></div>
+        </div>
+        <div class="section-card"><div class="section-title">آخر التحديثات</div><p style="color:#888;">يتم التحديث تلقائياً كل 30 ثانية</p></div>
+      `;
+    }
+
+    // ---------- Profile ----------
+    async function renderProfile() {
+      if (!currentMarketProfile) await loadProfile();
+      const profile = currentMarketProfile || {};
+      document.getElementById('mainContent').innerHTML = `
+        <div class="section-card" style="text-align:center">
+          <img id="profileLogo" src="${profile.logo || 'https://placehold.co/100x100/FF6B00/white?text=🛒'}" style="width:100px;height:100px;border-radius:20px;object-fit:cover;margin-bottom:12px;border:3px solid var(--brand);">
+          <h2 id="profileName">${profile.name || 'الماركت'}</h2>
+          <p style="color:var(--text-muted);">${profile.ownerPhone || ''}</p>
+          <button class="btn btn-outline" onclick="openEditProfileModal()" style="margin-top:16px;">✏️ تعديل الاسم</button>
+          <button class="btn btn-outline" onclick="document.getElementById('logoInput').click()" style="margin-top:8px;">🖼️ تغيير الشعار</button>
+          <input type="file" id="logoInput" accept="image/*" style="display:none" onchange="uploadLogo(this)">
+        </div>
+      `;
+    }
+
+    function openEditProfileModal() {
+      const name = currentMarketProfile?.name || '';
+      openModal('تعديل الاسم', `
+        <div class="field"><label>اسم الماركت</label><input id="editName" value="${name}"></div>
+        <button class="btn btn-block" onclick="saveProfileName()">حفظ</button>
+      `);
+    }
+
+    async function saveProfileName() {
+      const newName = document.getElementById('editName').value.trim();
+      if (!newName) return showToast('الاسم مطلوب', true);
+      const fd = new FormData(); fd.append('name', newName);
+      const res = await apiFetch(API + '/market/profile', { method: 'PATCH', body: fd });
+      if (!res.ok) { showToast('فشل الحفظ', true); return; }
+      const data = await res.json();
+      currentMarketProfile.name = data.name;
+      document.getElementById('headerName').textContent = data.name;
+      document.getElementById('profileName').textContent = data.name;
+      closeModal(); showToast('تم التحديث');
+    }
+
+    async function uploadLogo(input) {
+      const file = input.files[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) { showToast('⚠️ صورة فقط', true); input.value = ''; return; }
+      const fd = new FormData(); fd.append('logo', file);
+      const res = await apiFetch(API + '/market/profile', { method: 'PATCH', body: fd });
+      if (!res.ok) { showToast('فشل الرفع', true); return; }
+      const data = await res.json();
+      if (data.logo) {
+        const logoUrl = data.logo + '?t=' + Date.now();
+        document.getElementById('headerLogo').src = logoUrl;
+        document.getElementById('profileLogo').src = logoUrl;
+        currentMarketProfile.logo = data.logo;
+        showToast('✅ تم رفع الشعار');
+      }
+    }
+
+    // ---------- Orders ----------
+    async function renderOrders() {
+      document.getElementById('mainContent').innerHTML = `
+        <div style="display:flex; gap:10px; margin-bottom:16px;">
+          <button class="btn ${currentOrderTab==='active'?'':'btn-outline'}" onclick="switchOrderTab('active')">📥 نشطة</button>
+          <button class="btn ${currentOrderTab==='completed'?'':'btn-outline'}" onclick="switchOrderTab('completed')">✅ مكتملة</button>
+        </div>
+        <div id="ordersList"></div>
+      `;
+      loadOrderList();
+    }
+    function switchOrderTab(tab) { currentOrderTab = tab; renderOrders(); }
+
+    async function loadOrderList() {
+      const container = document.getElementById('ordersList');
+      if (!container) return;
+      container.innerHTML = '<div style="text-align:center;padding:32px;color:#888;">⏳ جاري التحميل...</div>';
+      const res = await apiFetch(API + '/market/orders');
+      if (!res.ok) return;
+      const orders = await res.json();
+      ordersData = orders;
+      const filtered = currentOrderTab === 'active' 
+        ? orders.filter(o => !['DELIVERED','CANCELLED'].includes(o.status))
+        : orders.filter(o => ['DELIVERED','CANCELLED'].includes(o.status));
+      if (!filtered.length) {
+        container.innerHTML = '<div class="empty-state">لا توجد طلبات</div>';
+        return;
+      }
+      container.innerHTML = filtered.map(o => buildOrderCard(o)).join('');
+    }
+
+    function buildOrderCard(o) {
+      return `
+        <div class="order-row">
+          <div class="order-info">
+            <div class="order-id">#${o.id.slice(-6)}</div>
+            <div class="order-meta">${o.customerName} • ${o.total} ج</div>
+            <span class="badge badge-${o.status === 'PENDING' ? 'pending' : (o.status === 'READY' ? 'ready' : 'accepted')}">${getStatusText(o.status)}</span>
+          </div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            ${o.status === 'PENDING' ? `<button class="btn btn-sm" onclick="acceptOrder('${o.id}')">قبول</button>` : ''}
+            ${['ACCEPTED','INVOICE_ADDED'].includes(o.status) ? `<button class="btn btn-sm btn-outline" onclick="showInvoiceModal('${o.id}')">فاتورة</button> <button class="btn btn-sm" onclick="markReady('${o.id}')">تجهيز</button>` : ''}
+            <button class="btn btn-sm btn-outline" onclick="openOrderDetails('${o.id}')">تفاصيل</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function getStatusText(s) { const map={PENDING:'جديد', ACCEPTED:'قيد التحضير', INVOICE_ADDED:'الفاتورة', READY:'جاهز', DELIVERED:'تم', CANCELLED:'ملغي'}; return map[s]||s; }
+
+    async function acceptOrder(id) {
+      const res = await apiFetch(API + '/market/orders/' + id + '/accept', { method: 'PATCH' });
+      if (!res.ok) { showToast('فشل', true); return; }
+      showToast('تم القبول'); loadOrderList();
+    }
+
+    function showInvoiceModal(id) {
+      const order = ordersData.find(o => o.id === id);
+      if (!order) return;
+      openModal('إضافة فاتورة', `
+        <div class="field"><label>قيمة الفاتورة (ج)</label><input type="number" id="invoiceAmount" value="${order.invoiceAmount||''}"></div>
+        <button class="btn btn-block" onclick="setInvoice('${id}')">حفظ</button>
+      `);
+    }
+
+    async function setInvoice(id) {
+      const amount = parseFloat(document.getElementById('invoiceAmount').value);
+      if (isNaN(amount)||amount<=0) return showToast('قيمة غير صحيحة', true);
+      const res = await apiFetch(API + '/market/orders/' + id + '/invoice', { method: 'PATCH', body: JSON.stringify({ invoiceAmount: amount }) });
+      if (!res.ok) { showToast('فشل', true); return; }
+      showToast('تم التحديث'); closeModal(); loadOrderList();
+    }
+
+    async function markReady(id) {
+      const res = await apiFetch(API + '/market/orders/' + id + '/ready', { method: 'PATCH' });
+      if (!res.ok) { showToast('فشل', true); return; }
+      showToast('تم التجهيز'); loadOrderList();
+    }
+
+    // ---------- دوال المنتجات ----------
+    function openOrderDetails(id) {
+      const order = ordersData.find(o => o.id === id);
+      if (!order) return;
+      let productsHtml = (order.items||[]).map((item, idx) => `
+        <div class="product-item">
+          <div><strong>${item.name}</strong><br><small>${item.quantity} × ${item.price} ج</small></div>
+          <div>
+            <button class="btn btn-sm" onclick="editProductItem('${id}',${idx})">✏️</button>
+            <button class="btn btn-sm btn-outline" onclick="deleteProductItem('${id}',${idx})">🗑️</button>
+          </div>
+        </div>
+      `).join('');
+
+      let attachmentsHtml = '';
+      if (order.attachments && order.attachments.length) {
+        attachmentsHtml = `
+          <div style="margin-top:12px;"><strong>📎 المرفقات:</strong></div>
+          <div class="attachments">
+            ${order.attachments.map(url => `<img src="${url}" onclick="window.open('${url}')">`).join('')}
+          </div>
+        `;
+      }
+
+      const notesHtml = order.orderNotes ? `<div class="order-note"><strong>📝 الطلب:</strong><br>${order.orderNotes}</div>` : '';
+      const invoiceHtml = order.invoiceAmount ? `<div style="margin-top:12px;"><strong>💰 الفاتورة:</strong> ${order.invoiceAmount} ج ${order.invoiceBy ? 'من ' + order.invoiceBy : ''}</div>` : '';
+
+      openModal(`طلب #${id.slice(-6)}`, `
+        <div style="margin-bottom:12px;"><strong>العميل:</strong> ${order.customerName}</div>
+        <div style="margin-bottom:12px;"><strong>المنطقة:</strong> ${order.regionName || '—'}</div>
+        <div style="margin-bottom:12px;"><strong>العنوان:</strong> ${order.address}</div>
+        ${notesHtml}
+        <div style="margin-bottom:12px;"><strong>المنتجات:</strong></div>
+        ${productsHtml || '<div style="color:#888; margin-bottom:12px;">لا توجد منتجات مضافة</div>'}
+        <button class="btn btn-sm" style="margin-top:12px" onclick="addProductToOrder('${id}')">+ إضافة منتج</button>
+        ${invoiceHtml}
+        ${attachmentsHtml}
+        <div style="margin-top:12px;"><strong>الإجمالي:</strong> ${order.total} ج</div>
+      `);
+    }
+
+    function addProductToOrder(orderId) {
+      openModal('إضافة منتج', `
+        <div class="field"><label>اسم المنتج</label><input id="newItemName"></div>
+        <div class="field"><label>الكمية</label><input id="newItemQty" type="number" value="1"></div>
+        <div class="field"><label>السعر (ج)</label><input id="newItemPrice" type="number" value="0"></div>
+        <button class="btn btn-block" onclick="saveNewProduct('${orderId}')">إضافة</button>
+      `);
+    }
+    async function saveNewProduct(orderId) {
+      const name = document.getElementById('newItemName').value.trim();
+      const qty = parseInt(document.getElementById('newItemQty').value) || 1;
+      const price = parseFloat(document.getElementById('newItemPrice').value) || 0;
+      if (!name) return showToast('اسم المنتج مطلوب', true);
+      const order = ordersData.find(o => o.id === orderId);
+      if (!order) return;
+      const newItems = [...(order.items||[]), { name, quantity: qty, price }];
+      const newTotal = newItems.reduce((sum, i) => sum + (i.price * i.quantity), 0) + (order.deliveryFee||0);
+      const res = await apiFetch(API + '/market/orders/' + orderId + '/items', {
+        method: 'PATCH', body: JSON.stringify({ items: newItems, total: newTotal })
+      });
+      if (!res.ok) { showToast('فشل', true); return; }
+      showToast('تمت الإضافة'); closeModal(); loadOrderList();
+    }
+    function editProductItem(orderId, index) {
+      const order = ordersData.find(o => o.id === orderId);
+      if (!order) return;
+      const item = order.items[index];
+      openModal('تعديل منتج', `
+        <div class="field"><label>الاسم</label><input id="editItemName" value="${item.name}"></div>
+        <div class="field"><label>الكمية</label><input id="editItemQty" type="number" value="${item.quantity}"></div>
+        <div class="field"><label>السعر (ج)</label><input id="editItemPrice" type="number" value="${item.price}"></div>
+        <button class="btn btn-block" onclick="saveEditProduct('${orderId}',${index})">حفظ</button>
+      `);
+    }
+    async function saveEditProduct(orderId, index) {
+      const name = document.getElementById('editItemName').value.trim();
+      const qty = parseInt(document.getElementById('editItemQty').value) || 1;
+      const price = parseFloat(document.getElementById('editItemPrice').value) || 0;
+      if (!name) return showToast('الاسم مطلوب', true);
+      const order = ordersData.find(o => o.id === orderId);
+      if (!order) return;
+      const items = [...order.items];
+      items[index] = { ...items[index], name, quantity: qty, price };
+      const newTotal = items.reduce((sum, i) => sum + (i.price * i.quantity), 0) + (order.deliveryFee||0);
+      const res = await apiFetch(API + '/market/orders/' + orderId + '/items', {
+        method: 'PATCH', body: JSON.stringify({ items, total: newTotal })
+      });
+      if (!res.ok) { showToast('فشل', true); return; }
+      showToast('تم التعديل'); closeModal(); loadOrderList();
+    }
+    async function deleteProductItem(orderId, index) {
+      const order = ordersData.find(o => o.id === orderId);
+      if (!order) return;
+      const items = order.items.filter((_, i) => i !== index);
+      const newTotal = items.reduce((sum, i) => sum + (i.price * i.quantity), 0) + (order.deliveryFee||0);
+      const res = await apiFetch(API + '/market/orders/' + orderId + '/items', {
+        method: 'PATCH', body: JSON.stringify({ items, total: newTotal })
+      });
+      if (!res.ok) { showToast('فشل', true); return; }
+      showToast('تم الحذف'); closeModal(); loadOrderList();
+    }
+
+    // ---------- بدء التشغيل ----------
+    (async function() {
+      if (!getToken()) return;
+      await loadProfile();
+      navigate('dashboard');
+    })();
+
+    const socket = io();
+    socket.on('orderStatusUpdate', () => { if (currentPage === 'orders') loadOrderList(); });
+    socket.on('newSpecialOrder', () => { showToast('طلب جديد!'); if (currentPage === 'orders') loadOrderList(); });
+  </script>
+</body>
+</html>

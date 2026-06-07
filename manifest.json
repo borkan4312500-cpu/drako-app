@@ -1,0 +1,23 @@
+{
+  "name": "Drako - طلبات الطعام",
+  "short_name": "Drako",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0D0F14",
+  "theme_color": "#FF6B00",
+  "description": "اطلب أكلك المفضل من أقرب المطاعم",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "lang": "ar",
+  "dir": "rtl"
+}
