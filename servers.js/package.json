@@ -2,7 +2,7 @@
   "name": "drako-server-js",
   "version": "1.0.0",
   "scripts": {
-    "start": "node server.js"
+    "start": "node servers.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
