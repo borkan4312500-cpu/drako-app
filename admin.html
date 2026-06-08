@@ -16,6 +16,7 @@
     body { background:var(--bg); color:var(--text); direction:rtl; min-height:100vh; }
     .app-layout { display:flex; min-height:100vh; }
 
+    /* شاشة تسجيل الدخول */
     .login-overlay {
       position:fixed; inset:0; background:var(--bg); z-index:9999;
       display:flex; align-items:center; justify-content:center; padding:24px;
@@ -34,6 +35,7 @@
     .btn-primary { background:var(--brand); color:white; }
     .error-msg { color:#F44336; font-size:13px; margin-top:8px; display:none; }
 
+    /* الشريط الجانبي */
     .sidebar {
       width:var(--sidebar-width); background:#1f2937; color:white; display:flex;
       flex-direction:column; position:fixed; top:0; right:0; bottom:0; z-index:1000;
@@ -65,8 +67,9 @@
     .stat-card { background:var(--card); border-radius:var(--radius); padding:20px; box-shadow:0 4px 12px rgba(0,0,0,0.04); }
     .stat-card h4 { color:var(--text-muted); font-size:14px; margin-bottom:8px; }
     .stat-card .value { font-size:32px; font-weight:900; color:var(--brand); }
-    .card { background:var(--card); border-radius:var(--radius); padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04); margin-bottom:20px; }
-    .card h3 { margin-bottom:16px; font-size:18px; }
+    .section-card { background:var(--card); border-radius:var(--radius); padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.04); margin-bottom:20px; border:1px solid var(--border); }
+    .section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:16px; }
+    .section-header h2 { font-size:20px; font-weight:800; display:flex; align-items:center; gap:8px; }
 
     .table-responsive { overflow-x:auto; }
     table { width:100%; border-collapse:collapse; }
@@ -89,6 +92,10 @@
 
     .flex-between { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
     .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    .grid-3 { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:20px; }
+    .info-item { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px dashed var(--border); }
+    .info-label { color:var(--text-muted); font-size:14px; }
+    .info-value { font-weight:600; }
 
     .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:2000; display:none; align-items:center; justify-content:center; }
     .modal-overlay.open { display:flex; }
@@ -110,12 +117,13 @@
       .sidebar.open { transform:translateX(0); }
       .main { margin-right:0; }
       .menu-toggle { display:block; }
-      .grid-2 { grid-template-columns:1fr; }
+      .grid-2, .grid-3 { grid-template-columns:1fr; }
     }
   </style>
 </head>
 <body>
 <div class="app-layout">
+  <!-- شاشة تسجيل الدخول -->
   <div class="login-overlay" id="loginOverlay">
     <div class="login-card">
       <div style="font-size:48px;">🛡️</div>
@@ -134,6 +142,7 @@
     </div>
   </div>
 
+  <!-- الشريط الجانبي -->
   <aside class="sidebar" id="sidebar" style="display:none;">
     <div class="sidebar-header"><h2>🛡️ Drako Admin</h2></div>
     <nav class="sidebar-nav">
@@ -155,6 +164,7 @@
     <div class="sidebar-footer"><button class="btn-logout" onclick="logout()">🚪 تسجيل الخروج</button></div>
   </aside>
 
+  <!-- المحتوى الرئيسي -->
   <main class="main" id="mainWrap" style="display:none;">
     <div class="topbar">
       <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
@@ -175,7 +185,7 @@
 const API = '/api';
 let allRegions = [];
 
-// ---------- الصوتيات (باستخدام ملفات /sounds) ----------
+// ---------- الصوتيات (ملفات /sounds) ----------
 const SOUNDS = {
   adminNewOrder: '/sounds/admin_new_order.mp3',
   orderCancelled: '/sounds/admin_order_cancelled.mp3',
@@ -294,8 +304,9 @@ async function loadDashboard(){
       <div class="stat-card"><h4>المطاعم</h4><div class="value">${stats.restaurants||0}</div></div>
       <div class="stat-card"><h4>إجمالي الإيرادات</h4><div class="value">${(stats.totalRevenue||0).toLocaleString()} ج</div></div>
     </div>
-    <div class="card"><h3>أحدث الطلبات</h3>
-      ${orders.slice(-6).reverse().map(o=>`<div class="flex-between" style="margin-bottom:8px;cursor:pointer" onclick="viewOrder('${o.id}')"><span>#${o.id.slice(-6)}</span><span>${o.customerName}</span><span>${o.total} ج</span>${statusBadge(o.status)}</div>`).join('')}
+    <div class="section-card">
+      <div class="section-header"><h2>📦 أحدث الطلبات</h2></div>
+      ${orders.slice(-6).reverse().map(o=>`<div class="info-item" style="cursor:pointer" onclick="viewOrder('${o.id}')"><span>#${o.orderNumber||o.id.slice(-6)}</span><span>${o.customerName}</span><span>${o.total} ج</span>${statusBadge(o.status)}</div>`).join('')}
     </div>`;
 }
 
@@ -305,10 +316,12 @@ async function loadDispatch(){
   const ready=orders.filter(o=>o.status==='READY'&&!o.driverId);
   const avail=drivers.filter(d=>d.isAvailable);
   document.getElementById('mainContent').innerHTML=`
-    <h3>🛵 توزيع الطلبات الجاهزة (${ready.length})</h3>
-    <div class="card"><div class="table-responsive"><table><thead><tr><th>الطلب</th><th>العميل</th><th>المطعم</th><th>المنطقة</th><th>تعيين طيار</th></tr></thead><tbody>
-    ${ready.map(o=>`<tr><td>#${o.id.slice(-6)}</td><td>${o.customerName}</td><td>${o.restaurantName||''}</td><td>${o.regionName||o.address||''}</td><td><select onchange="assignDriver('${o.id}',this.value)" class="form-input" style="width:auto"><option value="">اختر</option>${avail.map(d=>`<option value="${d.id}">${d.name}</option>`).join('')}</select></td></tr>`).join('')}
-    </tbody></table></div></div>`;
+    <div class="section-card">
+      <div class="section-header"><h2>🛵 توزيع الطلبات الجاهزة (${ready.length})</h2></div>
+      <div class="table-responsive"><table><thead><tr><th>الطلب</th><th>العميل</th><th>المطعم</th><th>المنطقة</th><th>تعيين طيار</th></tr></thead><tbody>
+        ${ready.map(o=>`<tr><td>#${o.orderNumber||o.id.slice(-6)}</td><td>${o.customerName}</td><td>${o.restaurantName||''}</td><td>${o.regionName||o.address||''}</td><td><select onchange="assignDriver('${o.id}',this.value)" class="form-input" style="width:auto"><option value="">اختر</option>${avail.map(d=>`<option value="${d.id}">${d.name}</option>`).join('')}</select></td></tr>`).join('')}
+      </tbody></table></div>
+    </div>`;
 }
 async function assignDriver(orderId,driverId){
   if(!driverId) return;
@@ -321,13 +334,12 @@ async function loadRestaurants(){
   const res=await apiFetch(API+'/admin/restaurants').then(r=>r.json());
   allRestaurantsCache=res;
   document.getElementById('mainContent').innerHTML=`
-    <div class="flex-between"><h3>المطاعم</h3><button class="btn btn-primary" onclick="showAddRestaurant()">+ إضافة</button></div>
-    <div class="card"><div class="table-responsive"><table><thead><tr><th>الاسم</th><th>المالك</th><th>الهاتف</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>
-    ${res.map(r=>`<tr><td>${r.name}</td><td>${r.ownerName||''}</td><td>${r.ownerPhone||''}</td><td>${r.isOpen?'<span class="badge badge-success">مفتوح</span>':'<span class="badge badge-danger">مغلق</span>'}</td>
-      <td><button class="btn btn-sm btn-outline" onclick="toggleRestaurant('${r.id}')">تبديل</button>
-      <button class="btn btn-sm btn-warning" onclick="editRestaurant('${r.id}')">تعديل</button>
-      <button class="btn btn-sm btn-danger" onclick="deleteRestaurant('${r.id}')">حذف</button></td></tr>`).join('')}
-    </tbody></table></div></div>`;
+    <div class="section-card">
+      <div class="section-header"><h2>🍽️ المطاعم</h2><button class="btn btn-primary" onclick="showAddRestaurant()">+ إضافة</button></div>
+      <div class="table-responsive"><table><thead><tr><th>الاسم</th><th>المالك</th><th>الهاتف</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>
+        ${res.map(r=>`<tr><td><strong>${r.name}</strong></td><td>${r.ownerName||'—'}</td><td>${r.ownerPhone||'—'}</td><td>${r.isOpen?'<span class="badge badge-success">مفتوح</span>':'<span class="badge badge-danger">مغلق</span>'}</td><td><button class="btn btn-sm btn-outline" onclick="toggleRestaurant('${r.id}')">تبديل</button><button class="btn btn-sm btn-warning" onclick="editRestaurant('${r.id}')">تعديل</button><button class="btn btn-sm btn-danger" onclick="deleteRestaurant('${r.id}')">حذف</button></td></tr>`).join('')}
+      </tbody></table></div>
+    </div>`;
 }
 async function toggleRestaurant(id){ await apiFetch(API+'/admin/restaurants/'+id+'/toggle',{method:'PATCH'}); loadRestaurants(); }
 function showAddRestaurant(){
@@ -356,19 +368,17 @@ async function saveRestaurantEdit(id){
 }
 async function deleteRestaurant(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/restaurants/'+id,{method:'DELETE'}); loadRestaurants(); } }
 
-// --- الطيارين ---
+// --- الطيارين (مع الرصيد والتفاصيل) ---
 async function loadDrivers(){
   const res=await apiFetch(API+'/admin/drivers').then(r=>r.json());
   allDriversCache=res;
   document.getElementById('mainContent').innerHTML=`
-    <div class="flex-between"><h3>الطيارين</h3><button class="btn btn-primary" onclick="showAddDriver()">+ إضافة</button></div>
-    <div class="card"><div class="table-responsive"><table><thead><tr><th>الاسم</th><th>الهاتف</th><th>الأرباح</th><th>الرصيد</th><th>متاح</th><th>نشط</th><th>طلبات نشطة</th><th>إجراءات</th></tr></thead><tbody>
-    ${res.map(d=>`<tr><td>${d.name}</td><td>${d.phone}</td><td>${d.earnings} ج</td><td>${d.credit||0} ج</td><td>${d.isAvailable?'✅':'❌'}</td><td>${d.isActive?'✅':'🚫'}</td><td>${d.activeOrdersCount}</td>
-      <td><button class="btn btn-sm btn-outline" onclick="toggleDriver('${d.id}')">توفر</button>
-      <button class="btn btn-sm btn-warning" onclick="blockDriver('${d.id}')">${d.isActive?'حظر':'تفعيل'}</button>
-      <button class="btn btn-sm btn-danger" onclick="deleteDriver('${d.id}')">حذف</button>
-      <button class="btn btn-sm btn-info" onclick="driverDetails('${d.id}')">تفاصيل</button></td></tr>`).join('')}
-    </tbody></table></div></div>`;
+    <div class="section-card">
+      <div class="section-header"><h2>👨‍✈️ الطيارين</h2><button class="btn btn-primary" onclick="showAddDriver()">+ إضافة</button></div>
+      <div class="table-responsive"><table><thead><tr><th>الاسم</th><th>الهاتف</th><th>الأرباح</th><th>الرصيد</th><th>متاح</th><th>نشط</th><th>طلبات نشطة</th><th>إجراءات</th></tr></thead><tbody>
+        ${res.map(d=>`<tr><td><strong>${d.name}</strong></td><td>${d.phone}</td><td>${d.earnings} ج</td><td style="color:var(--brand)">${d.credit||0} ج</td><td>${d.isAvailable?'✅':'❌'}</td><td>${d.isActive?'✅':'🚫'}</td><td>${d.activeOrdersCount}</td><td><button class="btn btn-sm btn-outline" onclick="toggleDriver('${d.id}')">توفر</button><button class="btn btn-sm btn-warning" onclick="blockDriver('${d.id}')">${d.isActive?'حظر':'تفعيل'}</button><button class="btn btn-sm btn-danger" onclick="deleteDriver('${d.id}')">حذف</button><button class="btn btn-sm btn-info" onclick="driverDetails('${d.id}')">تفاصيل</button></td></tr>`).join('')}
+      </tbody></table></div>
+    </div>`;
 }
 async function toggleDriver(id){ await apiFetch(API+'/admin/drivers/'+id+'/toggle',{method:'PATCH'}); loadDrivers(); }
 async function blockDriver(id){ await apiFetch(API+'/admin/drivers/'+id+'/block',{method:'PATCH'}); loadDrivers(); }
@@ -389,20 +399,20 @@ async function driverDetails(id){
   const res=await apiFetch(API+'/admin/drivers/'+id+'/details'); const d=await res.json();
   openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>تفاصيل الطيار</h3>
     <p>الاسم: ${d.name}</p><p>الهاتف: ${d.phone}</p><p>الأرباح الكلية: ${d.earnings} ج</p><p>الرصيد: ${d.credit||0} ج</p><p>طلبات اليوم: ${d.todayOrdersCount}</p><p>إيراد اليوم: ${d.todayRevenue} ج</p>
-    <h4>طلبات اليوم</h4>${d.todayOrders.length?d.todayOrders.map(o=>`<div>#${o.id.slice(-6)} - ${o.restaurantName} - ${o.total} ج</div>`).join(''):'لا يوجد'}`);
+    <h4>طلبات اليوم</h4>${d.todayOrders.length?d.todayOrders.map(o=>`<div>#${o.orderNumber||o.id.slice(-6)} - ${o.restaurantName} - ${o.total} ج</div>`).join(''):'لا يوجد'}`);
 }
 async function deleteDriver(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/drivers/'+id,{method:'DELETE'}); loadDrivers(); } }
 
-// --- الأسواق ---
+// --- الأسواق والصيدليات (بنفس النمط) ---
 async function loadMarkets(){
   const res=await apiFetch(API+'/admin/markets').then(r=>r.json());
   document.getElementById('mainContent').innerHTML=`
-    <div class="flex-between"><h3>الأسواق</h3><button class="btn btn-primary" onclick="showAddMarket()">+ إضافة</button></div>
-    <div class="card"><div class="table-responsive"><table><thead><tr><th>الاسم</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>
-    ${res.map(m=>`<tr><td>${m.name}</td><td>${m.isOpen?'<span class="badge badge-success">مفتوح</span>':'<span class="badge badge-danger">مغلق</span>'}</td>
-      <td><button class="btn btn-sm btn-outline" onclick="toggleMarket('${m.id}')">تبديل</button>
-      <button class="btn btn-sm btn-danger" onclick="deleteMarket('${m.id}')">حذف</button></td></tr>`).join('')}
-    </tbody></table></div></div>`;
+    <div class="section-card">
+      <div class="section-header"><h2>🛒 الأسواق</h2><button class="btn btn-primary" onclick="showAddMarket()">+ إضافة</button></div>
+      <div class="table-responsive"><table><thead><tr><th>الاسم</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>
+        ${res.map(m=>`<tr><td><strong>${m.name}</strong></td><td>${m.isOpen?'<span class="badge badge-success">مفتوح</span>':'<span class="badge badge-danger">مغلق</span>'}</td><td><button class="btn btn-sm btn-outline" onclick="toggleMarket('${m.id}')">تبديل</button><button class="btn btn-sm btn-danger" onclick="deleteMarket('${m.id}')">حذف</button></td></tr>`).join('')}
+      </tbody></table></div>
+    </div>`;
 }
 function showAddMarket(){
   openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>إضافة سوق</h3>
@@ -420,16 +430,15 @@ async function addMarket(){
 async function toggleMarket(id){ await apiFetch(API+'/admin/markets/'+id+'/toggle',{method:'PATCH'}); loadMarkets(); }
 async function deleteMarket(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/markets/'+id,{method:'DELETE'}); loadMarkets(); } }
 
-// --- الصيدليات ---
 async function loadPharmacies(){
   const res=await apiFetch(API+'/admin/pharmacies').then(r=>r.json());
   document.getElementById('mainContent').innerHTML=`
-    <div class="flex-between"><h3>الصيدليات</h3><button class="btn btn-primary" onclick="showAddPharmacy()">+ إضافة</button></div>
-    <div class="card"><div class="table-responsive"><table><thead><tr><th>الاسم</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>
-    ${res.map(p=>`<tr><td>${p.name}</td><td>${p.isOpen?'<span class="badge badge-success">مفتوح</span>':'<span class="badge badge-danger">مغلق</span>'}</td>
-      <td><button class="btn btn-sm btn-outline" onclick="togglePharmacy('${p.id}')">تبديل</button>
-      <button class="btn btn-sm btn-danger" onclick="deletePharmacy('${p.id}')">حذف</button></td></tr>`).join('')}
-    </tbody></table></div></div>`;
+    <div class="section-card">
+      <div class="section-header"><h2>💊 الصيدليات</h2><button class="btn btn-primary" onclick="showAddPharmacy()">+ إضافة</button></div>
+      <div class="table-responsive"><table><thead><tr><th>الاسم</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>
+        ${res.map(p=>`<tr><td><strong>${p.name}</strong></td><td>${p.isOpen?'<span class="badge badge-success">مفتوح</span>':'<span class="badge badge-danger">مغلق</span>'}</td><td><button class="btn btn-sm btn-outline" onclick="togglePharmacy('${p.id}')">تبديل</button><button class="btn btn-sm btn-danger" onclick="deletePharmacy('${p.id}')">حذف</button></td></tr>`).join('')}
+      </tbody></table></div>
+    </div>`;
 }
 function showAddPharmacy(){
   openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>إضافة صيدلية</h3>
@@ -452,11 +461,12 @@ async function loadCustomers(){
   const search=document.getElementById('customerSearch')?.value||'';
   const res=await apiFetch(API+'/admin/customers?search='+search).then(r=>r.json());
   document.getElementById('mainContent').innerHTML=`
-    <div class="flex-between"><h3>العملاء</h3><input class="form-input" id="customerSearch" placeholder="بحث..." oninput="loadCustomers()" style="width:200px;"></div>
-    <div class="card"><div class="table-responsive"><table><thead><tr><th>الاسم</th><th>الهاتف</th><th>المنطقة</th><th>العنوان</th><th>الطلبات</th><th>آخر طلب</th><th>إجراءات</th></tr></thead><tbody>
-    ${res.map(c=>`<tr><td>${c.name}</td><td>${c.phone}</td><td>${c.regionName}</td><td>${c.address}</td><td>${c.totalOrders}</td><td>${c.lastOrderDate?new Date(c.lastOrderDate).toLocaleDateString('ar-EG'):'—'}</td>
-      <td><button class="btn btn-sm btn-warning" onclick="editCustomer('${c.id}')">تعديل</button></td></tr>`).join('')}
-    </tbody></table></div></div>`;
+    <div class="section-card">
+      <div class="section-header"><h2>👥 العملاء</h2><input class="form-input" id="customerSearch" placeholder="بحث..." oninput="loadCustomers()" style="width:200px;"></div>
+      <div class="table-responsive"><table><thead><tr><th>الاسم</th><th>الهاتف</th><th>المنطقة</th><th>العنوان</th><th>الطلبات</th><th>آخر طلب</th><th>إجراءات</th></tr></thead><tbody>
+        ${res.map(c=>`<tr><td><strong>${c.name}</strong></td><td>${c.phone}</td><td>${c.regionName}</td><td>${c.address}</td><td>${c.totalOrders}</td><td>${c.lastOrderDate?new Date(c.lastOrderDate).toLocaleDateString('ar-EG'):'—'}</td><td><button class="btn btn-sm btn-warning" onclick="editCustomer('${c.id}')">تعديل</button></td></tr>`).join('')}
+      </tbody></table></div>
+    </div>`;
 }
 async function editCustomer(id){
   const c=await apiFetch(API+'/admin/customers/'+id).then(r=>r.json());
@@ -479,10 +489,12 @@ async function saveCustomerEdit(id){
 async function loadRegions(){
   const res=await apiFetch(API+'/admin/regions').then(r=>r.json()); allRegions=res;
   document.getElementById('mainContent').innerHTML=`
-    <div class="flex-between"><h3>المناطق</h3><button class="btn btn-primary" onclick="showAddRegion()">+ إضافة</button></div>
-    <div class="card"><table><thead><tr><th>الاسم</th><th>الرسوم</th><th>إجراءات</th></tr></thead><tbody>
-    ${res.map(r=>`<tr><td>${r.name}</td><td>${r.fee} ج</td><td><button class="btn btn-sm btn-warning" onclick="editRegion('${r.id}','${r.name}',${r.fee})">تعديل</button><button class="btn btn-sm btn-danger" onclick="deleteRegion('${r.id}')">حذف</button></td></tr>`).join('')}
-    </tbody></table></div>`;
+    <div class="section-card">
+      <div class="section-header"><h2>📍 المناطق</h2><button class="btn btn-primary" onclick="showAddRegion()">+ إضافة</button></div>
+      <div class="table-responsive"><table><thead><tr><th>الاسم</th><th>الرسوم</th><th>إجراءات</th></tr></thead><tbody>
+        ${res.map(r=>`<tr><td><strong>${r.name}</strong></td><td>${r.fee} ج</td><td><button class="btn btn-sm btn-warning" onclick="editRegion('${r.id}','${r.name}',${r.fee})">تعديل</button><button class="btn btn-sm btn-danger" onclick="deleteRegion('${r.id}')">حذف</button></td></tr>`).join('')}
+      </tbody></table></div>
+    </div>`;
 }
 function showAddRegion(){
   openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>إضافة منطقة</h3>
@@ -508,7 +520,7 @@ async function updateRegion(id){
 }
 async function deleteRegion(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/regions/'+id,{method:'DELETE'}); loadRegions(); } }
 
-// --- الطلبات (تبويبات) ---
+// --- الطلبات (مع تبويبات) ---
 let currentOrderTab = 'new';
 let filteredOrders = [];
 async function loadOrders(){
@@ -518,13 +530,15 @@ async function loadOrders(){
   currentOrderTab='new';
   applyOrderFilter();
   document.getElementById('mainContent').innerHTML=`
-    <div class="flex-between"><h3>الطلبات</h3><input class="form-input" id="ordSearch" placeholder="بحث..." oninput="applyOrderFilter()" style="width:200px;"></div>
-    <div class="tab-bar">
-      <div class="tab-btn active" onclick="switchOrderTab('new')">🆕 جديدة</div>
-      <div class="tab-btn" onclick="switchOrderTab('in-progress')">⏳ قيد التنفيذ</div>
-      <div class="tab-btn" onclick="switchOrderTab('completed')">✅ مكتملة</div>
-    </div>
-    <div class="card"><div class="table-responsive"><table><thead><tr><th>رقم</th><th>العميل</th><th>المطعم</th><th>الإجمالي</th><th>الحالة</th><th>الطيار</th><th>إجراءات</th></tr></thead><tbody id="ordersTbody"></tbody></table></div></div>`;
+    <div class="section-card">
+      <div class="section-header"><h2>📦 الطلبات</h2><input class="form-input" id="ordSearch" placeholder="بحث..." oninput="applyOrderFilter()" style="width:200px;"></div>
+      <div class="tab-bar">
+        <div class="tab-btn active" onclick="switchOrderTab('new')">🆕 جديدة</div>
+        <div class="tab-btn" onclick="switchOrderTab('in-progress')">⏳ قيد التنفيذ</div>
+        <div class="tab-btn" onclick="switchOrderTab('completed')">✅ مكتملة</div>
+      </div>
+      <div class="table-responsive"><table><thead><tr><th>رقم</th><th>العميل</th><th>المطعم</th><th>الإجمالي</th><th>الحالة</th><th>الطيار</th><th>إجراءات</th></tr></thead><tbody id="ordersTbody"></tbody></table></div>
+    </div>`;
   renderOrdersTable();
 }
 function switchOrderTab(tab){
@@ -547,10 +561,10 @@ function applyOrderFilter(){
 function renderOrdersTable(){
   const tbody=document.getElementById('ordersTbody');
   if(!tbody) return;
-  if(!filteredOrders.length){ tbody.innerHTML='<tr><td colspan="7" class="empty">لا توجد طلبات</td></tr>'; return; }
+  if(!filteredOrders.length){ tbody.innerHTML='<tr><td colspan="7"><div class="empty-state">لا توجد طلبات</div></td></tr>'; return; }
   tbody.innerHTML=filteredOrders.map(o=>`
     <tr>
-      <td style="color:var(--brand);font-weight:800">#${o.id.slice(-6)}</td>
+      <td style="color:var(--brand);font-weight:800">#${o.orderNumber||o.id.slice(-6)}</td>
       <td>${o.customerName}</td>
       <td>${o.restaurantName||'—'}</td>
       <td>${o.total} ج</td>
@@ -570,7 +584,7 @@ async function approveOrder(id){ await apiFetch(API+'/admin/orders/'+id+'/approv
 async function rejectOrder(id){ const r=prompt('سبب الرفض:'); if(r===null) return; await apiFetch(API+'/admin/orders/'+id+'/reject',{method:'PATCH',body:JSON.stringify({reason:r})}); loadOrders(); }
 async function editOrder(id){
   const o=allOrdersCache.find(o=>o.id===id);
-  openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>تعديل طلب #${id.slice(-6)}</h3>
+  openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>تعديل طلب #${o.orderNumber||id.slice(-6)}</h3>
     <div class="form-group"><label class="form-label">الأصناف (JSON)</label><textarea class="form-textarea" id="editItems" rows="4">${JSON.stringify(o.items,null,2)}</textarea></div>
     <div class="form-group"><label class="form-label">الإجمالي</label><input class="form-input" type="number" id="editTotal" value="${o.total}"></div>
     <div class="form-group"><label class="form-label">ملاحظات الأدمن</label><input class="form-input" id="editAdminNotes" value="${o.adminNotes||''}"></div>
@@ -588,7 +602,7 @@ async function saveOrderEdit(id){
 function viewOrder(id){
   const o=allOrdersCache.find(o=>o.id===id);
   if(!o) return;
-  openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>تفاصيل #${id.slice(-6)}</h3>
+  openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>تفاصيل #${o.orderNumber||id.slice(-6)}</h3>
     <div style="display:flex;flex-direction:column;gap:8px">
       <div><strong>العميل:</strong> ${o.customerName} (${o.customerPhone})</div>
       <div><strong>المطعم:</strong> ${o.restaurantName||'—'}</div>
@@ -609,22 +623,28 @@ async function loadProducts(){
   const [p,c]=await Promise.all([apiFetch(API+'/admin/products'), apiFetch(API+'/admin/categories')]);
   const products=await p.json(), categories=await c.json();
   document.getElementById('mainContent').innerHTML=`
-    <div class="flex-between"><h3>المنتجات</h3><button class="btn btn-primary" onclick="alert('يمكنك إضافة المنتجات عبر واجهة المطعم')">+ إضافة</button></div>
-    <div class="card"><div class="table-responsive"><table><thead><tr><th>الصورة</th><th>الاسم</th><th>السعر</th><th>التصنيف</th><th>المطعم</th><th>حذف</th></tr></thead><tbody>
-    ${products.map(p=>`<tr><td><img src="${p.image}" width="40" height="40" style="border-radius:8px"></td><td>${p.name}</td><td>${p.price||p.basePrice} ج</td><td>${p.category}</td><td>${p.restaurantName||''}</td><td><button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.id}')">حذف</button></td></tr>`).join('')}
-    </tbody></table></div></div>
-    <div class="card"><h3>التصنيفات</h3><button class="btn btn-primary btn-sm" onclick="addCategory()">+ إضافة</button>
-      <div style="margin-top:12px">${categories.map(c=>`<span class="badge badge-info" style="margin:4px">${c.name} <button onclick="deleteCategory('${c.id}')" style="border:none;color:red;cursor:pointer">×</button></span>`).join('')}</div></div>`;
+    <div class="section-card">
+      <div class="section-header"><h2>🏷️ المنتجات</h2><button class="btn btn-primary btn-sm" onclick="alert('يمكنك إضافة المنتجات عبر واجهة المطعم')">+ إضافة</button></div>
+      <div class="table-responsive"><table><thead><tr><th>الصورة</th><th>الاسم</th><th>السعر</th><th>التصنيف</th><th>المطعم</th><th>حذف</th></tr></thead><tbody>
+        ${products.map(p=>`<tr><td><img src="${p.image}" width="40" height="40" style="border-radius:8px"></td><td>${p.name}</td><td>${p.price||p.basePrice} ج</td><td>${p.category}</td><td>${p.restaurantName||''}</td><td><button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.id}')">حذف</button></td></tr>`).join('')}
+      </tbody></table></div>
+    </div>
+    <div class="section-card">
+      <div class="section-header"><h2>التصنيفات</h2><button class="btn btn-primary btn-sm" onclick="addCategory()">+ إضافة</button></div>
+      <div style="margin-top:12px">${categories.map(c=>`<span class="badge badge-info" style="margin:4px">${c.name} <button onclick="deleteCategory('${c.id}')" style="border:none;color:red;cursor:pointer">×</button></span>`).join('')}</div>
+    </div>`;
 }
 async function deleteProduct(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/products/'+id,{method:'DELETE'}); loadProducts(); } }
 function addCategory(){ const n=prompt('اسم التصنيف:'); if(n) apiFetch(API+'/admin/categories',{method:'POST',body:JSON.stringify({name:n})}).then(()=>loadProducts()); }
 async function deleteCategory(id){ await apiFetch(API+'/admin/categories/'+id,{method:'DELETE'}); loadProducts(); }
 
-// --- الأصوات (رفع ملفات) ---
+// --- إدارة الأصوات (رفع مباشر) ---
 async function loadSounds(){
-  document.getElementById('mainContent').innerHTML=`
-    <h3>🎵 إدارة الأصوات</h3>
-    <div class="grid-2" id="soundCards"></div>`;
+  document.getElementById('mainContent').innerHTML = `
+    <div class="section-card">
+      <div class="section-header"><h2>🎵 إدارة الأصوات</h2></div>
+      <div class="grid-3" id="soundCards"></div>
+    </div>`;
   renderSoundCards();
 }
 function renderSoundCards(){
@@ -637,52 +657,51 @@ function renderSoundCards(){
   ];
   let html = '';
   events.forEach(role => {
-    html += `<div class="card"><h3>${role.role}</h3>`;
     role.items.forEach(ev => {
       const id = `${role.prefix}_${ev}`;
       html += `
-        <div class="flex-between" style="margin-bottom:12px">
-          <span>${ev.replace(/_/g,' ')}</span>
-          <div>
-            <audio controls style="height:30px;width:120px"><source src="/sounds/${id}.mp3"></audio>
-            <button class="btn btn-sm btn-primary" onclick="document.getElementById('file_${id}').click()">📤</button>
-            <input type="file" id="file_${id}" accept="audio/*" style="display:none" onchange="uploadSound('${id}',this)">
+        <div class="section-card" style="padding:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div><strong>${role.role}</strong> - ${ev.replace(/_/g,' ')}</div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <audio controls style="height:30px; width:120px;"><source src="/sounds/${id}.mp3"></audio>
+              <button class="btn btn-sm btn-primary" onclick="document.getElementById('file_${id}').click()">📤</button>
+              <input type="file" id="file_${id}" accept="audio/*" style="display:none" onchange="uploadSound('${id}', this)">
+            </div>
           </div>
         </div>`;
     });
-    html += `</div>`;
   });
   document.getElementById('soundCards').innerHTML = html;
 }
-async function uploadSound(eventId, input){
+async function uploadSound(eventId, input) {
   const file = input.files[0];
-  if(!file) return;
+  if (!file) return;
   const formData = new FormData();
   formData.append('sound', file);
   formData.append('event', eventId);
   try {
-    const res = await apiFetch(API+'/admin/upload-sound', { method:'POST', body:formData });
+    const res = await fetch(API + '/admin/upload-sound', {
+      method: 'POST',
+      body: formData,
+      credentials: 'include'
+    });
     const data = await res.json();
-    if(data.error) return showToast(data.error);
-    showToast('✅ تم الرفع');
+    if (data.error) { showToast('❌ ' + data.error); return; }
+    showToast('✅ تم رفع الصوت');
     const audio = document.querySelector(`audio[src="/sounds/${eventId}.mp3"]`);
-    if(audio) audio.src = `/sounds/${eventId}.mp3?t=${Date.now()}`;
-  } catch(e) { showToast('❌ فشل الرفع'); }
+    if (audio) audio.src = `/sounds/${eventId}.mp3?t=${Date.now()}`;
+  } catch (e) { showToast('❌ فشل الاتصال'); }
 }
 
 // --- طلبات الشحن ---
 async function loadRecharge(){
   const res=await apiFetch(API+'/admin/recharge-requests?status=PENDING').then(r=>r.json());
   document.getElementById('mainContent').innerHTML=`
-    <h3>💰 طلبات الشحن المعلقة</h3>
-    ${res.length?res.map(r=>`<div class="card"><div class="flex-between">
-      <div><strong>${r.driverName}</strong> (${r.driverPhone})</div>
-      <div>المبلغ: <strong>${r.amount} ج</strong></div>
-      <div>آخر 4 أرقام: <strong>${r.last4digits}</strong></div>
-      <div>${new Date(r.createdAt).toLocaleString('ar-EG')}</div>
-      <div><button class="btn btn-sm btn-success" onclick="approveRecharge('${r.id}')">✅</button>
-      <button class="btn btn-sm btn-danger" onclick="rejectRecharge('${r.id}')">❌</button></div>
-    </div></div>`).join('') : '<div class="empty">لا توجد طلبات</div>'}`;
+    <div class="section-card">
+      <div class="section-header"><h2>💰 طلبات الشحن المعلقة</h2></div>
+      ${res.length?res.map(r=>`<div class="info-item"><div><strong>${r.driverName}</strong> (${r.driverPhone})</div><div>المبلغ: <strong>${r.amount} ج</strong></div><div>آخر 4 أرقام: <strong>${r.last4digits}</strong></div><div>${new Date(r.createdAt).toLocaleString('ar-EG')}</div><div><button class="btn btn-sm btn-success" onclick="approveRecharge('${r.id}')">✅</button><button class="btn btn-sm btn-danger" onclick="rejectRecharge('${r.id}')">❌</button></div></div>`).join('') : '<div class="empty-state">لا توجد طلبات</div>'}
+    </div>`;
 }
 async function approveRecharge(id){ if(confirm('موافقة؟')){ await apiFetch(API+'/admin/recharge-requests/'+id+'/approve',{method:'PATCH'}); showToast('تم'); loadRecharge(); } }
 async function rejectRecharge(id){ if(confirm('رفض؟')){ await apiFetch(API+'/admin/recharge-requests/'+id+'/reject',{method:'PATCH'}); showToast('تم'); loadRecharge(); } }
@@ -691,7 +710,6 @@ async function rejectRecharge(id){ if(confirm('رفض؟')){ await apiFetch(API+'
 async function loadReports(){
   const data=await apiFetch(API+'/admin/reports/full').then(r=>r.json());
   document.getElementById('mainContent').innerHTML=`
-    <h3>التقارير</h3>
     <div class="stats-grid">
       <div class="stat-card"><h4>يومي</h4><div class="value">${data.daily.count} طلب</div><div>${data.daily.totalRevenue} ج</div></div>
       <div class="stat-card"><h4>أسبوعي</h4><div class="value">${data.weekly.count} طلب</div><div>${data.weekly.totalRevenue} ج</div></div>
@@ -699,8 +717,8 @@ async function loadReports(){
       <div class="stat-card"><h4>الإجمالي</h4><div class="value">${data.total.count} طلب</div><div>${data.total.totalRevenue} ج</div></div>
     </div>
     <div class="grid-2">
-      <div class="card"><h3>أفضل المطاعم (شهري)</h3>${data.restaurants.month.map(r=>`<div class="flex-between"><span>${r.name}</span><span>${r.netRevenue} ج</span></div>`).join('')}</div>
-      <div class="card"><h3>أفضل الطيارين (شهري)</h3>${data.drivers.month.map(d=>`<div class="flex-between"><span>${d.name}</span><span>${d.revenue} ج</span></div>`).join('')}</div>
+      <div class="section-card"><h3>أفضل المطاعم (شهري)</h3>${data.restaurants.month.map(r=>`<div class="info-item"><span>${r.name}</span><span>${r.netRevenue} ج</span></div>`).join('')}</div>
+      <div class="section-card"><h3>أفضل الطيارين (شهري)</h3>${data.drivers.month.map(d=>`<div class="info-item"><span>${d.name}</span><span>${d.revenue} ج</span></div>`).join('')}</div>
     </div>`;
 }
 
