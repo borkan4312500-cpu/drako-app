@@ -45,8 +45,8 @@ const soundStorage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     const event = req.body.event;
-    const ext = path.extname(file.originalname);
-    cb(null, event + ext);
+    // احفظ الملف دائماً بامتداد mp3
+    cb(null, event + '.mp3');
   }
 });
 const soundUpload = multer({
