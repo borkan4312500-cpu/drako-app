@@ -16,7 +16,6 @@
     body { background:var(--bg); color:var(--text); direction:rtl; min-height:100vh; }
     .app-layout { display:flex; min-height:100vh; }
 
-    /* شاشة تسجيل الدخول */
     .login-overlay {
       position:fixed; inset:0; background:var(--bg); z-index:9999;
       display:flex; align-items:center; justify-content:center; padding:24px;
@@ -35,7 +34,6 @@
     .btn-primary { background:var(--brand); color:white; }
     .error-msg { color:#F44336; font-size:13px; margin-top:8px; display:none; }
 
-    /* الشريط الجانبي */
     .sidebar {
       width:var(--sidebar-width); background:#1f2937; color:white; display:flex;
       flex-direction:column; position:fixed; top:0; right:0; bottom:0; z-index:1000;
@@ -188,34 +186,59 @@
 const API = '/api';
 let allRegions = [];
 let audioActivated = false;
+let audioCtx = null;
 
-// ---------- الصوتيات ----------
-const SOUNDS = {
-  adminNewOrder: '/sounds/admin_new_order.mp3',
-  orderCancelled: '/sounds/admin_order_cancelled.mp3',
-  driverArrived: '/sounds/admin_driver_arrived.mp3'
-};
+// ---------- نظام الصوت الهجين (ملفات / نغمات افتراضية) ----------
+function playTone(frequency, duration, type = 'square', volume = 0.3) {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { return; }
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  const oscillator = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+  gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  oscillator.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+  oscillator.start();
+  oscillator.stop(audioCtx.currentTime + duration);
+}
 
-function playSound(name) {
+const audioElements = {};
+function playSound(name, fallbackFreq = 800, fallbackType = 'square') {
   if (!audioActivated) return;
-  try {
-    const url = SOUNDS[name];
-    if (!url) return;
+  const url = `/sounds/admin_${name}.mp3`;
+  if (audioElements[name]) {
+    audioElements[name].currentTime = 0;
+    audioElements[name].play().catch(() => playTone(fallbackFreq, 0.2, fallbackType));
+  } else {
     const audio = new Audio(url);
     audio.volume = 0.5;
-    audio.play().catch(() => {});
-  } catch(e) {}
+    audio.play().then(() => { audioElements[name] = audio; }).catch(() => playTone(fallbackFreq, 0.2, fallbackType));
+  }
 }
 
 async function activateAudio() {
-  const temp = new Audio('/sounds/admin_new_order.mp3');
-  temp.volume = 0.1;
+  if (audioActivated) return;
   try {
-    await temp.play();
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+    // تشغيل نغمة صامتة للتفعيل
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    gain.gain.value = 0.001;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.001);
     audioActivated = true;
-    showToast('✅ تم تفعيل الإشعارات الصوتية');
+    showToast('✅ تم تفعيل الإشعارات الصوتية (النغمات الافتراضية)');
   } catch(e) {
-    showToast('❌ فشل تفعيل الصوت، تأكد من وجود الملفات الصوتية في مجلد /sounds');
+    showToast('❌ فشل تفعيل الصوت. قد لا يدعم متصفحك AudioContext.');
   }
 }
 
@@ -421,7 +444,7 @@ async function driverDetails(id){
 }
 async function deleteDriver(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/drivers/'+id,{method:'DELETE'}); loadDrivers(); } }
 
-// --- الأسواق والصيدليات (بنفس النمط) ---
+// --- الأسواق والصيدليات ---
 async function loadMarkets(){
   const res=await apiFetch(API+'/admin/markets').then(r=>r.json());
   document.getElementById('mainContent').innerHTML=`
@@ -660,7 +683,7 @@ async function deleteCategory(id){ await apiFetch(API+'/admin/categories/'+id,{m
 async function loadSounds(){
   document.getElementById('mainContent').innerHTML = `
     <div class="section-card">
-      <div class="section-header"><h2>🎵 إدارة الأصوات</h2></div>
+      <div class="section-header"><h2>🎵 إدارة الأصوات</h2><p style="font-size:12px;color:var(--text-muted)">عند رفع ملف، سيتم استخدامه فوراً. وإلا تعمل النغمات الافتراضية.</p></div>
       <div class="grid-3" id="soundCards"></div>
     </div>`;
   renderSoundCards();
@@ -707,15 +730,11 @@ async function uploadSound(eventId, input) {
     const data = await res.json();
     if (data.error) { showToast('❌ ' + data.error); return; }
     showToast('✅ تم رفع الصوت');
-    // تحديث المشغل وتشغيل الصوت مباشرة للمعاينة
     const audio = document.getElementById('audio_' + eventId);
     if (audio) {
       audio.src = `/sounds/${eventId}.mp3?t=${Date.now()}`;
       audio.load();
       audio.play().catch(() => {});
-    }
-    if (!audioActivated) {
-      activateAudio();
     }
   } catch (e) { showToast('❌ فشل الاتصال'); }
 }
@@ -771,12 +790,12 @@ function initApp() {
   navigate('dashboard');
   const socket=io();
   window._socket = socket;
-  socket.on('newOrder',data=>{ playSound('adminNewOrder'); showToast('طلب جديد من '+data.customerName); });
-  socket.on('orderCancelled',data=>{ playSound('orderCancelled'); showToast('تم إلغاء طلب #'+(data.orderId||'').slice(-6),'error'); });
-  socket.on('driverArrived',data=>{ playSound('driverArrived'); showToast('الطيار '+data.driverName+' وصل'); });
+  socket.on('newOrder',data=>{ playSound('newOrder', 800, 'square'); showToast('طلب جديد من '+data.customerName); });
+  socket.on('orderCancelled',data=>{ playSound('orderCancelled', 400, 'triangle'); showToast('تم إلغاء طلب #'+(data.orderId||'').slice(-6),'error'); });
+  socket.on('driverArrived',data=>{ playSound('driverArrived', 600, 'sine'); showToast('الطيار '+data.driverName+' وصل'); });
 }
 
-// تفعيل الصوت عند أول نقرة كحل بديل
+// تفعيل الصوت عند أول نقرة تلقائياً
 document.addEventListener('click', function initialActivation() {
   if (!audioActivated) activateAudio();
   document.removeEventListener('click', initialActivation);
