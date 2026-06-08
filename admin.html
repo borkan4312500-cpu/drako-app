@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
@@ -169,7 +169,10 @@
     <div class="topbar">
       <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
       <h1 id="pageTitle">لوحة التحكم</h1>
-      <div><button class="btn btn-primary btn-sm" onclick="testOrder()">🧪 طلب تجريبي</button></div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-sm" style="background:#3b82f6;color:white;" onclick="activateAudio()">🔊 تفعيل الصوت</button>
+        <button class="btn btn-primary btn-sm" onclick="testOrder()">🧪 طلب تجريبي</button>
+      </div>
     </div>
     <div class="content" id="mainContent"></div>
   </main>
@@ -184,14 +187,17 @@
 <script>
 const API = '/api';
 let allRegions = [];
+let audioActivated = false;
 
-// ---------- الصوتيات (ملفات /sounds) ----------
+// ---------- الصوتيات ----------
 const SOUNDS = {
   adminNewOrder: '/sounds/admin_new_order.mp3',
   orderCancelled: '/sounds/admin_order_cancelled.mp3',
   driverArrived: '/sounds/admin_driver_arrived.mp3'
 };
+
 function playSound(name) {
+  if (!audioActivated) return;
   try {
     const url = SOUNDS[name];
     if (!url) return;
@@ -199,6 +205,18 @@ function playSound(name) {
     audio.volume = 0.5;
     audio.play().catch(() => {});
   } catch(e) {}
+}
+
+async function activateAudio() {
+  const temp = new Audio('/sounds/admin_new_order.mp3');
+  temp.volume = 0.1;
+  try {
+    await temp.play();
+    audioActivated = true;
+    showToast('✅ تم تفعيل الإشعارات الصوتية');
+  } catch(e) {
+    showToast('❌ فشل تفعيل الصوت، تأكد من وجود الملفات الصوتية في مجلد /sounds');
+  }
 }
 
 // ---------- دوال عامة ----------
@@ -306,7 +324,7 @@ async function loadDashboard(){
     </div>
     <div class="section-card">
       <div class="section-header"><h2>📦 أحدث الطلبات</h2></div>
-      ${orders.slice(-6).reverse().map(o=>`<div class="info-item" style="cursor:pointer" onclick="viewOrder('${o.id}')"><span>#${o.orderNumber||o.id.slice(-6)}</span><span>${o.customerName}</span><span>${o.total} ج</span>${statusBadge(o.status)}</div>`).join('')}
+      ${orders.slice(-6).reverse().map(o=>`<div class="info-item" style="cursor:pointer" onclick="viewOrder('${o.id}')"><span><strong>#${o.orderNumber||'-'}</strong></span><span>${o.customerName}</span><span>${o.total} ج</span>${statusBadge(o.status)}</div>`).join('')}
     </div>`;
 }
 
@@ -319,7 +337,7 @@ async function loadDispatch(){
     <div class="section-card">
       <div class="section-header"><h2>🛵 توزيع الطلبات الجاهزة (${ready.length})</h2></div>
       <div class="table-responsive"><table><thead><tr><th>الطلب</th><th>العميل</th><th>المطعم</th><th>المنطقة</th><th>تعيين طيار</th></tr></thead><tbody>
-        ${ready.map(o=>`<tr><td>#${o.orderNumber||o.id.slice(-6)}</td><td>${o.customerName}</td><td>${o.restaurantName||''}</td><td>${o.regionName||o.address||''}</td><td><select onchange="assignDriver('${o.id}',this.value)" class="form-input" style="width:auto"><option value="">اختر</option>${avail.map(d=>`<option value="${d.id}">${d.name}</option>`).join('')}</select></td></tr>`).join('')}
+        ${ready.map(o=>`<tr><td><strong>#${o.orderNumber||'-'}</strong></td><td>${o.customerName}</td><td>${o.restaurantName||''}</td><td>${o.regionName||o.address||''}</td><td><select onchange="assignDriver('${o.id}',this.value)" class="form-input" style="width:auto"><option value="">اختر</option>${avail.map(d=>`<option value="${d.id}">${d.name}</option>`).join('')}</select></td></tr>`).join('')}
       </tbody></table></div>
     </div>`;
 }
@@ -368,7 +386,7 @@ async function saveRestaurantEdit(id){
 }
 async function deleteRestaurant(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/restaurants/'+id,{method:'DELETE'}); loadRestaurants(); } }
 
-// --- الطيارين (مع الرصيد والتفاصيل) ---
+// --- الطيارين (مع الرصيد) ---
 async function loadDrivers(){
   const res=await apiFetch(API+'/admin/drivers').then(r=>r.json());
   allDriversCache=res;
@@ -399,7 +417,7 @@ async function driverDetails(id){
   const res=await apiFetch(API+'/admin/drivers/'+id+'/details'); const d=await res.json();
   openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>تفاصيل الطيار</h3>
     <p>الاسم: ${d.name}</p><p>الهاتف: ${d.phone}</p><p>الأرباح الكلية: ${d.earnings} ج</p><p>الرصيد: ${d.credit||0} ج</p><p>طلبات اليوم: ${d.todayOrdersCount}</p><p>إيراد اليوم: ${d.todayRevenue} ج</p>
-    <h4>طلبات اليوم</h4>${d.todayOrders.length?d.todayOrders.map(o=>`<div>#${o.orderNumber||o.id.slice(-6)} - ${o.restaurantName} - ${o.total} ج</div>`).join(''):'لا يوجد'}`);
+    <h4>طلبات اليوم</h4>${d.todayOrders.length?d.todayOrders.map(o=>`<div>#${o.orderNumber||'-'} - ${o.restaurantName} - ${o.total} ج</div>`).join(''):'لا يوجد'}`);
 }
 async function deleteDriver(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/drivers/'+id,{method:'DELETE'}); loadDrivers(); } }
 
@@ -520,7 +538,7 @@ async function updateRegion(id){
 }
 async function deleteRegion(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/regions/'+id,{method:'DELETE'}); loadRegions(); } }
 
-// --- الطلبات (مع تبويبات) ---
+// --- الطلبات (مع تبويبات و orderNumber) ---
 let currentOrderTab = 'new';
 let filteredOrders = [];
 async function loadOrders(){
@@ -564,7 +582,7 @@ function renderOrdersTable(){
   if(!filteredOrders.length){ tbody.innerHTML='<tr><td colspan="7"><div class="empty-state">لا توجد طلبات</div></td></tr>'; return; }
   tbody.innerHTML=filteredOrders.map(o=>`
     <tr>
-      <td style="color:var(--brand);font-weight:800">#${o.orderNumber||o.id.slice(-6)}</td>
+      <td style="color:var(--brand);font-weight:800">#${o.orderNumber||'-'}</td>
       <td>${o.customerName}</td>
       <td>${o.restaurantName||'—'}</td>
       <td>${o.total} ج</td>
@@ -638,7 +656,7 @@ async function deleteProduct(id){ if(confirm('حذف؟')){ await apiFetch(API+'/
 function addCategory(){ const n=prompt('اسم التصنيف:'); if(n) apiFetch(API+'/admin/categories',{method:'POST',body:JSON.stringify({name:n})}).then(()=>loadProducts()); }
 async function deleteCategory(id){ await apiFetch(API+'/admin/categories/'+id,{method:'DELETE'}); loadProducts(); }
 
-// --- إدارة الأصوات (رفع مباشر) ---
+// --- إدارة الأصوات (رفع مباشر وتشغيل) ---
 async function loadSounds(){
   document.getElementById('mainContent').innerHTML = `
     <div class="section-card">
@@ -664,7 +682,7 @@ function renderSoundCards(){
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <div><strong>${role.role}</strong> - ${ev.replace(/_/g,' ')}</div>
             <div style="display:flex; align-items:center; gap:8px;">
-              <audio controls style="height:30px; width:120px;"><source src="/sounds/${id}.mp3"></audio>
+              <audio controls style="height:30px; width:120px;" id="audio_${id}"><source src="/sounds/${id}.mp3"></audio>
               <button class="btn btn-sm btn-primary" onclick="document.getElementById('file_${id}').click()">📤</button>
               <input type="file" id="file_${id}" accept="audio/*" style="display:none" onchange="uploadSound('${id}', this)">
             </div>
@@ -689,8 +707,16 @@ async function uploadSound(eventId, input) {
     const data = await res.json();
     if (data.error) { showToast('❌ ' + data.error); return; }
     showToast('✅ تم رفع الصوت');
-    const audio = document.querySelector(`audio[src="/sounds/${eventId}.mp3"]`);
-    if (audio) audio.src = `/sounds/${eventId}.mp3?t=${Date.now()}`;
+    // تحديث المشغل وتشغيل الصوت مباشرة للمعاينة
+    const audio = document.getElementById('audio_' + eventId);
+    if (audio) {
+      audio.src = `/sounds/${eventId}.mp3?t=${Date.now()}`;
+      audio.load();
+      audio.play().catch(() => {});
+    }
+    if (!audioActivated) {
+      activateAudio();
+    }
   } catch (e) { showToast('❌ فشل الاتصال'); }
 }
 
@@ -750,6 +776,12 @@ function initApp() {
   socket.on('driverArrived',data=>{ playSound('driverArrived'); showToast('الطيار '+data.driverName+' وصل'); });
 }
 
+// تفعيل الصوت عند أول نقرة كحل بديل
+document.addEventListener('click', function initialActivation() {
+  if (!audioActivated) activateAudio();
+  document.removeEventListener('click', initialActivation);
+}, { once: true });
+
 async function checkSession() {
   try {
     const res = await fetch(API + '/whoami', { credentials: 'include' });
@@ -764,17 +796,6 @@ async function checkSession() {
   } catch (e) {}
   showLogin();
 }
-// تفعيل الصوت تلقائياً بعد أول تفاعل من المستخدم (حل لمشكلة Autoplay)
-document.addEventListener('click', function enableAudioOnce() {
-  // تشغيل أي صوت صامت وهمي لتنشيط السياق الصوتي
-  const temp = new Audio('/sounds/admin_new_order.mp3');
-  temp.volume = 0;
-  temp.play().then(() => {
-    console.log('✅ تم تفعيل الصوت بنجاح');
-  }).catch(() => {});
-  // إزالة المستمع بعد أول نقرة
-  document.removeEventListener('click', enableAudioOnce);
-}, { once: true });
 checkSession();
 </script>
 </body>
