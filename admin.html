@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
@@ -764,6 +764,17 @@ async function checkSession() {
   } catch (e) {}
   showLogin();
 }
+// تفعيل الصوت تلقائياً بعد أول تفاعل من المستخدم (حل لمشكلة Autoplay)
+document.addEventListener('click', function enableAudioOnce() {
+  // تشغيل أي صوت صامت وهمي لتنشيط السياق الصوتي
+  const temp = new Audio('/sounds/admin_new_order.mp3');
+  temp.volume = 0;
+  temp.play().then(() => {
+    console.log('✅ تم تفعيل الصوت بنجاح');
+  }).catch(() => {});
+  // إزالة المستمع بعد أول نقرة
+  document.removeEventListener('click', enableAudioOnce);
+}, { once: true });
 checkSession();
 </script>
 </body>
