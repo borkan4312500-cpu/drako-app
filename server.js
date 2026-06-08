@@ -12,13 +12,18 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// مساعدة لتفعيل secure تلقائياً حتى خلف proxy
 app.set('trust proxy', 1);
 
-// إعداد multer لرفع الملفات
+// --- إعداد المجلدات الأساسية ---
+const SOUNDS_DIR = path.join(__dirname, 'sounds');
+const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
+if (!fs.existsSync(SOUNDS_DIR)) fs.mkdirSync(SOUNDS_DIR);
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR);
+
+// --- إعداد Multer للمرفقات العامة ---
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    let dir = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
+    let dir = UPLOADS_DIR;
     if (req.originalUrl.includes('/orders/special')) {
       dir = path.join(dir, 'special_orders');
     }
@@ -31,7 +36,30 @@ const storage = multer.diskStorage({
   }
 });
 const upload = multer({ storage: storage });
-app.use('/uploads', express.static(process.env.UPLOADS_DIR || path.join(__dirname, 'uploads')));
+
+// --- إعداد Multer لملفات الصوت (استبدال مباشر) ---
+const soundStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    if (!fs.existsSync(SOUNDS_DIR)) fs.mkdirSync(SOUNDS_DIR);
+    cb(null, SOUNDS_DIR);
+  },
+  filename: function (req, file, cb) {
+    const event = req.body.event;
+    const ext = path.extname(file.originalname);
+    cb(null, event + ext);
+  }
+});
+const soundUpload = multer({
+  storage: soundStorage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('audio/')) cb(null, true);
+    else cb(new Error('فقط ملفات الصوت مسموحة'));
+  }
+});
+
+// --- خدمة المجلدات الثابتة ---
+app.use('/uploads', express.static(UPLOADS_DIR));
+app.use('/sounds', express.static(SOUNDS_DIR));
 
 const http = require('http');
 const { Server } = require('socket.io');
@@ -42,7 +70,6 @@ const DATA_DIR = process.env.DATA_DIR || __dirname;
 const DATA_FILE = path.join(DATA_DIR, 'data.json');
 const JWT_SECRET = process.env.JWT_SECRET || 'drako_secret_key_fallback';
 
-// دالة مساعدة لتحديد secure تلقائياً
 const isSecure = (req) => req.secure || req.headers['x-forwarded-proto'] === 'https';
 
 // تجديد الكوكي تلقائياً
@@ -62,6 +89,7 @@ app.use((req, res, next) => {
   next();
 });
 
+// ================== دوال قراءة وكتابة البيانات ==================
 function readData() {
   if (!fs.existsSync(DATA_FILE)) {
     const initial = {
@@ -79,7 +107,9 @@ function readData() {
         { id: 'reg_3', name: 'المنصورة الجديدة', fee: 20 },
         { id: 'reg_4', name: 'الدلتا', fee: 25 },
         { id: 'reg_5', name: 'الشيخ زايد', fee: 30 }
-      ]
+      ],
+      rechargeRequests: [],
+      dailyOrderCounter: { date: new Date().toISOString().slice(0,10), counter: 0 }
     };
     initial.users.push({
       id: "admin1",
@@ -97,6 +127,8 @@ function readData() {
   if (!data.regions) data.regions = [];
   if (!data.markets) data.markets = [];
   if (!data.pharmacies) data.pharmacies = [];
+  if (!data.rechargeRequests) data.rechargeRequests = [];
+  if (!data.dailyOrderCounter) data.dailyOrderCounter = { date: new Date().toISOString().slice(0,10), counter: 0 };
   const adminUser = data.users.find(u => u.phone === '01000000000');
   if (adminUser && adminUser.role !== 'ADMIN') adminUser.role = 'ADMIN';
   return data;
@@ -106,7 +138,19 @@ function writeData(data) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 }
 
-// Middlewares
+// دالة مساعدة للحصول على رقم الطلب اليومي التصاعدي
+function getNextOrderNumber() {
+  const data = readData();
+  const today = new Date().toISOString().slice(0,10);
+  if (data.dailyOrderCounter.date !== today) {
+    data.dailyOrderCounter = { date: today, counter: 0 };
+  }
+  data.dailyOrderCounter.counter += 1;
+  writeData(data);
+  return data.dailyOrderCounter.counter;
+}
+
+// ================== Middlewares ==================
 function requireAuth(req, res, next) {
   const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'غير مصرح' });
@@ -121,20 +165,7 @@ function adminOnly(req, res, next) {
   next();
 }
 
-function rolePageAuth(requiredRole) {
-  return (req, res, next) => {
-    const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
-    if (!token) return res.redirect('/login.html?redirect=' + encodeURIComponent(req.originalUrl));
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      if (decoded.role !== requiredRole) return res.redirect('/login.html?error=role');
-      req.user = decoded;
-      next();
-    } catch { return res.redirect('/login.html?redirect=' + encodeURIComponent(req.originalUrl)); }
-  };
-}
-
-// الصفحات الثابتة
+// ================== الصفحات الثابتة ==================
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'customer.html')));
 app.get('/customer', (req, res) => res.sendFile(path.join(__dirname, 'customer.html')));
 app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, 'login.html')));
@@ -144,38 +175,27 @@ app.get('/driver', (req, res) => res.sendFile(path.join(__dirname, 'driver.html'
 app.get('/market', (req, res) => res.sendFile(path.join(__dirname, 'market.html')));
 app.get('/pharmacy', (req, res) => res.sendFile(path.join(__dirname, 'pharmacy.html')));
 
-// تسجيل الدخول
+// ================== المصادقة ==================
 app.post('/login', (req, res) => {
-  const { phone, password, redirect } = req.body;
+  const { phone, password } = req.body;
   const data = readData();
   const user = data.users.find(u => u.phone === phone);
   if (!user || !bcrypt.compareSync(password, user.password)) {
-    return res.redirect('/login.html?error=1');
+    return res.status(401).json({ error: 'بيانات خاطئة' });
   }
   const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '365d' });
-  res.cookie('token', token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: isSecure(req),
-    maxAge: 365 * 24 * 60 * 60 * 1000
-  });
-  let target = '/';
-  switch (user.role) {
-    case 'ADMIN': target = '/admin'; break;
-    case 'RESTAURANT': target = '/restaurant'; break;
-    case 'DRIVER': target = '/driver'; break;
-    case 'MARKET': target = '/market'; break;
-    case 'PHARMACY': target = '/pharmacy'; break;
-    default: return res.send('تم الدخول');
-  }
-  if (redirect) {
-    const redirectPrefix = '/' + redirect.split('/')[1];
-    if (target.startsWith(redirectPrefix)) target = redirect;
-  }
-  return res.redirect(target);
+  res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 365 * 24 * 60 * 60 * 1000 });
+  res.json({ token, user: { id: user.id, name: user.name, role: user.role } });
 });
 
 app.get('/logout', (req, res) => { res.clearCookie('token'); res.redirect('/'); });
+
+app.get('/api/whoami', requireAuth, (req, res) => {
+  const data = readData();
+  const user = data.users.find(u => u.id === req.user.id);
+  if (!user) return res.status(404).json({ error: 'مستخدم غير موجود' });
+  res.json({ token: jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '365d' }), user: { id: user.id, name: user.name, role: user.role } });
+});
 
 // ==================== ADMIN ====================
 app.get('/api/admin/stats', requireAuth, adminOnly, (req, res) => {
@@ -191,12 +211,12 @@ app.get('/api/admin/dashboard', requireAuth, adminOnly, (req, res) => {
   const availableDrivers = data.users.filter(u => u.role === 'DRIVER').map(u => {
     const dp = data.drivers.find(d => d.userId === u.id) || {};
     const activeCount = data.orders.filter(o => o.driverId === u.id && !['DELIVERED','CANCELLED'].includes(o.status)).length;
-    return { id: u.id, name: u.name, phone: u.phone, earnings: dp.earnings || 0, isAvailable: dp.isAvailable !== false, isActive: u.isActive !== false, activeOrdersCount: activeCount };
+    return { id: u.id, name: u.name, phone: u.phone, earnings: dp.earnings || 0, credit: dp.credit || 0, isAvailable: dp.isAvailable !== false, isActive: u.isActive !== false, activeOrdersCount: activeCount };
   });
   res.json({ todayOrders: todayOrders.length, activeOrders: activeOrders.length, restaurants: data.restaurants.length, drivers: data.drivers.length, totalRevenue: data.orders.reduce((s, o) => s + (o.total || 0), 0), recentOrders: data.orders.slice(-10).reverse(), availableDrivers });
 });
 
-// مطاعم (أدمن)
+// --- المطاعم (أدمن) ---
 app.get('/api/admin/restaurants', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const list = data.restaurants.map(r => {
@@ -251,13 +271,13 @@ app.delete('/api/admin/restaurants/:id', requireAuth, adminOnly, (req, res) => {
   res.json({ success: true });
 });
 
-// طيارين (أدمن)
+// --- الطيارين (أدمن) ---
 app.get('/api/admin/drivers', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const list = data.users.filter(u => u.role === 'DRIVER').map(u => {
     const dp = data.drivers.find(d => d.userId === u.id) || {};
     const activeOrders = data.orders.filter(o => o.driverId === u.id && !['DELIVERED','CANCELLED'].includes(o.status));
-    return { id: u.id, name: u.name, phone: u.phone, earnings: dp.earnings || 0, isAvailable: dp.isAvailable !== false, isActive: u.isActive !== false, activeOrdersCount: activeOrders.length };
+    return { id: u.id, name: u.name, phone: u.phone, earnings: dp.earnings || 0, credit: dp.credit || 0, isAvailable: dp.isAvailable !== false, isActive: u.isActive !== false, activeOrdersCount: activeOrders.length };
   });
   res.json(list);
 });
@@ -270,7 +290,7 @@ app.post('/api/admin/drivers', requireAuth, adminOnly, (req, res) => {
   const driverId = 'drv_' + Date.now();
   const hashed = bcrypt.hashSync(password, 10);
   data.users.push({ id: userId, name, phone, password: hashed, role: 'DRIVER' });
-  data.drivers.push({ id: driverId, userId, earnings: 0, isAvailable: true });
+  data.drivers.push({ id: driverId, userId, earnings: 0, credit: 0, isAvailable: true });
   writeData(data);
   res.json({ id: userId, name });
 });
@@ -312,8 +332,6 @@ app.delete('/api/admin/drivers/:id', requireAuth, adminOnly, (req, res) => {
   writeData(data);
   res.json({ success: true });
 });
-
-// تفاصيل الطيار
 app.get('/api/admin/drivers/:id/details', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const user = data.users.find(u => u.id === req.params.id && u.role === 'DRIVER');
@@ -328,6 +346,7 @@ app.get('/api/admin/drivers/:id/details', requireAuth, adminOnly, (req, res) => 
   const todayRevenue = todayOrders.reduce((sum, o) => sum + (o.deliveryFee || 0), 0);
   const enrichedOrders = todayOrders.map(o => ({
     id: o.id,
+    orderNumber: o.orderNumber,
     createdAt: o.createdAt,
     deliveredAt: o.deliveredAt,
     customerName: o.customerName,
@@ -343,13 +362,14 @@ app.get('/api/admin/drivers/:id/details', requireAuth, adminOnly, (req, res) => 
     isAvailable: driver.isAvailable !== false,
     isActive: user.isActive !== false,
     earnings: driver.earnings || 0,
+    credit: driver.credit || 0,
     todayOrdersCount: todayOrders.length,
     todayRevenue: todayRevenue,
     todayOrders: enrichedOrders
   });
 });
 
-// مناطق (أدمن)
+// --- المناطق (أدمن) ---
 app.get('/api/admin/regions', requireAuth, adminOnly, (req, res) => { const data = readData(); res.json(data.regions); });
 app.post('/api/admin/regions', requireAuth, adminOnly, (req, res) => {
   const data = readData();
@@ -377,7 +397,7 @@ app.delete('/api/admin/regions/:id', requireAuth, adminOnly, (req, res) => {
   res.json({ success: true });
 });
 
-// منتجات وتصنيفات (أدمن)
+// --- المنتجات والتصنيفات (أدمن) ---
 app.get('/api/admin/products', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const enriched = data.products.map(p => {
@@ -426,7 +446,45 @@ app.delete('/api/admin/categories/:id', requireAuth, adminOnly, (req, res) => {
   res.json({ success: true });
 });
 
-// طلبات وتعيين طيار وتجريبي وتقارير
+// --- إدارة الأصوات (أدمن) ---
+app.post('/api/admin/upload-sound', requireAuth, adminOnly, soundUpload.single('sound'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'لم يتم رفع ملف' });
+  const event = req.body.event;
+  if (!event) return res.status(400).json({ error: 'اسم الحدث مطلوب' });
+  res.json({ success: true, event: event, filename: req.file.filename });
+});
+
+// --- طلبات الشحن (أدمن) ---
+app.get('/api/admin/recharge-requests', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const status = req.query.status || 'PENDING';
+  const requests = data.rechargeRequests.filter(r => r.status === status);
+  res.json(requests);
+});
+app.patch('/api/admin/recharge-requests/:id/approve', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const reqItem = data.rechargeRequests.find(r => r.id === req.params.id);
+  if (!reqItem) return res.status(404).json({ error: 'الطلب غير موجود' });
+  if (reqItem.status !== 'PENDING') return res.status(400).json({ error: 'تمت معالجته مسبقاً' });
+  reqItem.status = 'APPROVED';
+  reqItem.processedAt = new Date().toISOString();
+  const driver = data.drivers.find(d => d.userId === reqItem.driverId);
+  if (driver) driver.credit = (driver.credit || 0) + reqItem.amount;
+  writeData(data);
+  res.json({ success: true, message: 'تمت الموافقة وإضافة الرصيد' });
+});
+app.patch('/api/admin/recharge-requests/:id/reject', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const reqItem = data.rechargeRequests.find(r => r.id === req.params.id);
+  if (!reqItem) return res.status(404).json({ error: 'الطلب غير موجود' });
+  if (reqItem.status !== 'PENDING') return res.status(400).json({ error: 'تمت معالجته مسبقاً' });
+  reqItem.status = 'REJECTED';
+  reqItem.processedAt = new Date().toISOString();
+  writeData(data);
+  res.json({ success: true, message: 'تم رفض الطلب' });
+});
+
+// --- الطلبات وتعيين طيار وتجريبي وتقارير ---
 app.get('/api/orders', (req, res) => {
   const data = readData();
   const enriched = data.orders.map(o => ({
@@ -450,8 +508,10 @@ app.post('/api/admin/test-order', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const { restaurantId } = req.body;
   if (!restaurantId) return res.status(400).json({ error: 'اختر مطعماً' });
+  const orderNumber = getNextOrderNumber();
   const order = {
     id: 'test_' + Date.now(),
+    orderNumber,
     restaurantId,
     customerName: 'عميل تجريبي',
     customerPhone: '0100000000',
@@ -540,7 +600,6 @@ app.get('/api/admin/reports/full', requireAuth, adminOnly, (req, res) => {
   });
 });
 
-// مسارات تحكم الأدمن في الطلبات
 app.patch('/api/admin/orders/:id/approve', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const order = data.orders.find(o => o.id === req.params.id);
@@ -574,6 +633,150 @@ app.patch('/api/admin/orders/:id', requireAuth, adminOnly, (req, res) => {
   if (orderNotes !== undefined) order.orderNotes = orderNotes;
   writeData(data);
   res.json({ success: true });
+});
+
+// --- العملاء (أدمن) ---
+app.get('/api/admin/customers', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const search = req.query.search || '';
+  let customers = data.users.filter(u => u.role === 'CUSTOMER');
+  if (search) {
+    const q = search.toLowerCase();
+    customers = customers.filter(u => u.name.toLowerCase().includes(q) || u.phone.includes(q) || (u.address || '').toLowerCase().includes(q));
+  }
+  const enriched = customers.map(u => {
+    const region = data.regions.find(r => r.id === u.regionId);
+    const orders = data.orders.filter(o => o.customerPhone === u.phone);
+    const lastOrder = orders.length ? orders.reduce((latest, o) => new Date(o.createdAt) > new Date(latest.createdAt) ? o : latest) : null;
+    return { id: u.id, name: u.name, phone: u.phone, regionId: u.regionId || '', regionName: region ? region.name : '—', regionFee: region ? region.fee : 0, address: u.address || '—', totalOrders: orders.length, lastOrderDate: lastOrder ? lastOrder.createdAt : null };
+  });
+  res.json(enriched);
+});
+app.get('/api/admin/customers/:id', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const user = data.users.find(u => u.id === req.params.id && u.role === 'CUSTOMER');
+  if (!user) return res.status(404).json({ error: 'العميل غير موجود' });
+  const region = data.regions.find(r => r.id === user.regionId);
+  const orders = data.orders.filter(o => o.customerPhone === user.phone);
+  const lastOrder = orders.length ? orders.reduce((latest, o) => new Date(o.createdAt) > new Date(latest.createdAt) ? o : latest) : null;
+  res.json({ id: user.id, name: user.name, phone: user.phone, regionId: user.regionId || '', regionName: region ? region.name : '—', regionFee: region ? region.fee : 0, address: user.address || '—', totalOrders: orders.length, lastOrderDate: lastOrder ? lastOrder.createdAt : null });
+});
+app.patch('/api/admin/customers/:id', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const user = data.users.find(u => u.id === req.params.id && u.role === 'CUSTOMER');
+  if (!user) return res.status(404).json({ error: 'العميل غير موجود' });
+  const { name, phone, regionId, address } = req.body;
+  if (name !== undefined) { if (!name.trim()) return res.status(400).json({ error: 'الاسم لا يمكن أن يكون فارغاً' }); user.name = name.trim(); }
+  if (phone !== undefined) { if (!phone.trim()) return res.status(400).json({ error: 'الهاتف لا يمكن أن يكون فارغاً' }); const existing = data.users.find(u => u.phone === phone.trim() && u.id !== user.id); if (existing) return res.status(400).json({ error: 'الهاتف مستخدم من عميل آخر' }); user.phone = phone.trim(); }
+  if (regionId !== undefined) { if (regionId && !data.regions.find(r => r.id === regionId)) return res.status(400).json({ error: 'المنطقة غير موجودة' }); user.regionId = regionId; }
+  if (address !== undefined) user.address = address;
+  writeData(data);
+  res.json({ success: true });
+});
+
+// --- الأسواق والصيدليات (أدمن) ---
+app.get('/api/admin/markets', requireAuth, adminOnly, (req, res) => { const data = readData(); res.json(data.markets || []); });
+app.post('/api/admin/markets', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const { name, ownerPhone, ownerPassword } = req.body;
+  if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
+  if (data.users.find(u => u.phone === ownerPhone)) return res.status(400).json({ error: 'الهاتف مستخدم' });
+  const userId = 'usr_' + Date.now();
+  const marketId = 'market_' + Date.now();
+  const hashed = bcrypt.hashSync(ownerPassword, 10);
+  data.users.push({ id: userId, name, phone: ownerPhone, password: hashed, role: 'MARKET' });
+  data.markets.push({ id: marketId, userId, name, logo: '', isOpen: true });
+  writeData(data);
+  res.json({ id: marketId, name });
+});
+app.patch('/api/admin/markets/:id/toggle', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const market = data.markets.find(m => m.id === req.params.id);
+  if (!market) return res.status(404).json({ error: 'غير موجود' });
+  market.isOpen = !market.isOpen;
+  writeData(data);
+  res.json({ success: true });
+});
+app.patch('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const market = data.markets.find(m => m.id === req.params.id);
+  if (!market) return res.status(404).json({ error: 'غير موجود' });
+  const { name, ownerPhone } = req.body;
+  if (name) market.name = name;
+  if (ownerPhone) {
+    const user = data.users.find(u => u.id === market.userId);
+    if (user) user.phone = ownerPhone;
+  }
+  writeData(data);
+  res.json({ success: true });
+});
+app.delete('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const idx = data.markets.findIndex(m => m.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'غير موجود' });
+  const market = data.markets[idx];
+  const userIndex = data.users.findIndex(u => u.id === market.userId);
+  if (userIndex !== -1) data.users.splice(userIndex, 1);
+  data.markets.splice(idx, 1);
+  writeData(data);
+  res.json({ success: true });
+});
+
+app.get('/api/admin/pharmacies', requireAuth, adminOnly, (req, res) => { const data = readData(); res.json(data.pharmacies || []); });
+app.post('/api/admin/pharmacies', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const { name, ownerPhone, ownerPassword } = req.body;
+  if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
+  if (data.users.find(u => u.phone === ownerPhone)) return res.status(400).json({ error: 'الهاتف مستخدم' });
+  const userId = 'usr_' + Date.now();
+  const pharmacyId = 'pharm_' + Date.now();
+  const hashed = bcrypt.hashSync(ownerPassword, 10);
+  data.users.push({ id: userId, name, phone: ownerPhone, password: hashed, role: 'PHARMACY' });
+  data.pharmacies.push({ id: pharmacyId, userId, name, logo: '', isOpen: true });
+  writeData(data);
+  res.json({ id: pharmacyId, name });
+});
+app.patch('/api/admin/pharmacies/:id/toggle', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const pharmacy = data.pharmacies.find(p => p.id === req.params.id);
+  if (!pharmacy) return res.status(404).json({ error: 'غير موجود' });
+  pharmacy.isOpen = !pharmacy.isOpen;
+  writeData(data);
+  res.json({ success: true });
+});
+app.patch('/api/admin/pharmacies/:id', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const pharmacy = data.pharmacies.find(p => p.id === req.params.id);
+  if (!pharmacy) return res.status(404).json({ error: 'غير موجود' });
+  const { name, ownerPhone } = req.body;
+  if (name) pharmacy.name = name;
+  if (ownerPhone) {
+    const user = data.users.find(u => u.id === pharmacy.userId);
+    if (user) user.phone = ownerPhone;
+  }
+  writeData(data);
+  res.json({ success: true });
+});
+app.delete('/api/admin/pharmacies/:id', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const idx = data.pharmacies.findIndex(p => p.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'غير موجود' });
+  const pharm = data.pharmacies[idx];
+  const userIndex = data.users.findIndex(u => u.id === pharm.userId);
+  if (userIndex !== -1) data.users.splice(userIndex, 1);
+  data.pharmacies.splice(idx, 1);
+  writeData(data);
+  res.json({ success: true });
+});
+
+// --- إيرادات المنصة ---
+app.get('/api/admin/platform-revenue', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const orders = data.orders.filter(o => o.status === 'DELIVERED' && o.platformFee);
+  const totalPlatform = orders.reduce((s, o) => s + (o.platformFee || 0), 0);
+  const today = new Date().toISOString().slice(0, 10);
+  const todayPlatform = orders.filter(o => o.deliveredAt?.startsWith(today)).reduce((s, o) => s + (o.platformFee || 0), 0);
+  res.json({ total: totalPlatform, today: todayPlatform });
 });
 
 // ==================== RESTAURANT ====================
@@ -830,6 +1033,16 @@ app.patch('/api/driver/orders/:id/accept', requireAuth, (req, res) => {
   const data = readData();
   const order = data.orders.find(o => o.id === req.params.id && o.status === 'READY' && !o.driverId);
   if (!order) return res.status(404).json({ error: 'الطلب غير متاح' });
+
+  const driver = data.drivers.find(d => d.userId === req.user.id);
+  if (!driver) return res.status(404).json({ error: 'لم يتم العثور على ملف السائق' });
+
+  const productValue = (order.total || 0) - (order.deliveryFee || 0);
+  const estimatedCommission = Math.round(productValue * 0.20);
+  if ((driver.credit || 0) < estimatedCommission) {
+    return res.status(400).json({ error: `رصيدك غير كافٍ (${driver.credit} ج). العمولة المتوقعة ${estimatedCommission} ج. الرجاء شحن الرصيد.` });
+  }
+
   order.driverId = req.user.id;
   order.status = 'DRIVER_ASSIGNED';
   writeData(data);
@@ -848,10 +1061,13 @@ app.patch('/api/driver/orders/:id/status', requireAuth, (req, res) => {
   order.status = status;
   if (status === 'DELIVERED') {
     const driver = data.drivers.find(d => d.userId === req.user.id);
-    if (driver) driver.earnings = (driver.earnings || 0) + (order.deliveryFee || 10);
+    if (driver) {
+      driver.earnings = (driver.earnings || 0) + (order.deliveryFee || 10);
+      const productValue = (order.total || 0) - (order.deliveryFee || 0);
+      order.platformFee = Math.round(productValue * 0.20);
+      driver.credit = (driver.credit || 0) - order.platformFee;
+    }
     order.deliveredAt = new Date().toISOString();
-    const productValue = (order.total || 0) - (order.deliveryFee || 0);
-    order.platformFee = Math.round(productValue * 0.12);
   }
   writeData(data);
   io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
@@ -878,7 +1094,7 @@ app.get('/api/driver/profile', requireAuth, (req, res) => {
   const user = data.users.find(u => u.id === req.user.id);
   if (!user) return res.status(404).json({ error: 'المستخدم غير موجود' });
   const dp = data.drivers.find(d => d.userId === req.user.id) || {};
-  res.json({ name: user.name, phone: user.phone, isAvailable: dp.isAvailable !== false, earnings: dp.earnings || 0 });
+  res.json({ name: user.name, phone: user.phone, isAvailable: dp.isAvailable !== false, earnings: dp.earnings || 0, credit: dp.credit || 0 });
 });
 
 app.patch('/api/driver/toggle-status', requireAuth, (req, res) => {
@@ -902,6 +1118,7 @@ app.get('/api/driver/history', requireAuth, (req, res) => {
     const storeName = getStoreNameForOrder(o, data);
     return {
       id: o.id,
+      orderNumber: o.orderNumber,
       createdAt: o.createdAt,
       deliveredAt: o.deliveredAt,
       restaurantName: restaurant?.name || storeName || '—',
@@ -915,6 +1132,32 @@ app.get('/api/driver/history', requireAuth, (req, res) => {
     };
   });
   res.json(enriched);
+});
+
+// طلب شحن الرصيد
+app.post('/api/driver/recharge-request', requireAuth, (req, res) => {
+  if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
+  const { amount, last4digits } = req.body;
+  if (!amount || amount <= 0) return res.status(400).json({ error: 'المبلغ غير صالح' });
+  if (!last4digits || !/^\d{4}$/.test(last4digits)) return res.status(400).json({ error: 'آخر 4 أرقام غير صحيحة' });
+  const data = readData();
+  const driver = data.drivers.find(d => d.userId === req.user.id);
+  if (!driver) return res.status(404).json({ error: 'الطيار غير موجود' });
+  const user = data.users.find(u => u.id === req.user.id);
+  const request = {
+    id: 'req_' + Date.now(),
+    driverId: req.user.id,
+    driverName: user?.name || 'طيار',
+    driverPhone: user?.phone || '',
+    amount: Number(amount),
+    last4digits: last4digits.trim(),
+    status: 'PENDING',
+    createdAt: new Date().toISOString(),
+    processedAt: null
+  };
+  data.rechargeRequests.push(request);
+  writeData(data);
+  res.json({ success: true, message: 'تم إرسال طلب الشحن، بانتظار موافقة الأدمن.' });
 });
 
 // ==================== CUSTOMER & PUBLIC ====================
@@ -961,8 +1204,10 @@ app.post('/api/orders/special', upload.array('files', 10), async (req, res) => {
   if (!customerName || !customerPhone) return res.status(400).json({ error: 'بيانات العميل ناقصة' });
   const files = req.files || [];
   const filePaths = files.map(f => '/uploads/special_orders/' + f.filename);
+  const orderNumber = getNextOrderNumber();
   const newOrder = {
     id: 'ord_' + Date.now(),
+    orderNumber,
     type: 'special',
     orderType,
     storeId: storeId || null,
@@ -1017,8 +1262,10 @@ app.post('/api/orders', customerAuth, (req, res) => {
   if (!restaurantId || !total || !customerName || !customerPhone || !address) return res.status(400).json({ error: 'بيانات الطلب ناقصة' });
   const restaurant = data.restaurants.find(r => r.id === restaurantId);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
+  const orderNumber = getNextOrderNumber();
   const order = {
     id: 'ord_' + Date.now(),
+    orderNumber,
     restaurantId,
     items: items || [],
     total: Number(total),
@@ -1100,111 +1347,7 @@ app.post('/api/customer/login', (req, res) => {
   res.json({ success: true, token, name: user.name, phone: user.phone, regionId: user.regionId || '', address: user.address || '' });
 });
 
-// العملاء (أدمن)
-app.get('/api/admin/customers', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const search = req.query.search || '';
-  let customers = data.users.filter(u => u.role === 'CUSTOMER');
-  if (search) {
-    const q = search.toLowerCase();
-    customers = customers.filter(u => u.name.toLowerCase().includes(q) || u.phone.includes(q) || (u.address || '').toLowerCase().includes(q));
-  }
-  const enriched = customers.map(u => {
-    const region = data.regions.find(r => r.id === u.regionId);
-    const orders = data.orders.filter(o => o.customerPhone === u.phone);
-    const lastOrder = orders.length ? orders.reduce((latest, o) => new Date(o.createdAt) > new Date(latest.createdAt) ? o : latest) : null;
-    return { id: u.id, name: u.name, phone: u.phone, regionId: u.regionId || '', regionName: region ? region.name : '—', regionFee: region ? region.fee : 0, address: u.address || '—', totalOrders: orders.length, lastOrderDate: lastOrder ? lastOrder.createdAt : null };
-  });
-  res.json(enriched);
-});
-app.get('/api/admin/customers/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const user = data.users.find(u => u.id === req.params.id && u.role === 'CUSTOMER');
-  if (!user) return res.status(404).json({ error: 'العميل غير موجود' });
-  const region = data.regions.find(r => r.id === user.regionId);
-  const orders = data.orders.filter(o => o.customerPhone === user.phone);
-  const lastOrder = orders.length ? orders.reduce((latest, o) => new Date(o.createdAt) > new Date(latest.createdAt) ? o : latest) : null;
-  res.json({ id: user.id, name: user.name, phone: user.phone, regionId: user.regionId || '', regionName: region ? region.name : '—', regionFee: region ? region.fee : 0, address: user.address || '—', totalOrders: orders.length, lastOrderDate: lastOrder ? lastOrder.createdAt : null });
-});
-app.patch('/api/admin/customers/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const user = data.users.find(u => u.id === req.params.id && u.role === 'CUSTOMER');
-  if (!user) return res.status(404).json({ error: 'العميل غير موجود' });
-  const { name, phone, regionId, address } = req.body;
-  if (name !== undefined) { if (!name.trim()) return res.status(400).json({ error: 'الاسم لا يمكن أن يكون فارغاً' }); user.name = name.trim(); }
-  if (phone !== undefined) { if (!phone.trim()) return res.status(400).json({ error: 'الهاتف لا يمكن أن يكون فارغاً' }); const existing = data.users.find(u => u.phone === phone.trim() && u.id !== user.id); if (existing) return res.status(400).json({ error: 'الهاتف مستخدم من عميل آخر' }); user.phone = phone.trim(); }
-  if (regionId !== undefined) { if (regionId && !data.regions.find(r => r.id === regionId)) return res.status(400).json({ error: 'المنطقة غير موجودة' }); user.regionId = regionId; }
-  if (address !== undefined) user.address = address;
-  writeData(data);
-  res.json({ success: true });
-});
-
-// إيرادات المنصة
-app.get('/api/admin/platform-revenue', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const orders = data.orders.filter(o => o.status === 'DELIVERED' && o.platformFee);
-  const totalPlatform = orders.reduce((s, o) => s + (o.platformFee || 0), 0);
-  const today = new Date().toISOString().slice(0, 10);
-  const todayPlatform = orders.filter(o => o.deliveredAt?.startsWith(today)).reduce((s, o) => s + (o.platformFee || 0), 0);
-  res.json({ total: totalPlatform, today: todayPlatform });
-});
-
-// ==================== MARKETS & PHARMACIES ADMIN ====================
-app.get('/api/admin/markets', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  res.json(data.markets || []);
-});
-
-app.post('/api/admin/markets', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const { name, ownerPhone, ownerPassword } = req.body;
-  if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
-  if (data.users.find(u => u.phone === ownerPhone)) return res.status(400).json({ error: 'الهاتف مستخدم' });
-  const userId = 'usr_' + Date.now();
-  const marketId = 'market_' + Date.now();
-  const hashed = bcrypt.hashSync(ownerPassword, 10);
-  data.users.push({ id: userId, name, phone: ownerPhone, password: hashed, role: 'MARKET' });
-  data.markets.push({ id: marketId, userId, name, logo: '', isOpen: true });
-  writeData(data);
-  res.json({ id: marketId, name });
-});
-
-app.patch('/api/admin/markets/:id/toggle', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const market = data.markets.find(m => m.id === req.params.id);
-  if (!market) return res.status(404).json({ error: 'غير موجود' });
-  market.isOpen = !market.isOpen;
-  writeData(data);
-  res.json({ success: true });
-});
-
-app.patch('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const market = data.markets.find(m => m.id === req.params.id);
-  if (!market) return res.status(404).json({ error: 'غير موجود' });
-  const { name, ownerPhone } = req.body;
-  if (name) market.name = name;
-  if (ownerPhone) {
-    const user = data.users.find(u => u.id === market.userId);
-    if (user) user.phone = ownerPhone;
-  }
-  writeData(data);
-  res.json({ success: true });
-});
-
-app.delete('/api/admin/markets/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const idx = data.markets.findIndex(m => m.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: 'غير موجود' });
-  const market = data.markets[idx];
-  const userIndex = data.users.findIndex(u => u.id === market.userId);
-  if (userIndex !== -1) data.users.splice(userIndex, 1);
-  data.markets.splice(idx, 1);
-  writeData(data);
-  res.json({ success: true });
-});
-
-// ========== MARKET PROFILE ==========
+// ==================== MARKET & PHARMACY PROFILE ====================
 app.get('/api/market/profile', requireAuth, (req, res) => {
   if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
@@ -1220,69 +1363,11 @@ app.patch('/api/market/profile', requireAuth, upload.single('logo'), (req, res) 
   const market = data.markets.find(m => m.userId === req.user.id);
   if (!market) return res.status(404).json({ error: 'الماركت غير موجود' });
   if (req.body.name) market.name = req.body.name;
-  if (req.file) {
-    market.logo = '/uploads/' + req.file.filename;
-  }
+  if (req.file) market.logo = '/uploads/' + req.file.filename;
   writeData(data);
   res.json({ name: market.name, logo: market.logo });
 });
 
-// صيدليات
-app.get('/api/admin/pharmacies', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  res.json(data.pharmacies || []);
-});
-
-app.post('/api/admin/pharmacies', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const { name, ownerPhone, ownerPassword } = req.body;
-  if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
-  if (data.users.find(u => u.phone === ownerPhone)) return res.status(400).json({ error: 'الهاتف مستخدم' });
-  const userId = 'usr_' + Date.now();
-  const pharmacyId = 'pharm_' + Date.now();
-  const hashed = bcrypt.hashSync(ownerPassword, 10);
-  data.users.push({ id: userId, name, phone: ownerPhone, password: hashed, role: 'PHARMACY' });
-  data.pharmacies.push({ id: pharmacyId, userId, name, logo: '', isOpen: true });
-  writeData(data);
-  res.json({ id: pharmacyId, name });
-});
-
-app.patch('/api/admin/pharmacies/:id/toggle', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const pharmacy = data.pharmacies.find(p => p.id === req.params.id);
-  if (!pharmacy) return res.status(404).json({ error: 'غير موجود' });
-  pharmacy.isOpen = !pharmacy.isOpen;
-  writeData(data);
-  res.json({ success: true });
-});
-
-app.patch('/api/admin/pharmacies/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const pharmacy = data.pharmacies.find(p => p.id === req.params.id);
-  if (!pharmacy) return res.status(404).json({ error: 'غير موجود' });
-  const { name, ownerPhone } = req.body;
-  if (name) pharmacy.name = name;
-  if (ownerPhone) {
-    const user = data.users.find(u => u.id === pharmacy.userId);
-    if (user) user.phone = ownerPhone;
-  }
-  writeData(data);
-  res.json({ success: true });
-});
-
-app.delete('/api/admin/pharmacies/:id', requireAuth, adminOnly, (req, res) => {
-  const data = readData();
-  const idx = data.pharmacies.findIndex(p => p.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: 'غير موجود' });
-  const pharm = data.pharmacies[idx];
-  const userIndex = data.users.findIndex(u => u.id === pharm.userId);
-  if (userIndex !== -1) data.users.splice(userIndex, 1);
-  data.pharmacies.splice(idx, 1);
-  writeData(data);
-  res.json({ success: true });
-});
-
-// ==================== MARKET ORDERS API ====================
 app.get('/api/market/orders', requireAuth, (req, res) => {
   if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
@@ -1442,32 +1527,6 @@ setInterval(() => {
     io.emit('driver:newJob', { count: readyCount });
   }
 }, 60000);
-// أضف هذا قبل نهاية app.use(...)
-app.get('/api/whoami', requireAuth, (req, res) => {
-  const data = readData();
-  const user = data.users.find(u => u.id === req.user.id);
-  if (!user) return res.status(404).json({ error: 'مستخدم غير موجود' });
-  res.json({ token: jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '365d' }), user: { id: user.id, name: user.name, role: user.role } });
-});
-function setTokenCookie(res, token) {
-  res.cookie('token', token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production', // true فقط في الإنتاج
-    maxAge: 365 * 24 * 60 * 60 * 1000
-  });
-}
-app.post('/api/login', (req, res) => {
-  const { phone, password } = req.body;
-  const data = readData();
-  const user = data.users.find(u => u.phone === phone);
-  if (!user || !bcrypt.compareSync(password, user.password)) {
-    return res.status(401).json({ error: 'بيانات خاطئة' });
-  }
-  const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '365d' });
-  res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 365 * 24 * 60 * 60 * 1000 });
-  res.json({ token, user: { id: user.id, name: user.name, role: user.role } });
-});
 
 // معالج أخطاء multer
 app.use((err, req, res, next) => {
@@ -1478,7 +1537,6 @@ app.use((err, req, res, next) => {
   }
   next();
 });
-app.use('/sounds', express.static(path.join(__dirname, 'sounds')));
 
 io.on('connection', (socket) => {
   console.log('عميل متصل:', socket.id);
