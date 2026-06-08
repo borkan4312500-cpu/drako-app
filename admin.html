@@ -16,6 +16,7 @@
     body { background:var(--bg); color:var(--text); direction:rtl; min-height:100vh; }
     .app-layout { display:flex; min-height:100vh; }
 
+    /* شاشة تسجيل الدخول */
     .login-overlay {
       position:fixed; inset:0; background:var(--bg); z-index:9999;
       display:flex; align-items:center; justify-content:center; padding:24px;
@@ -34,6 +35,7 @@
     .btn-primary { background:var(--brand); color:white; }
     .error-msg { color:#F44336; font-size:13px; margin-top:8px; display:none; }
 
+    /* الشريط الجانبي */
     .sidebar {
       width:var(--sidebar-width); background:#1f2937; color:white; display:flex;
       flex-direction:column; position:fixed; top:0; right:0; bottom:0; z-index:1000;
@@ -195,41 +197,10 @@ let allRegions = [];
 let audioActivated = false;
 let audioCtx = null;
 
-// ---------- نظام صوتي هجين (ملفات أو نغمات افتراضية) ----------
-function playTone(freq, dur, type='square', vol=0.3) {
-  if (!audioCtx) { try { audioCtx = new (window.AudioContext||window.webkitAudioContext)(); } catch(e) { return; } }
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type = type; osc.frequency.value = freq;
-  gain.gain.setValueAtTime(vol, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
-  osc.connect(gain); gain.connect(audioCtx.destination);
-  osc.start(); osc.stop(audioCtx.currentTime + dur);
-}
-
-function playSound(name, fallbackFreq=800, fallbackType='square') {
-  if (!audioActivated) return;
-  const url = `/sounds/admin_${name}.mp3`;
-  const audio = new Audio(url);
-  audio.volume = 0.5;
-  audio.play().catch(() => playTone(fallbackFreq, 0.2, fallbackType));
-}
-
-async function activateAudio() {
-  if (audioActivated) return;
-  try {
-    if (!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') await audioCtx.resume();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    gain.gain.value = 0.001;
-    osc.connect(gain); gain.connect(audioCtx.destination);
-    osc.start(); osc.stop(audioCtx.currentTime + 0.001);
-    audioActivated = true;
-    showToast('✅ تم تفعيل الإشعارات الصوتية');
-  } catch(e) { showToast('❌ فشل تفعيل الصوت'); }
-}
+// ---------- نظام الصوت (نغمات افتراضية + ملفات) ----------
+function playTone(f,d,t,v=0.3){ if(!audioCtx){ try{audioCtx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){return;} } if(audioCtx.state==='suspended')audioCtx.resume(); var o=audioCtx.createOscillator(); var g=audioCtx.createGain(); o.type=t; o.frequency.value=f; g.gain.setValueAtTime(v,audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+d); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+d); }
+function playSound(name, fallbackFreq=800, fallbackType='square') { if (!audioActivated) return; const url = `/sounds/admin_${name}.mp3`; const audio = new Audio(url); audio.volume=0.5; audio.play().catch(() => playTone(fallbackFreq,0.2,fallbackType)); }
+async function activateAudio() { if (audioActivated) return; try { if (!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); if (audioCtx.state === 'suspended') await audioCtx.resume(); var o=audioCtx.createOscillator(); var g=audioCtx.createGain(); g.gain.value=0.001; o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+0.001); audioActivated=true; showToast('✅ تم تفعيل الإشعارات الصوتية'); } catch(e) { showToast('❌ فشل تفعيل الصوت'); } }
 
 // ---------- دوال عامة ----------
 function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); }
@@ -260,10 +231,19 @@ function hideLogin() {
   document.getElementById('mainWrap').style.display = 'flex';
 }
 
+// ---------- تسجيل الدخول ----------
 async function adminLogin() {
   const phone = document.getElementById('loginPhone').value.trim();
   const password = document.getElementById('loginPass').value;
-  if (!phone || !password) return;
+  const errorDiv = document.getElementById('loginError');
+  errorDiv.style.display = 'none';
+  
+  if (!phone || !password) {
+    errorDiv.textContent = '⚠️ الرجاء إدخال رقم الهاتف وكلمة المرور';
+    errorDiv.style.display = 'block';
+    return;
+  }
+
   try {
     const res = await fetch(API + '/login', {
       method: 'POST',
@@ -271,13 +251,28 @@ async function adminLogin() {
       credentials: 'include',
       body: JSON.stringify({ phone, password })
     });
-    if (!res.ok) { document.getElementById('loginError').style.display = 'block'; return; }
+
     const data = await res.json();
-    if (data.error || data.user.role !== 'ADMIN') { document.getElementById('loginError').style.display = 'block'; return; }
-    document.getElementById('loginError').style.display = 'none';
+
+    if (!res.ok || data.error) {
+      errorDiv.textContent = '❌ ' + (data.error || 'فشل تسجيل الدخول، تحقق من الخادم');
+      errorDiv.style.display = 'block';
+      return;
+    }
+
+    if (!data.user || data.user.role !== 'ADMIN') {
+      errorDiv.textContent = '❌ هذا الحساب ليس لديه صلاحية الأدمن';
+      errorDiv.style.display = 'block';
+      return;
+    }
+
+    errorDiv.style.display = 'none';
     hideLogin();
     initApp();
-  } catch (e) { document.getElementById('loginError').style.display = 'block'; }
+  } catch (e) {
+    errorDiv.textContent = '❌ فشل الاتصال بالخادم. تأكد من تشغيل السيرفر.';
+    errorDiv.style.display = 'block';
+  }
 }
 
 async function logout() {
@@ -761,12 +756,10 @@ async function uploadSound(eventId, input) {
     const data = await res.json();
     if (data.error) { showToast('❌ ' + data.error); return; }
     showToast('✅ تم رفع الصوت');
-    // تحديث المشغل الصوتي
     const audio = document.getElementById('audio_' + eventId);
     if (audio) {
       audio.src = `/sounds/${eventId}.mp3?t=${Date.now()}`;
       audio.load();
-      // اختبر الصوت مباشرة
       audio.play().catch(() => {});
     }
   } catch (e) { showToast('❌ فشل الاتصال'); }
