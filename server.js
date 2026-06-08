@@ -12,6 +12,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// الثقة بالبروكسي (مهم للنطاقات مثل drako0.com)
 app.set('trust proxy', 1);
 
 // --- إعداد المجلدات الأساسية ---
@@ -20,7 +21,7 @@ const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
 if (!fs.existsSync(SOUNDS_DIR)) fs.mkdirSync(SOUNDS_DIR);
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR);
 
-// --- إعداد Multer للمرفقات العامة ---
+// --- Multer للمرفقات العامة ---
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     let dir = UPLOADS_DIR;
@@ -37,7 +38,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// --- إعداد Multer لملفات الصوت (استبدال مباشر) ---
+// --- Multer لملفات الصوت (حفظ دائمًا بامتداد mp3) ---
 const soundStorage = multer.diskStorage({
   destination: function (req, file, cb) {
     if (!fs.existsSync(SOUNDS_DIR)) fs.mkdirSync(SOUNDS_DIR);
@@ -45,8 +46,7 @@ const soundStorage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     const event = req.body.event;
-    // احفظ الملف دائماً بامتداد mp3
-    cb(null, event + '.mp3');
+    cb(null, event + '.mp3'); // حفظ دائمًا بامتداد mp3
   }
 });
 const soundUpload = multer({
@@ -175,8 +175,8 @@ app.get('/driver', (req, res) => res.sendFile(path.join(__dirname, 'driver.html'
 app.get('/market', (req, res) => res.sendFile(path.join(__dirname, 'market.html')));
 app.get('/pharmacy', (req, res) => res.sendFile(path.join(__dirname, 'pharmacy.html')));
 
-// ================== المصادقة ==================
-app.post('/login', (req, res) => {
+// ================== نقطة تسجيل الدخول الموحدة (JSON فقط) ==================
+app.post('/api/login', (req, res) => {
   const { phone, password } = req.body;
   const data = readData();
   const user = data.users.find(u => u.phone === phone);
@@ -184,7 +184,12 @@ app.post('/login', (req, res) => {
     return res.status(401).json({ error: 'بيانات خاطئة' });
   }
   const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '365d' });
-  res.cookie('token', token, { httpOnly: true, sameSite: 'lax', maxAge: 365 * 24 * 60 * 60 * 1000 });
+  res.cookie('token', token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isSecure(req),
+    maxAge: 365 * 24 * 60 * 60 * 1000
+  });
   res.json({ token, user: { id: user.id, name: user.name, role: user.role } });
 });
 
