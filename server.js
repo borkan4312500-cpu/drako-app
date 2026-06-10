@@ -783,6 +783,28 @@ app.get('/api/admin/platform-revenue', requireAuth, adminOnly, (req, res) => {
   const todayPlatform = orders.filter(o => o.deliveredAt?.startsWith(today)).reduce((s, o) => s + (o.platformFee || 0), 0);
   res.json({ total: totalPlatform, today: todayPlatform });
 });
+// عرض الطلبات المباشرة من المطاعم (للأدمن)
+app.get('/api/admin/restaurant-direct-orders', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const orders = data.orders.filter(o => o.isDirect);
+  const enriched = orders.map(o => ({
+    ...o,
+    restaurantName: data.restaurants.find(r => r.id === o.restaurantId)?.name || '—',
+    driverName: data.users.find(u => u.id === o.driverId)?.name || '—'
+  }));
+  res.json(enriched);
+});
+
+// تعيين طيار لطلب مباشر
+app.patch('/api/admin/restaurant-direct-orders/:id/assign-driver', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const order = data.orders.find(o => o.id === req.params.id);
+  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
+  order.driverId = req.body.driverId;
+  order.status = 'DRIVER_ASSIGNED';
+  writeData(data);
+  res.json({ success: true });
+});
 
 // ==================== RESTAURANT ====================
 app.get('/api/restaurant/profile', requireAuth, (req, res) => {
