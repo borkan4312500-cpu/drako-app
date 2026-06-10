@@ -23,8 +23,32 @@
 html,body{height:100%;overflow:hidden;}
 body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:relative;}
 
-.status-bar{height:env(safe-area-inset-top,0px);background:var(--surface);flex-shrink:0;}
+/* شاشة تسجيل الدخول */
+.login-overlay{
+  position:fixed;inset:0;background:var(--bg);z-index:9999;
+  display:flex;align-items:center;justify-content:center;padding:24px;
+}
+.login-overlay.hidden{display:none;}
+.login-card{
+  background:var(--surface);border-radius:24px;padding:32px 24px;width:100%;max-width:380px;
+  box-shadow:0 10px 40px rgba(0,0,0,0.1);text-align:center;
+}
+.login-card .logo-icon{
+  width:80px;height:80px;margin:0 auto 16px;background:var(--orange);border-radius:24px;
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:42px;font-weight:900;
+}
+.login-card h2{font-size:28px;font-weight:900;color:var(--orange);margin-bottom:8px;}
+.login-card p{color:var(--text3);margin-bottom:24px;}
+.form-group{margin-bottom:16px;text-align:right;}
+.form-label{display:block;font-size:14px;font-weight:600;margin-bottom:6px;color:var(--text3);}
+.form-input{width:100%;padding:10px 16px;border:1px solid var(--border);border-radius:10px;font-size:15px;background:var(--surface2);outline:none;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 24px;border-radius:10px;font-weight:700;font-size:16px;border:none;cursor:pointer;transition:0.2s;width:100%;}
+.btn-primary{background:var(--orange);color:white;}
+.btn-primary:hover{background:var(--orange2);}
+.error-msg{color:var(--red);font-size:13px;margin-top:8px;display:none;}
 
+/* باقي التصميم */
+.status-bar{height:env(safe-area-inset-top,0px);background:var(--surface);flex-shrink:0;}
 .app-header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
 .header-logo{display:flex;align-items:center;gap:10px;}
 .logo-mark{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--orange),#ff4b3e);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff;box-shadow:0 4px 14px var(--orange-glow);}
@@ -82,10 +106,7 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;m
 .oc-pay{font-size:11px;color:var(--text3);margin-top:2px;}
 .oc-actions{display:flex;gap:8px;}
 
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 18px;border-radius:12px;font-size:14px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;border:none;transition:all .18s;white-space:nowrap;}
-.btn:active{transform:scale(.96);}
-.btn-primary{background:var(--orange);color:#fff;box-shadow:0 4px 14px var(--orange-glow);}
-.btn-primary:hover{background:var(--orange2);}
+.btn-sm{padding:6px 14px;font-size:13px;}
 .btn-green{background:rgba(16,185,129,.1);color:var(--green);border:1.5px solid rgba(16,185,129,.3);}
 .btn-green:hover{background:rgba(16,185,129,.2);}
 .btn-ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
@@ -157,6 +178,25 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;m
 </head>
 <body>
 
+<!-- شاشة تسجيل الدخول -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-card">
+    <div class="logo-icon">🏍️</div>
+    <h2>Drako Rider</h2>
+    <p>سجّل دخولك لبدء العمل</p>
+    <div class="form-group">
+      <label class="form-label">رقم الهاتف</label>
+      <input class="form-input" type="tel" id="loginPhone" placeholder="010xxxxxxxx">
+    </div>
+    <div class="form-group">
+      <label class="form-label">كلمة المرور</label>
+      <input class="form-input" type="password" id="loginPass" placeholder="كلمة المرور">
+    </div>
+    <button class="btn btn-primary" onclick="driverLogin()">دخول</button>
+    <div class="error-msg" id="loginError">بيانات الدخول غير صحيحة</div>
+  </div>
+</div>
+
 <div class="toast-wrap" id="toast-wrap"></div>
 <div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
   <div class="bottom-sheet" id="sheet-box">
@@ -168,7 +208,7 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;m
 <div class="status-bar"></div>
 
 <!-- HEADER -->
-<div class="app-header">
+<div class="app-header" id="appHeader" style="display:none;">
   <div class="header-logo">
     <div class="logo-mark">🏍️</div>
     <div class="logo-text"><div class="name">Drako Rider</div><div class="role" id="driver-name-lbl">جاري التحميل...</div></div>
@@ -180,7 +220,7 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;m
 </div>
 
 <!-- TABS -->
-<div class="tab-bar">
+<div class="tab-bar" id="tabBar" style="display:none;">
   <div class="tab active" id="tab-available" onclick="switchTab('available')"><span id="tab-available-icon">🟡</span> متاحة<span class="tab-badge" id="badge-available">0</span></div>
   <div class="tab" id="tab-active" onclick="switchTab('active')"><span>🟢</span> طلباتي<span class="tab-badge" id="badge-active">0</span></div>
   <div class="tab" id="tab-history" onclick="switchTab('history')"><span>📋</span> السجل</div>
@@ -241,7 +281,6 @@ function createSound(name, ...tones) { soundInstances[name] = tones.map(t => new
 function playSound(name) { if (soundInstances[name]) soundInstances[name].forEach(h => h.play()); }
 createSound('newJob', generateToneWAV(800, 0.12, 'square'), generateToneWAV(1000, 0.12, 'square'));
 createSound('orderDelivered', generateToneWAV(600, 0.15, 'sine'), generateToneWAV(900, 0.15, 'sine'));
-createSound('driverAssigned', generateToneWAV(500, 0.1, 'sine'));
 
 /* ── STATE ──────────────────────── */
 let currentTab = 'available';
@@ -254,7 +293,7 @@ let availableOrders = [];
 let myOrders = [];
 let historySelectedDate = new Date().toISOString().slice(0, 10);
 
-/* ── API FETCH ───────────────── */
+/* ── API FETCH (مع الكوكيز فقط) ───── */
 async function apiFetch(path, opts = {}) {
   const res = await fetch(path, {
     ...opts,
@@ -265,8 +304,8 @@ async function apiFetch(path, opts = {}) {
     }
   });
   if (res.status === 401) {
-    toast('انتهت الجلسة — جاري إعادة التوجيه', 'error');
-    setTimeout(() => location.href = '/', 2000);
+    // انتهت الجلسة -> نظهر شاشة الدخول
+    showLogin();
     throw new Error('401');
   }
   return res.json();
@@ -294,19 +333,16 @@ function closeModal() { document.getElementById('modal').classList.remove('open'
 const S_AR = { PENDING: 'في الانتظار', ACCEPTED: 'مقبول', PREPARING: 'يتحضر', READY: 'جاهز', DRIVER_ASSIGNED: 'مع طيار', ON_THE_WAY: 'في الطريق', DELIVERED: 'تم التوصيل', CANCELLED: 'ملغي' };
 const S_CL = { PENDING: 'badge-yellow', ACCEPTED: 'badge-blue', PREPARING: 'badge-orange', READY: 'badge-green', DRIVER_ASSIGNED: 'badge-orange', ON_THE_WAY: 'badge-orange', DELIVERED: 'badge-green', CANCELLED: 'badge-red' };
 function sBadge(s) { return `<span class="badge ${S_CL[s] || 'badge-gray'}">${S_AR[s] || s}</span>`; }
-
 function relTime(iso) {
   if (!iso) return '';
   const m = Math.floor((new Date() - new Date(iso)) / 60000);
   if (m < 1) return 'الآن'; if (m < 60) return `${m}د`;
   const h = Math.floor(m / 60); if (h < 24) return `${h}س`; return `${Math.floor(h / 24)}ي`;
 }
-
 function formatDateTime(iso) {
   if (!iso) return '—';
   return new Date(iso).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' });
 }
-
 function renderItemsList(items) {
   if (!items || !items.length) return '<div class="oc-item-line">لا تفاصيل</div>';
   return items.map(item => {
@@ -320,6 +356,50 @@ function renderItemsList(items) {
     }
     return html;
   }).join('');
+}
+
+/* ── LOGIN / SESSION ────────────── */
+function showLogin() {
+  document.getElementById('loginOverlay').classList.remove('hidden');
+  document.getElementById('appHeader').style.display = 'none';
+  document.getElementById('tabBar').style.display = 'none';
+  document.getElementById('scroll-content').innerHTML = '';
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+  if (window._socket) window._socket.disconnect();
+}
+function hideLogin() {
+  document.getElementById('loginOverlay').classList.add('hidden');
+  document.getElementById('appHeader').style.display = 'flex';
+  document.getElementById('tabBar').style.display = 'flex';
+}
+
+async function driverLogin() {
+  const phone = document.getElementById('loginPhone').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  if (!phone || !pass) return;
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ phone, password: pass })
+    });
+    const data = await res.json();
+    if (data.error || data.user.role !== 'DRIVER') {
+      document.getElementById('loginError').style.display = 'block';
+      return;
+    }
+    document.getElementById('loginError').style.display = 'none';
+    hideLogin();
+    initApp();
+  } catch (e) {
+    document.getElementById('loginError').style.display = 'block';
+  }
+}
+
+async function logout() {
+  try { await fetch('/logout', { credentials: 'include' }); } catch(e) {}
+  showLogin();
 }
 
 /* ── ONLINE STATUS ──────────────── */
@@ -421,7 +501,7 @@ function buildAvailableCard(o) {
         <div class="oc-total">${o.deliveryFee || 10} ج <span style="font-size:11px;color:var(--text3)">عمولتك</span></div>
         <div class="oc-pay">💰 الإجمالي: ${o.total} ج (المنتجات: ${productTotal} ج + التوصيل: ${o.deliveryFee||0} ج)</div>
       </div>
-      <button class="btn btn-primary" onclick="acceptOrder('${o.id}')">🏍️ قبول الطلب</button>
+      <button class="btn btn-primary btn-sm" onclick="acceptOrder('${o.id}')">🏍️ قبول</button>
     </div>
   </div>`;
 }
@@ -486,8 +566,8 @@ function buildActiveCard(o) {
         <div class="oc-pay">💰 الإجمالي: ${o.total} ج (المنتجات: ${productTotal} ج + التوصيل: ${o.deliveryFee||0} ج) • ${o.paymentMethod === 'CASH' ? '💵 كاش' : '📱 فودافون'}</div>
       </div>
       <div class="oc-actions">
-        ${o.status === 'DRIVER_ASSIGNED' ? `<button class="btn btn-primary" onclick="updateStatus('${o.id}','ON_THE_WAY')">🏍️ خرجت</button>` : ''}
-        ${o.status === 'ON_THE_WAY' ? `<button class="btn btn-green" onclick="confirmDelivery('${o.id}')">✅ سلّمت</button>` : ''}
+        ${o.status === 'DRIVER_ASSIGNED' ? `<button class="btn btn-primary btn-sm" onclick="updateStatus('${o.id}','ON_THE_WAY')">🏍️ خرجت</button>` : ''}
+        ${o.status === 'ON_THE_WAY' ? `<button class="btn btn-green btn-sm" onclick="confirmDelivery('${o.id}')">✅ سلّمت</button>` : ''}
       </div>
     </div>
   </div>`;
@@ -523,8 +603,8 @@ async function renderHistoryView() {
   c.innerHTML = `
     <div class="filter-bar">
       <input type="date" id="history-date-input" value="${historySelectedDate}" />
-      <button class="btn btn-primary" style="height:42px;font-size:13px" onclick="applyDateFilter()">🔍 عرض</button>
-      <button class="btn btn-ghost" style="height:42px;font-size:13px;padding:0 12px" onclick="goToToday()">📅 اليوم</button>
+      <button class="btn btn-primary btn-sm" onclick="applyDateFilter()">🔍 عرض</button>
+      <button class="btn btn-ghost btn-sm" onclick="goToToday()">📅 اليوم</button>
       <button class="btn-clear" onclick="clearDateFilter()">📋 الكل</button>
     </div>
     <div id="history-results"></div>
@@ -629,7 +709,7 @@ async function tabProfile() {
         <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span style="color:var(--text3)">إصدار التطبيق</span><span style="font-weight:700">Drako Rider v2.0</span></div>
       </div>
     </div>
-    <a href="/logout" style="text-decoration:none"><div style="background:rgba(239,68,68,.08);border:1.5px solid rgba(239,68,68,.2);border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:700;color:var(--red);cursor:pointer">⏻ تسجيل الخروج</div></a>`;
+    <button class="btn btn-danger btn-full" onclick="logout()">⏻ تسجيل الخروج</button>`;
 }
 
 function showRechargeModal() {
@@ -661,27 +741,48 @@ async function submitRecharge() {
 }
 
 /* ========== SOCKET.IO ========== */
-const socket = io();
-socket.on('driver:newJob', (data) => {
-  playSound('newJob');
-  toast(`🚀 في ${data.count} طلب جديد متاح!`, 'info', 2000);
-  if (currentTab === 'available') tabAvailable();
-});
-socket.on('orderStatusUpdate', (data) => {
-  if (data.status === 'DELIVERED') playSound('orderDelivered');
-  if (currentTab === 'active') tabActive();
-  else if (currentTab === 'available') tabAvailable();
-});
+function connectSocket() {
+  if (window._socket) window._socket.disconnect();
+  const socket = io();
+  window._socket = socket;
+  socket.on('driver:newJob', (data) => {
+    playSound('newJob');
+    toast(`🚀 في ${data.count} طلب جديد متاح!`, 'info', 2000);
+    if (currentTab === 'available') tabAvailable();
+  });
+  socket.on('orderStatusUpdate', (data) => {
+    if (data.status === 'DELIVERED') playSound('orderDelivered');
+    if (currentTab === 'active') tabActive();
+    else if (currentTab === 'available') tabAvailable();
+  });
+}
 
 /* ── INIT ────────────────────────── */
-async function init() {
+async function initApp() {
   await loadProfile();
   await loadEarnings();
   const profile = await apiFetch('/api/driver/profile').catch(() => ({}));
   setOnlineUI(profile.isAvailable !== false);
+  connectSocket();
   switchTab('available');
 }
-init();
+
+// التحقق من الجلسة عند التحميل
+async function checkSession() {
+  try {
+    const res = await fetch('/api/whoami', { credentials: 'include' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.user?.role === 'DRIVER') {
+        hideLogin();
+        initApp();
+        return;
+      }
+    }
+  } catch(e) {}
+  showLogin();
+}
+checkSession();
 </script>
 </body>
 </html>
