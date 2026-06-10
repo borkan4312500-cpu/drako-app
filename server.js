@@ -836,6 +836,53 @@ app.patch('/api/restaurant/orders/:id', requireAuth, (req, res) => {
   else if (status === 'CANCELLED') io.emit('orderCancelled', { orderId: order.id });
   res.json({ success: true });
 });
+// طلب مباشر من المطعم إلى الأدمن
+app.post('/api/restaurant/order-from-restaurant', requireAuth, (req, res) => {
+  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
+  const data = readData();
+  const restaurant = data.restaurants.find(r => r.userId === req.user.id);
+  if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
+  const { customerName, customerPhone, regionId, regionName, address, orderPrice, deliveryFee, total, notes } = req.body;
+  if (!customerName || !customerPhone || !address || !orderPrice || !deliveryFee || !total) {
+    return res.status(400).json({ error: 'بيانات ناقصة' });
+  }
+  const orderNumber = getNextOrderNumber();
+  const newOrder = {
+    id: 'dir_' + Date.now(),
+    orderNumber,
+    restaurantId: restaurant.id,
+    customerName,
+    customerPhone,
+    regionName,
+    address,
+    items: [{ name: 'أوردر مطعم', price: orderPrice, quantity: 1 }],
+    total,
+    deliveryFee,
+    orderPrice,
+    paymentMethod: 'CASH',
+    status: 'PENDING',
+    driverId: null,
+    adminApproved: true, // موافقة تلقائية لأنه من المطعم
+    isDirect: true, // علامة مميزة
+    notes: notes || '',
+    createdAt: new Date().toISOString(),
+    deliveredAt: null
+  };
+  data.orders.push(newOrder);
+  writeData(data);
+  io.emit('newOrder', { orderId: newOrder.id, restaurantId: restaurant.id, customerName });
+  res.json({ success: true, orderId: newOrder.id });
+});
+
+// عرض الطلبات المباشرة الخاصة بالمطعم
+app.get('/api/restaurant/my-direct-orders', requireAuth, (req, res) => {
+  if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
+  const data = readData();
+  const restaurant = data.restaurants.find(r => r.userId === req.user.id);
+  if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
+  const orders = data.orders.filter(o => o.restaurantId === restaurant.id && o.isDirect);
+  res.json(orders);
+});
 
 // تصنيفات المطعم
 app.get('/api/restaurant/categories', requireAuth, (req, res) => {
