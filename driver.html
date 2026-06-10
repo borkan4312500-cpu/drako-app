@@ -1,362 +1,687 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>دراكو - الطيار</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&display=swap" rel="stylesheet">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
-    body { background: #F7F7F7; color: #1A1A1A; max-width: 430px; margin: auto; height: 100%; overflow: hidden; }
-    :root { --brand: #E8180E; --brand-dark: #B80F09; --bg: #F7F7F7; --card: #FFFFFF; --text: #1A1A1A; --text-muted: #7A7A7A; --border: #EBEBEB; --radius: 18px; }
-    .app-container { display: flex; flex-direction: column; height: 100vh; }
-    .auth-wrapper { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--bg); }
-    .auth-wrapper.hide { display: none; }
-    .auth-card { background: white; border-radius: 24px; padding: 32px 24px; width: 90%; max-width: 360px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); text-align: center; }
-    .auth-card h1 { font-size: 32px; font-weight: 900; color: var(--brand); margin-bottom: 6px; }
-    .field-group { margin-bottom: 16px; text-align: right; }
-    .field-wrap input { width: 100%; height: 52px; background: #F9F9F9; border: 1px solid var(--border); border-radius: 12px; padding: 0 48px 0 16px; font-size: 15px; }
-    .btn { width: 100%; height: 52px; background: var(--brand); border: none; border-radius: 14px; color: white; font-size: 17px; font-weight: 700; cursor: pointer; }
-    .error-msg { color: #F44336; font-size: 13px; margin-top: 8px; display: none; }
-    .main-app { display: none; flex-direction: column; height: 100%; }
-    .main-app.active { display: flex; }
-    .header { padding: 16px; background: white; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
-    .icon-btn { background: #F5F5F5; border: none; width: 40px; height: 40px; border-radius: 12px; font-size: 20px; cursor: pointer; }
-    .tabs { display: flex; padding: 12px 16px; background: white; gap: 8px; border-bottom: 1px solid var(--border); overflow-x: auto; }
-    .tab { padding: 8px 16px; border-radius: 20px; background: #F5F5F5; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
-    .tab.active { background: var(--brand); color: white; }
-    .content { flex: 1; overflow-y: auto; padding: 16px; }
-    .card { background: white; border-radius: 16px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
-    .balance-bar { background: linear-gradient(135deg, #4CAF50, #8BC34A); color: white; border-radius: 16px; padding: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-    .balance-bar.low { background: linear-gradient(135deg, #FF9800, #FFC107); }
-    .balance-bar.critical { background: linear-gradient(135deg, #F44336, #FF5722); }
-    .order-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
-    .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; }
-    .toggle-switch { position: relative; width: 52px; height: 28px; background: #ccc; border-radius: 28px; cursor: pointer; transition: 0.3s; }
-    .toggle-switch.active { background: #4CAF50; }
-    .toggle-switch::after { content: ''; position: absolute; top: 3px; right: 3px; width: 22px; height: 22px; background: white; border-radius: 50%; transition: 0.3s; }
-    .toggle-switch.active::after { right: 27px; }
-    .date-filter { display: flex; gap: 8px; margin-bottom: 16px; }
-    .date-filter input { flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 10px; }
-    .empty { text-align: center; color: #888; margin-top: 40px; }
-    .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1A1A1A; color: white; padding: 12px 24px; border-radius: 100px; z-index: 9999; transition: 0.35s; opacity: 0; }
-    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#E8180E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Drako Rider</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
+<style>
+:root{
+  --bg:#f8f9fb; --surface:#ffffff; --surface2:#f2f4f7; --surface3:#e9ecf1;
+  --border:#dce1e8; --orange:#E8180E; --orange2:#c0100b;
+  --orange-glow:rgba(232,24,14,.12); --orange-dim:rgba(232,24,14,.05);
+  --text:#1a1a1a; --text2:#5f6b7a; --text3:#8f99a9;
+  --green:#10b981; --red:#ef4444; --yellow:#f59e0b; --blue:#3b82f6;
+  --radius:16px; --radius-lg:22px;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo',sans-serif;-webkit-tap-highlight-color:transparent;}
+::-webkit-scrollbar{width:0;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:relative;}
+
+.status-bar{height:env(safe-area-inset-top,0px);background:var(--surface);flex-shrink:0;}
+
+.app-header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.header-logo{display:flex;align-items:center;gap:10px;}
+.logo-mark{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--orange),#ff4b3e);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff;box-shadow:0 4px 14px var(--orange-glow);}
+.logo-text .name{font-size:17px;font-weight:900;color:var(--orange);}
+.logo-text .role{font-size:11px;color:var(--text3);}
+.header-right{display:flex;align-items:center;gap:10px;}
+.earnings-pill{background:var(--orange-dim);border:1px solid rgba(232,24,14,.2);border-radius:99px;padding:6px 14px;display:flex;align-items:center;gap:6px;}
+.earnings-pill .amt{font-size:15px;font-weight:800;color:var(--orange);}
+.earnings-pill .lbl{font-size:10px;color:var(--text3);}
+.status-toggle{width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;}
+.status-toggle.online{background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.3);}
+
+.tab-bar{display:flex;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
+.tab{flex:1;padding:12px 8px;text-align:center;cursor:pointer;font-size:13px;font-weight:700;color:var(--text3);border-bottom:2.5px solid transparent;transition:all .2s;position:relative;}
+.tab.active{color:var(--orange);border-bottom-color:var(--orange);}
+.tab .tab-badge{position:absolute;top:6px;right:calc(50% - 18px);background:var(--orange);color:#fff;font-size:10px;font-weight:800;border-radius:99px;padding:1px 6px;min-width:18px;display:none;}
+.tab .tab-badge.show{display:inline-block;}
+
+.scroll-content{flex:1;overflow-y:auto;padding:16px;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 16px);}
+
+.toast-wrap{position:fixed;top:env(safe-area-inset-top,16px);left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;gap:8px;pointer-events:none;width:calc(100% - 32px);max-width:420px;}
+.toast{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:11px 16px;border-radius:12px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;box-shadow:0 10px 30px rgba(0,0,0,.1);animation:toastIn .3s ease;}
+.toast.success{border-color:var(--green);}.toast.error{border-color:var(--red);}
+@keyframes toastIn{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes toastOut{to{opacity:0;transform:translateY(-12px)}}
+.toast.hiding{animation:toastOut .3s ease forwards;}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:none;align-items:flex-end;justify-content:center;}
+.modal-overlay.open{display:flex;animation:overlayIn .2s ease;}
+@keyframes overlayIn{from{opacity:0}to{opacity:1}}
+.bottom-sheet{background:var(--surface);border-radius:22px 22px 0 0;width:100%;max-width:480px;padding:0 0 env(safe-area-inset-bottom,16px);animation:sheetUp .3s cubic-bezier(.34,1.2,.64,1);max-height:92vh;overflow-y:auto;}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.sheet-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:12px auto;}
+.sheet-head{padding:4px 20px 16px;display:flex;align-items:center;justify-content:space-between;}
+.sheet-title{font-size:17px;font-weight:800;}
+.sheet-close{width:32px;height:32px;background:var(--surface2);border:none;border-radius:9px;cursor:pointer;color:var(--text3);font-size:18px;display:flex;align-items:center;justify-content:center;}
+.sheet-body{padding:0 16px 20px;}
+
+.order-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden;transition:border .2s;animation:cardIn .3s ease;}
+@keyframes cardIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.order-card.new-order{border-color:var(--orange);box-shadow:0 4px 14px var(--orange-glow);}
+.order-card.active-order{border-color:rgba(16,185,129,.3);}
+.oc-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;}
+.oc-id{font-size:14px;font-weight:900;color:var(--orange);}
+.oc-timer{font-size:12px;color:var(--text3);display:flex;align-items:center;gap:4px;}
+.oc-body{padding:0 16px 14px;display:flex;flex-direction:column;gap:8px;}
+.oc-row{display:flex;align-items:flex-start;gap:10px;font-size:13px;}
+.oc-row .icon{font-size:15px;flex-shrink:0;margin-top:1px;}
+.oc-row .val{color:var(--text);font-weight:600;flex:1;line-height:1.4;}
+.oc-row .lbl{color:var(--text3);font-size:11px;}
+.oc-items-box{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin:4px 0;}
+.oc-item-line{font-size:12px;color:var(--text2);padding:2px 0;}
+.oc-footer{padding:12px 16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.oc-total{font-size:18px;font-weight:900;color:var(--orange);}
+.oc-pay{font-size:11px;color:var(--text3);margin-top:2px;}
+.oc-actions{display:flex;gap:8px;}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 18px;border-radius:12px;font-size:14px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;border:none;transition:all .18s;white-space:nowrap;}
+.btn:active{transform:scale(.96);}
+.btn-primary{background:var(--orange);color:#fff;box-shadow:0 4px 14px var(--orange-glow);}
+.btn-primary:hover{background:var(--orange2);}
+.btn-green{background:rgba(16,185,129,.1);color:var(--green);border:1.5px solid rgba(16,185,129,.3);}
+.btn-green:hover{background:rgba(16,185,129,.2);}
+.btn-ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--surface3);color:var(--text);}
+.btn-danger{background:rgba(239,68,68,.08);color:var(--red);border:1.5px solid rgba(239,68,68,.25);}
+.btn-full{width:100%;height:52px;border-radius:14px;font-size:16px;}
+
+.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;}
+.badge::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;}
+.badge-green{background:rgba(16,185,129,.1);color:var(--green);}
+.badge-orange{background:var(--orange-dim);color:var(--orange);}
+.badge-yellow{background:rgba(245,158,11,.1);color:var(--yellow);}
+.badge-gray{background:var(--surface3);color:var(--text3);}
+.badge-blue{background:rgba(59,130,246,.1);color:var(--blue);}
+.badge-red{background:rgba(239,68,68,.08);color:var(--red);}
+
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+.stat-mini{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 10px;text-align:center;}
+.stat-mini .val{font-size:20px;font-weight:900;}
+.stat-mini .lbl{font-size:10px;color:var(--text3);margin-top:3px;}
+
+.profile-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px;}
+.profile-avatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--orange),#ff4b3e);display:flex;align-items:center;justify-content:center;font-size:26px;color:#fff;font-weight:900;margin:0 auto 12px;}
+.profile-name{font-size:18px;font-weight:800;text-align:center;}
+.profile-phone{font-size:13px;color:var(--text3);text-align:center;margin-top:3px;}
+
+.history-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;padding:14px 16px;}
+.hc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.hc-id{font-size:13px;font-weight:800;color:var(--orange);}
+.hc-date{font-size:11px;color:var(--text3);}
+.hc-row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;}
+.hc-row .l{color:var(--text3);}
+.hc-row .r{font-weight:700;}
+
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;}
+.empty-state .icon{font-size:52px;margin-bottom:14px;opacity:.6;}
+.empty-state .title{font-size:16px;font-weight:700;margin-bottom:6px;}
+.empty-state .sub{font-size:13px;color:var(--text3);}
+
+.divider{height:1px;background:var(--border);margin:12px 0;}
+
+.skeleton{background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:14px;}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skel-card{height:160px;margin-bottom:12px;}
+
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;animation:blink 1.4s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+.steps-wrap{display:flex;align-items:center;gap:0;margin:14px 0;}
+.step-item{display:flex;flex-direction:column;align-items:center;flex:1;}
+.step-dot{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;transition:all .3s;z-index:1;}
+.step-dot.done{background:var(--green);border-color:var(--green);color:#fff;}
+.step-dot.active{background:var(--orange);border-color:var(--orange);color:#fff;box-shadow:0 0 0 4px var(--orange-glow);}
+.step-line{flex:1;height:2px;background:var(--border);margin:0 -4px;margin-top:-14px;}
+.step-line.done{background:var(--green);}
+.step-lbl{font-size:9px;color:var(--text3);margin-top:4px;text-align:center;}
+.step-dot.active+.step-lbl,.step-dot.done+.step-lbl{color:var(--orange);}
+
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
+.field label{font-size:12px;font-weight:700;color:var(--text3);}
+.field input{background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:11px 13px;font-size:14px;font-family:'Cairo',sans-serif;color:var(--text);outline:none;transition:border .2s;}
+.field input:focus{border-color:var(--orange);}
+
+.filter-bar{display:flex;gap:8px;margin-bottom:14px;align-items:center;}
+.filter-bar input[type="date"]{flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;font-family:'Cairo',sans-serif;color:var(--text);outline:none;}
+.filter-bar input[type="date"]:focus{border-color:var(--orange);}
+.filter-bar .btn-clear{background:var(--surface3);color:var(--text2);border:1px solid var(--border);padding:10px 14px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+</style>
 </head>
 <body>
-<div class="app-container">
-  <!-- شاشة تسجيل الدخول -->
-  <div class="auth-wrapper" id="authWrapper">
-    <div class="auth-card">
-      <div style="font-size: 48px;">🛵</div>
-      <h1>Drako Driver</h1>
-      <p>سجّل دخولك لبدء العمل</p>
-      <div class="field-group">
-        <label>رقم الهاتف</label>
-        <div class="field-wrap"><span style="position:absolute; right:14px; top:14px;">📱</span><input type="tel" id="driverPhone" placeholder="01xxxxxxxxx"></div>
-      </div>
-      <div class="field-group">
-        <label>كلمة المرور</label>
-        <div class="field-wrap"><span style="position:absolute; right:14px; top:14px;">🔒</span><input type="password" id="driverPass" placeholder="••••••••"></div>
-      </div>
-      <button class="btn" onclick="driverLogin()">دخول</button>
-      <div class="error-msg" id="loginError">بيانات الدخول خاطئة</div>
-    </div>
-  </div>
 
-  <!-- الواجهة الرئيسية -->
-  <div class="main-app" id="mainApp">
-    <div class="header">
-      <h2 id="headerTitle">الرئيسية</h2>
-      <button class="icon-btn" onclick="logout()">🚪</button>
-    </div>
-    <div class="tabs" id="mainTabs">
-      <div class="tab active" data-tab="available" onclick="switchTab('available')">🆕 متاحة</div>
-      <div class="tab" data-tab="active" onclick="switchTab('active')">📋 نشطة</div>
-      <div class="tab" data-tab="history" onclick="switchTab('history')">📜 السجل</div>
-      <div class="tab" data-tab="account" onclick="switchTab('account')">👤 حسابي</div>
-    </div>
-    <div class="content" id="tabContent"></div>
+<div class="toast-wrap" id="toast-wrap"></div>
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="bottom-sheet" id="sheet-box">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><div class="sheet-title" id="sheet-title"></div><button class="sheet-close" onclick="closeModal()">✕</button></div>
+    <div class="sheet-body" id="sheet-body"></div>
   </div>
-  <div class="toast" id="toast"></div>
+</div>
+<div class="status-bar"></div>
+
+<!-- HEADER -->
+<div class="app-header">
+  <div class="header-logo">
+    <div class="logo-mark">🏍️</div>
+    <div class="logo-text"><div class="name">Drako Rider</div><div class="role" id="driver-name-lbl">جاري التحميل...</div></div>
+  </div>
+  <div class="header-right">
+    <div class="earnings-pill"><div><div class="amt" id="earnings-val">0</div><div class="lbl">جنيه</div></div></div>
+    <div class="status-toggle" id="status-toggle" onclick="toggleOnlineStatus()" title="تبديل الحالة"><span id="status-icon">⚫</span></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tab-bar">
+  <div class="tab active" id="tab-available" onclick="switchTab('available')"><span id="tab-available-icon">🟡</span> متاحة<span class="tab-badge" id="badge-available">0</span></div>
+  <div class="tab" id="tab-active" onclick="switchTab('active')"><span>🟢</span> طلباتي<span class="tab-badge" id="badge-active">0</span></div>
+  <div class="tab" id="tab-history" onclick="switchTab('history')"><span>📋</span> السجل</div>
+  <div class="tab" id="tab-profile" onclick="switchTab('profile')"><span>👤</span> حسابي</div>
+</div>
+
+<div class="scroll-content" id="scroll-content">
+  <div class="skel-card skeleton"></div>
+  <div class="skel-card skeleton"></div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-const API = '/api';
-let currentDriver = null, socket = null, currentTab = 'available';
-let driverCredit = 0;
-
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2800);
-}
-
-// ========== Auth ==========
-async function driverLogin() {
-  const phone = document.getElementById('driverPhone').value.trim();
-  const pass = document.getElementById('driverPass').value;
-  if (!phone || !pass) return showToast('⚠️ أكمل البيانات');
-  try {
-    const res = await fetch(API + '/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, password: pass })
-    });
-    const data = await res.json();
-    if (data.error || data.user.role !== 'DRIVER') {
-      document.getElementById('loginError').style.display = 'block';
-      return;
+/* ========== SOUND ENGINE ========== */
+function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
+  const sampleRate = 44100;
+  const numSamples = Math.floor(sampleRate * duration);
+  const buffer = new Float32Array(numSamples);
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / sampleRate;
+    let sample = 0;
+    if (type === 'sine') sample = Math.sin(2 * Math.PI * frequency * t);
+    else if (type === 'square') sample = Math.sign(Math.sin(2 * Math.PI * frequency * t));
+    else if (type === 'triangle') {
+      const p = (frequency * t) % 1;
+      sample = 4 * Math.abs(p - 0.5) - 1;
     }
-    currentDriver = data.user;
-    document.getElementById('authWrapper').classList.add('hide');
-    document.getElementById('mainApp').classList.add('active');
-    initSocket();
-    switchTab('available');
-  } catch (e) { showToast('❌ فشل الاتصال'); }
+    buffer[i] = sample * volume;
+  }
+  const dataLength = buffer.length * 2;
+  const bufferArray = new ArrayBuffer(44 + dataLength);
+  const view = new DataView(bufferArray);
+  function writeString(offset, string) { for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i)); }
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + dataLength, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, dataLength, true);
+  let offset = 44;
+  for (let i = 0; i < buffer.length; i++) {
+    const s = Math.max(-1, Math.min(1, buffer[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    offset += 2;
+  }
+  const blob = new Blob([bufferArray], { type: 'audio/wav' });
+  return URL.createObjectURL(blob);
+}
+const soundInstances = {};
+function createSound(name, ...tones) { soundInstances[name] = tones.map(t => new Howl({ src: [t], format: ['wav'], volume: 0.5 })); }
+function playSound(name) { if (soundInstances[name]) soundInstances[name].forEach(h => h.play()); }
+createSound('newJob', generateToneWAV(800, 0.12, 'square'), generateToneWAV(1000, 0.12, 'square'));
+createSound('orderDelivered', generateToneWAV(600, 0.15, 'sine'), generateToneWAV(900, 0.15, 'sine'));
+createSound('driverAssigned', generateToneWAV(500, 0.1, 'sine'));
+
+/* ── STATE ──────────────────────── */
+let currentTab = 'available';
+let isOnline = true;
+let driverEarnings = 0;
+let driverName = '';
+let driverPhone = '';
+let autoTimer = null;
+let availableOrders = [];
+let myOrders = [];
+let historySelectedDate = new Date().toISOString().slice(0, 10);
+
+/* ── API FETCH ───────────────── */
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(path, {
+    ...opts,
+    credentials: 'include',
+    headers: {
+      ...(opts.headers || {}),
+      'Content-Type': opts.body instanceof FormData ? undefined : 'application/json'
+    }
+  });
+  if (res.status === 401) {
+    toast('انتهت الجلسة — جاري إعادة التوجيه', 'error');
+    setTimeout(() => location.href = '/', 2000);
+    throw new Error('401');
+  }
+  return res.json();
 }
 
-function logout() {
-  if (socket) socket.disconnect();
-  fetch('/logout');
-  currentDriver = null;
-  document.getElementById('mainApp').classList.remove('active');
-  document.getElementById('authWrapper').classList.remove('hide');
+/* ── TOAST ──────────────────────── */
+function toast(msg, type = 'success', dur = 3000) {
+  const w = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.innerHTML = `<span>${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span><span>${msg}</span>`;
+  w.appendChild(t);
+  setTimeout(() => { t.classList.add('hiding'); setTimeout(() => t.remove(), 300); }, dur);
 }
 
-// ========== Socket ==========
-function initSocket() {
-  if (socket) return;
-  socket = io();
-  socket.on('orderStatusUpdate', () => { if (['active','available'].includes(currentTab)) loadCurrentTab(); });
-  socket.on('driver:newJob', (data) => { showToast(`🆕 ${data.count} طلب جديد`); if (currentTab === 'available') loadCurrentTab(); });
+/* ── MODAL ──────────────────────── */
+function openModal(title, body) {
+  document.getElementById('sheet-title').textContent = title;
+  document.getElementById('sheet-body').innerHTML = body;
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+/* ── HELPERS ────────────────────── */
+const S_AR = { PENDING: 'في الانتظار', ACCEPTED: 'مقبول', PREPARING: 'يتحضر', READY: 'جاهز', DRIVER_ASSIGNED: 'مع طيار', ON_THE_WAY: 'في الطريق', DELIVERED: 'تم التوصيل', CANCELLED: 'ملغي' };
+const S_CL = { PENDING: 'badge-yellow', ACCEPTED: 'badge-blue', PREPARING: 'badge-orange', READY: 'badge-green', DRIVER_ASSIGNED: 'badge-orange', ON_THE_WAY: 'badge-orange', DELIVERED: 'badge-green', CANCELLED: 'badge-red' };
+function sBadge(s) { return `<span class="badge ${S_CL[s] || 'badge-gray'}">${S_AR[s] || s}</span>`; }
+
+function relTime(iso) {
+  if (!iso) return '';
+  const m = Math.floor((new Date() - new Date(iso)) / 60000);
+  if (m < 1) return 'الآن'; if (m < 60) return `${m}د`;
+  const h = Math.floor(m / 60); if (h < 24) return `${h}س`; return `${Math.floor(h / 24)}ي`;
 }
 
+function formatDateTime(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function renderItemsList(items) {
+  if (!items || !items.length) return '<div class="oc-item-line">لا تفاصيل</div>';
+  return items.map(item => {
+    let html = `<div class="oc-item-line">• ${item.name} × ${item.qty || item.quantity || 1}</div>`;
+    if (item.selectedOptions && item.selectedOptions.length > 0) {
+      html += `<div class="oc-item-line" style="color:var(--text3);font-size:11px">` +
+              item.selectedOptions.map(opt => opt.value).join('، ') + `</div>`;
+    }
+    if (item.notes) {
+      html += `<div class="oc-item-line" style="color:var(--text3);font-size:11px">📝 ${item.notes}</div>`;
+    }
+    return html;
+  }).join('');
+}
+
+/* ── ONLINE STATUS ──────────────── */
+function setOnlineUI(on) {
+  isOnline = on;
+  const t = document.getElementById('status-toggle');
+  const i = document.getElementById('status-icon');
+  if (on) { t.classList.add('online'); i.textContent = '🟢'; }
+  else { t.classList.remove('online'); i.textContent = '⚫'; }
+}
+async function toggleOnlineStatus() {
+  try {
+    const d = await apiFetch('/api/driver/toggle-status', { method: 'PATCH' });
+    if (d.error) { toast(d.error, 'error'); return; }
+    setOnlineUI(d.isAvailable);
+    toast(d.isAvailable ? 'أنت الآن متاح للطلبات' : 'أنت الآن غير متاح', 'success', 2000);
+  } catch (e) { toast('حدث خطأ', 'error'); }
+}
+
+/* ── EARNINGS & PROFILE ──────────── */
+async function loadEarnings() {
+  try {
+    const todayData = await apiFetch('/api/driver/earnings?today=true');
+    driverEarnings = todayData.total || 0;
+    document.getElementById('earnings-val').textContent = driverEarnings;
+  } catch (e) {}
+}
+async function loadProfile() {
+  try {
+    const d = await apiFetch('/api/driver/profile');
+    if (d.name) {
+      driverName = d.name;
+      driverPhone = d.phone;
+      document.getElementById('driver-name-lbl').textContent = driverName;
+    }
+  } catch (e) {}
+}
+
+/* ── TAB SWITCH ─────────────────── */
 function switchTab(tab) {
   currentTab = tab;
-  document.querySelectorAll('#mainTabs .tab').forEach(t => t.classList.remove('active'));
-  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
-  document.getElementById('headerTitle').innerText = { available:'الطلبات المتاحة', active:'طلباتي النشطة', history:'السجل', account:'حسابي' }[tab];
-  loadCurrentTab();
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  renderTab(tab);
+}
+async function renderTab(tab) {
+  const c = document.getElementById('scroll-content');
+  c.innerHTML = `<div class="skel-card skeleton"></div><div class="skel-card skeleton"></div>`;
+  try {
+    if (tab === 'available') await tabAvailable();
+    else if (tab === 'active') await tabActive();
+    else if (tab === 'history') await renderHistoryView();
+    else if (tab === 'profile') await tabProfile();
+  } catch (e) { console.error(e); }
 }
 
-function loadCurrentTab() {
-  switch (currentTab) {
-    case 'available': loadAvailableOrders(); break;
-    case 'active': loadMyActiveOrders(); break;
-    case 'history': loadHistory(); break;
-    case 'account': loadAccount(); break;
+/* ── TAB: AVAILABLE ORDERS ──────── */
+async function tabAvailable() {
+  const orders = await apiFetch('/api/driver/available-orders');
+  availableOrders = orders;
+  const badge = document.getElementById('badge-available');
+  if (orders.length) { badge.textContent = orders.length; badge.classList.add('show'); } else badge.classList.remove('show');
+  const c = document.getElementById('scroll-content');
+  if (!orders.length) {
+    c.innerHTML = `<div class="empty-state"><div class="icon">🏍️</div><div class="title">لا توجد طلبات متاحة</div><div class="sub">بنتحقق تلقائياً كل 10 ثواني</div></div>`;
+  } else {
+    c.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-size:14px;font-weight:700">${orders.length} طلب متاح</div><div style="display:flex;align-items:center;gap:6px"><span class="live-dot"></span><span style="font-size:12px;color:var(--text3)">مباشر</span></div></div>` +
+      orders.map(o => buildAvailableCard(o)).join('');
   }
-}
-
-// ========== Balance Display ==========
-async function fetchCredit() {
-  try {
-    const res = await fetch(API + '/driver/profile', { credentials: 'include' });
-    const profile = await res.json();
-    driverCredit = profile.credit || 0;
-    return driverCredit;
-  } catch(e) { return 0; }
-}
-
-function renderBalanceBar(credit) {
-  let cls = '';
-  if (credit < 10) cls = 'critical';
-  else if (credit < 30) cls = 'low';
-  return `
-    <div class="balance-bar ${cls}">
-      <div>
-        <div style="font-size:12px;">💰 رصيدي</div>
-        <div style="font-size:22px; font-weight:900;">${credit} ج</div>
-      </div>
-      <button class="btn-sm" style="background:white; color:#333; border:none; border-radius:10px; padding:8px 16px;" onclick="recharge()">⚡ شحن</button>
-    </div>`;
-}
-
-async function recharge() {
-  const amount = prompt('أدخل المبلغ المراد شحنه (ج):', '100');
-  if (!amount || isNaN(amount) || Number(amount) <= 0) return;
-  try {
-    const res = await fetch(API + '/driver/recharge', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ amount: Number(amount) })
-    });
-    const data = await res.json();
-    showToast('✅ ' + data.message);
-    loadCurrentTab(); // لتحديث الرصيد
-  } catch(e) { showToast('❌ فشل الشحن'); }
-}
-
-// ========== Available Orders ==========
-async function loadAvailableOrders() {
-  const container = document.getElementById('tabContent');
-  const credit = await fetchCredit();
-  container.innerHTML = renderBalanceBar(credit);
-  try {
-    const res = await fetch(API + '/driver/available-orders', { credentials: 'include' });
-    if (res.status === 401) { logout(); return; }
-    const orders = await res.json();
-    if (!orders.length) {
-      container.innerHTML += '<div class="empty">🎉 لا توجد طلبات متاحة</div>';
-      return;
+  autoTimer = setInterval(async () => {
+    const fresh = await apiFetch('/api/driver/available-orders').catch(() => []);
+    availableOrders = fresh;
+    if (currentTab === 'available') {
+      const c2 = document.getElementById('scroll-content');
+      if (!fresh.length) c2.innerHTML = `<div class="empty-state"><div class="icon">🏍️</div><div class="title">لا توجد طلبات متاحة</div></div>`;
+      else c2.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-size:14px;font-weight:700">${fresh.length} طلب متاح</div><div style="display:flex;align-items:center;gap:6px"><span class="live-dot"></span><span style="font-size:12px;color:var(--text3)">مباشر</span></div></div>` + fresh.map(o => buildAvailableCard(o)).join('');
     }
-    container.innerHTML += orders.map(order => {
-      const productVal = (order.total||0) - (order.deliveryFee||0);
-      const estCommission = Math.round(productVal * 0.20);
-      const canAccept = credit >= estCommission;
-      return `
-        <div class="card">
-          <div><strong>#${order.id.slice(-6)}</strong> <span class="badge" style="background:#FFF3E0;color:#E65100;">جاهز</span></div>
-          <p>🏪 ${order.restaurantName || '—'}</p>
-          <p>👤 ${order.customerName} | 📍 ${order.customerAddress || order.address}</p>
-          <p>💵 القيمة: ${order.total} ج | 📊 عمولة تقريبية: ${estCommission} ج</p>
-          ${canAccept ? 
-            `<button class="btn" style="margin-top:8px;" onclick="acceptOrder('${order.id}')">🚀 استلام</button>` :
-            `<div style="color:#F44336; margin-top:8px;">⚠️ رصيدك غير كافٍ (${credit} ج). <a href="#" onclick="recharge()">اشحن الآن</a></div>`
-          }
-        </div>`;
-    }).join('');
-  } catch(e) { container.innerHTML += '<div class="empty">⚠️ خطأ في التحميل</div>'; }
+  }, 10000);
 }
 
-async function acceptOrder(orderId) {
-  try {
-    const res = await fetch(API + '/driver/orders/' + orderId + '/accept', { method:'PATCH', credentials:'include' });
-    if (!res.ok) {
-      const err = await res.json();
-      showToast('❌ ' + (err.error || 'فشل'));
-      if (err.error.includes('رصيدك')) loadAvailableOrders(); // تحديث الرصيد
-      return;
-    }
-    showToast('✅ تم استلام الطلب');
-    switchTab('active');
-  } catch(e) { showToast('❌ فشل الاتصال'); }
-}
-
-// ========== Active Orders ==========
-async function loadMyActiveOrders() {
-  const container = document.getElementById('tabContent');
-  const credit = await fetchCredit();
-  container.innerHTML = renderBalanceBar(credit);
-  try {
-    const res = await fetch(API + '/driver/my-orders', { credentials: 'include' });
-    const orders = await res.json();
-    if (!orders.length) { container.innerHTML += '<div class="empty">📭 لا يوجد طلبات نشطة</div>'; return; }
-    container.innerHTML += orders.map(order => `
-      <div class="card">
-        <div><strong>#${order.id.slice(-6)}</strong> <span class="badge" style="background:#E3F2FD;color:#0D47A1;">${order.status==='DRIVER_ASSIGNED'?'بانتظارك':'في الطريق'}</span></div>
-        <p>🏪 ${order.restaurantName || '—'}</p>
-        <p>👤 ${order.customerName} | 📍 ${order.customerAddress || order.address}</p>
-        ${order.status === 'DRIVER_ASSIGNED' ? 
-          `<button class="btn" style="margin-top:8px; background:#1565C0;" onclick="updateOrderStatus('${order.id}','ON_THE_WAY')">🚗 في الطريق</button>` :
-          `<button class="btn" style="margin-top:8px; background:#2E7D32;" onclick="updateOrderStatus('${order.id}','DELIVERED')">✅ تم التوصيل</button>`
-        }
-      </div>`).join('');
-  } catch(e) { container.innerHTML += '<div class="empty">⚠️ خطأ</div>'; }
-}
-
-async function updateOrderStatus(orderId, status) {
-  try {
-    const res = await fetch(API + '/driver/orders/' + orderId + '/status', {
-      method:'PATCH', headers:{'Content-Type':'application/json'}, credentials:'include',
-      body: JSON.stringify({ status })
-    });
-    if (!res.ok) { const e = await res.json(); showToast('❌ '+e.error); return; }
-    showToast('✅ تم التحديث');
-    if (status === 'DELIVERED') switchTab('history');
-    else loadMyActiveOrders();
-  } catch(e) { showToast('❌ فشل'); }
-}
-
-// ========== History with Date Filter ==========
-async function loadHistory() {
-  const container = document.getElementById('tabContent');
-  const credit = await fetchCredit();
-  container.innerHTML = renderBalanceBar(credit) + `
-    <div class="date-filter">
-      <input type="date" id="historyDate" onchange="loadHistory()">
-      <button class="btn" style="width:auto;" onclick="loadHistory()">عرض</button>
+function buildAvailableCard(o) {
+  const productTotal = (o.total || 0) - (o.deliveryFee || 0);
+  const invoiceLine = o.invoiceAmount ? 
+    `<div class="oc-row"><div class="icon">💰</div><div><div class="val">${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div><div class="lbl">الفاتورة</div></div></div>` : '';
+  
+  return `<div class="order-card new-order" id="oc-${o.id}">
+    <div class="oc-header"><div class="oc-id">#${o.id.slice(-6)}</div><div style="display:flex;align-items:center;gap:8px">${sBadge(o.status)}<div class="oc-timer">⏱ ${relTime(o.createdAt)}</div></div></div>
+    <div class="oc-body">
+      <div class="oc-row"><div class="icon">🍽️</div><div><div class="val">${o.restaurantName || '—'}</div><div class="lbl">المطعم / المتجر</div></div></div>
+      <div class="oc-row"><div class="icon">👤</div><div><div class="val">${o.customerName || '—'}</div><div class="lbl">العميل</div></div></div>
+      <div class="oc-row"><div class="icon">🌍</div><div><div class="val">${o.regionName || '—'}</div><div class="lbl">المنطقة</div></div></div>
+      <div class="oc-row"><div class="icon">📍</div><div><div class="val">${o.address || o.customerAddress || '—'}</div><div class="lbl">العنوان</div></div></div>
+      ${invoiceLine}
+      <div class="oc-items-box">${renderItemsList(o.items)}</div>
     </div>
-    <div id="historyList"></div>`;
-  await loadHistoryList();
-}
-
-async function loadHistoryList() {
-  const listContainer = document.getElementById('historyList');
-  const date = document.getElementById('historyDate')?.value;
-  let url = API + '/driver/history';
-  if (date) url += '?date=' + date;
-  try {
-    const res = await fetch(url, { credentials: 'include' });
-    const orders = await res.json();
-    if (!orders.length) { listContainer.innerHTML = '<div class="empty">لا توجد طلبات منتهية</div>'; return; }
-    listContainer.innerHTML = orders.map(order => `
-      <div class="card">
-        <p><strong>#${order.id.slice(-6)}</strong> - <span class="badge" style="background:#E8F5E9;color:#1B5E20;">تم</span></p>
-        <p>🏪 ${order.restaurantName} | 👤 ${order.customerName}</p>
-        <p>📅 ${new Date(order.deliveredAt).toLocaleDateString('ar-EG')}</p>
-        <p>💰 القيمة: ${order.total} ج | 🛵 توصيل: ${order.deliveryFee} ج</p>
-      </div>`).join('');
-  } catch(e) { listContainer.innerHTML = '<div class="empty">⚠️ خطأ</div>'; }
-}
-
-// ========== Account ==========
-async function loadAccount() {
-  const container = document.getElementById('tabContent');
-  try {
-    const [profileRes, earningsRes] = await Promise.all([
-      fetch(API + '/driver/profile', { credentials: 'include' }),
-      fetch(API + '/driver/earnings', { credentials: 'include' })
-    ]);
-    const profile = await profileRes.json();
-    const earnings = await earningsRes.json();
-    driverCredit = profile.credit || 0;
-    container.innerHTML = `
-      <div class="balance-bar ${driverCredit<10?'critical':(driverCredit<30?'low':'')}">
-        <div><div>💰 رصيدي</div><div style="font-size:24px; font-weight:900;">${driverCredit} ج</div></div>
-        <button class="btn-sm" style="background:white; color:#333;" onclick="recharge()">⚡ شحن</button>
+    <div class="oc-footer">
+      <div>
+        <div class="oc-total">${o.deliveryFee || 10} ج <span style="font-size:11px;color:var(--text3)">عمولتك</span></div>
+        <div class="oc-pay">💰 الإجمالي: ${o.total} ج (المنتجات: ${productTotal} ج + التوصيل: ${o.deliveryFee||0} ج)</div>
       </div>
-      <div class="card">
-        <div style="text-align:center; font-size:64px;">🛵</div>
-        <h2 style="text-align:center;">${profile.name}</h2>
-        <p style="text-align:center;">📱 ${profile.phone}</p>
-        <div class="stat-row"><span>💵 إجمالي الأرباح</span><span>${earnings.total} ج</span></div>
-        <div class="stat-row" style="margin-top:12px; align-items:center;">
-          <span>🟢 متاح للعمل</span>
-          <div class="toggle-switch ${profile.isAvailable?'active':''}" onclick="toggleAvailability()"></div>
-        </div>
-        <button class="btn" style="margin-top:20px; background:#666;" onclick="logout()">🚪 خروج</button>
-      </div>`;
-  } catch(e) { container.innerHTML = '<div class="empty">⚠️ خطأ</div>'; }
+      <button class="btn btn-primary" onclick="acceptOrder('${o.id}')">🏍️ قبول الطلب</button>
+    </div>
+  </div>`;
 }
 
-async function toggleAvailability() {
-  const res = await fetch(API + '/driver/toggle-status', { method:'PATCH', credentials:'include' });
-  const data = await res.json();
-  document.querySelector('.toggle-switch').classList.toggle('active', data.isAvailable);
-  showToast(data.isAvailable ? 'متاح' : 'متوقف');
-}
-
-// ========== Init ==========
-async function checkSession() {
+/* ── ACCEPT ORDER ─────────────────── */
+async function acceptOrder(id) {
   try {
-    const res = await fetch(API + '/whoami', { credentials: 'include' });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.user.role === 'DRIVER') {
-        currentDriver = data.user;
-        document.getElementById('authWrapper').classList.add('hide');
-        document.getElementById('mainApp').classList.add('active');
-        initSocket();
-        switchTab('available');
-      }
-    }
-  } catch(e) {}
+    const d = await apiFetch('/api/driver/orders/' + id + '/accept', { method: 'PATCH' });
+    if (d.error) { toast(d.error, 'error'); return; }
+    toast('تم قبول الطلب! 🎉');
+    loadEarnings();
+    setTimeout(() => switchTab('active'), 800);
+  } catch (e) { toast('حدث خطأ', 'error'); }
 }
-checkSession();
+
+/* ── TAB: MY ORDERS ──────────────── */
+async function tabActive() {
+  const orders = await apiFetch('/api/driver/my-orders');
+  myOrders = orders;
+  const badge = document.getElementById('badge-active');
+  if (orders.length) { badge.textContent = orders.length; badge.classList.add('show'); } else badge.classList.remove('show');
+  const c = document.getElementById('scroll-content');
+  if (!orders.length) {
+    c.innerHTML = `<div class="empty-state"><div class="icon">📦</div><div class="title">لا توجد طلبات نشطة</div><div class="sub">اقبل طلباً من قائمة الطلبات المتاحة</div></div>`;
+  } else {
+    c.innerHTML = orders.map(o => buildActiveCard(o)).join('');
+  }
+  autoTimer = setInterval(async () => {
+    const fresh = await apiFetch('/api/driver/my-orders').catch(() => []);
+    myOrders = fresh;
+    if (currentTab === 'active') {
+      const c2 = document.getElementById('scroll-content');
+      if (!fresh.length) c2.innerHTML = `<div class="empty-state"><div class="icon">📦</div><div class="title">لا توجد طلبات نشطة</div></div>`;
+      else c2.innerHTML = fresh.map(o => buildActiveCard(o)).join('');
+    }
+  }, 10000);
+}
+
+function buildActiveCard(o) {
+  const steps = [{ key: 'DRIVER_ASSIGNED', lbl: 'استلمته' }, { key: 'ON_THE_WAY', lbl: 'في الطريق' }, { key: 'DELIVERED', lbl: 'تم التسليم' }];
+  const curIdx = steps.findIndex(s => s.key === o.status);
+  const stepsHTML = `<div class="steps-wrap">${steps.map((s, i) => `<div class="step-item"><div class="step-dot ${i < curIdx ? 'done' : i === curIdx ? 'active' : ''}">${i < curIdx ? '✓' : i + 1}</div><div class="step-lbl">${s.lbl}</div></div>${i < steps.length - 1 ? `<div class="step-line ${i < curIdx ? 'done' : ''}"></div>` : ''}`).join('')}</div>`;
+  const productTotal = (o.total || 0) - (o.deliveryFee || 0);
+  const invoiceLine = o.invoiceAmount ? 
+    `<div class="oc-row"><div class="icon">💰</div><div><div class="val">${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div><div class="lbl">الفاتورة</div></div></div>` : '';
+  
+  return `<div class="order-card active-order" id="oc-${o.id}">
+    <div class="oc-header"><div class="oc-id">#${o.id.slice(-6)}</div><div style="display:flex;align-items:center;gap:8px">${sBadge(o.status)}<div class="oc-timer">⏱ ${relTime(o.createdAt)}</div></div></div>
+    <div class="oc-body">
+      ${stepsHTML}
+      <div class="oc-row"><div class="icon">🍽️</div><div><div class="val">${o.restaurantName || '—'}</div><div class="lbl">المطعم / المتجر</div></div></div>
+      <div class="oc-row"><div class="icon">👤</div><div><div class="val">${o.customerName || '—'}</div><div class="lbl">العميل</div></div></div>
+      <div class="oc-row"><div class="icon">🌍</div><div><div class="val">${o.regionName || '—'}</div><div class="lbl">المنطقة</div></div></div>
+      <div class="oc-row"><div class="icon">📍</div><div><div class="val">${o.address || o.customerAddress || '—'}</div><div class="lbl">عنوان التوصيل</div></div></div>
+      ${o.customerPhone ? `<div class="oc-row"><div class="icon">📞</div><div><div class="val"><a href="tel:${o.customerPhone}" style="color:var(--orange);text-decoration:none">${o.customerPhone}</a></div><div class="lbl">اتصل بالعميل</div></div></div>` : ''}
+      ${invoiceLine}
+      <div class="oc-items-box">${renderItemsList(o.items)}</div>
+    </div>
+    <div class="oc-footer">
+      <div>
+        <div class="oc-total">${o.deliveryFee || 10} ج <span style="font-size:11px;color:var(--text3)">عمولتك</span></div>
+        <div class="oc-pay">💰 الإجمالي: ${o.total} ج (المنتجات: ${productTotal} ج + التوصيل: ${o.deliveryFee||0} ج) • ${o.paymentMethod === 'CASH' ? '💵 كاش' : '📱 فودافون'}</div>
+      </div>
+      <div class="oc-actions">
+        ${o.status === 'DRIVER_ASSIGNED' ? `<button class="btn btn-primary" onclick="updateStatus('${o.id}','ON_THE_WAY')">🏍️ خرجت</button>` : ''}
+        ${o.status === 'ON_THE_WAY' ? `<button class="btn btn-green" onclick="confirmDelivery('${o.id}')">✅ سلّمت</button>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── UPDATE STATUS ────────────────── */
+async function updateStatus(id, status) {
+  try {
+    const d = await apiFetch('/api/driver/orders/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status }) });
+    if (d.error) { toast(d.error, 'error'); return; }
+    toast('🏍️ أنت في الطريق!');
+    loadEarnings();
+    tabActive();
+  } catch (e) { toast('حدث خطأ', 'error'); }
+}
+function confirmDelivery(id) {
+  openModal('تأكيد التسليم', `<p style="font-size:14px;color:var(--text2);margin-bottom:20px;line-height:1.7">هل تأكد تسليم الطلب <strong style="color:var(--orange)">#${id.slice(-6)}</strong> للعميل؟</p><div style="display:flex;gap:10px"><button class="btn btn-ghost" style="flex:1" onclick="closeModal()">لا، رجوع</button><button class="btn btn-green" style="flex:2" onclick="doDelivery('${id}')">✅ نعم، تم التسليم</button></div>`);
+}
+async function doDelivery(id) {
+  closeModal();
+  try {
+    const d = await apiFetch('/api/driver/orders/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status: 'DELIVERED' }) });
+    if (d.error) { toast(d.error, 'error'); return; }
+    toast('🎉 تم التسليم بنجاح! عمولتك أُضيفت');
+    loadEarnings();
+    setTimeout(() => tabActive(), 600);
+  } catch (e) { toast('حدث خطأ', 'error'); }
+}
+
+/* ── TAB: HISTORY ────────────────── */
+async function renderHistoryView() {
+  const c = document.getElementById('scroll-content');
+  c.innerHTML = `
+    <div class="filter-bar">
+      <input type="date" id="history-date-input" value="${historySelectedDate}" />
+      <button class="btn btn-primary" style="height:42px;font-size:13px" onclick="applyDateFilter()">🔍 عرض</button>
+      <button class="btn btn-ghost" style="height:42px;font-size:13px;padding:0 12px" onclick="goToToday()">📅 اليوم</button>
+      <button class="btn-clear" onclick="clearDateFilter()">📋 الكل</button>
+    </div>
+    <div id="history-results"></div>
+  `;
+  await loadHistoryOrders();
+}
+async function loadHistoryOrders() {
+  const results = document.getElementById('history-results');
+  if (!results) return;
+  results.innerHTML = `<div class="skel-card skeleton" style="height:80px"></div><div class="skel-card skeleton" style="height:80px"></div>`;
+  let url = '/api/driver/history';
+  if (historySelectedDate) url += '?date=' + historySelectedDate;
+  try {
+    const orders = await apiFetch(url);
+    const totalEarnings = orders.reduce((s, o) => s + (o.deliveryFee || 10), 0);
+    const labelEarnings = historySelectedDate ? 'أرباح اليوم' : 'إجمالي الأرباح';
+    if (!orders.length) {
+      results.innerHTML = `<div class="empty-state"><div class="icon">📭</div><div class="title">لا توجد توصيلات ${historySelectedDate ? 'في هذا اليوم' : 'سابقة'}</div><div class="sub">جرب يومًا آخر</div></div>`;
+      return;
+    }
+    const summaryHTML = `<div class="stats-row" style="grid-template-columns: repeat(2,1fr)"><div class="stat-mini"><div class="val" style="color:var(--orange)">${totalEarnings} ج</div><div class="lbl">${labelEarnings}</div></div><div class="stat-mini"><div class="val" style="color:var(--green)">${orders.length}</div><div class="lbl">طلبات مكتملة</div></div></div>`;
+    const cardsHTML = orders.map(o => {
+      const productTotal = (o.total || 0) - (o.deliveryFee || 0);
+      const invoiceLine = o.invoiceAmount ? 
+        `<div class="oc-row"><div class="icon">💰</div><div><div class="val">${o.invoiceAmount} ج ${o.invoiceBy ? 'من ' + o.invoiceBy : ''}</div><div class="lbl">الفاتورة</div></div></div>` : '';
+      return `<div class="order-card" style="border-color:rgba(16,185,129,.2);">
+        <div class="oc-header"><div class="oc-id">#${o.id.slice(-6)}</div><span class="badge badge-green">✓ موصّل</span></div>
+        <div class="oc-body">
+          <div class="oc-row"><div class="icon">🍽️</div><div><div class="val">${o.restaurantName || '—'}</div><div class="lbl">المطعم / المتجر</div></div></div>
+          <div class="oc-row"><div class="icon">👤</div><div><div class="val">${o.customerName || '—'}</div><div class="lbl">العميل</div></div></div>
+          <div class="oc-row"><div class="icon">🌍</div><div><div class="val">${o.regionName || '—'}</div><div class="lbl">المنطقة</div></div></div>
+          <div class="oc-row"><div class="icon">📍</div><div><div class="val">${o.address || '—'}</div><div class="lbl">العنوان</div></div></div>
+          <div class="oc-row"><div class="icon">📞</div><div><div class="val"><a href="tel:${o.customerPhone}" style="color:var(--orange);text-decoration:none">${o.customerPhone || '—'}</a></div><div class="lbl">رقم العميل</div></div></div>
+          ${invoiceLine}
+          <div class="oc-items-box">${renderItemsList(o.items)}</div>
+          <div class="oc-row"><div class="icon">💳</div><div><div class="val">الإجمالي: ${o.total} ج (المنتجات: ${productTotal} ج + التوصيل: ${o.deliveryFee||0} ج)</div><div class="lbl">عمولتك: ${o.deliveryFee || 10} ج</div></div></div>
+          <div class="oc-row"><div class="icon">⏰</div><div><div class="val">${formatDateTime(o.deliveredAt)}</div><div class="lbl">تاريخ التسليم بالضبط</div></div></div>
+          <div class="oc-row"><div class="icon">💳</div><div><div class="val">${o.paymentMethod === 'CASH' ? '💵 كاش' : '📱 فودافون'}</div></div></div>
+        </div>
+      </div>`;
+    }).join('');
+    results.innerHTML = summaryHTML + cardsHTML;
+  } catch (e) { results.innerHTML = `<div class="empty-state"><div class="icon">❌</div><div class="title">خطأ في التحميل</div></div>`; }
+}
+function goToToday() {
+  historySelectedDate = new Date().toISOString().slice(0, 10);
+  document.getElementById('history-date-input').value = historySelectedDate;
+  loadHistoryOrders();
+}
+function applyDateFilter() {
+  const input = document.getElementById('history-date-input');
+  if (input) { historySelectedDate = input.value; loadHistoryOrders(); }
+}
+function clearDateFilter() {
+  historySelectedDate = '';
+  document.getElementById('history-date-input').value = '';
+  loadHistoryOrders();
+}
+
+/* ── TAB: PROFILE (مع طلب شحن) ──── */
+async function tabProfile() {
+  const c = document.getElementById('scroll-content');
+  c.innerHTML = `<div class="skel-card skeleton" style="height:120px"></div>`;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const [profile, todayEarnings, todayHistory, myOrdersData] = await Promise.all([
+    apiFetch('/api/driver/profile').catch(() => ({})),
+    apiFetch('/api/driver/earnings?today=true').catch(() => ({ total: 0 })),
+    apiFetch('/api/driver/history?date=' + todayStr).catch(() => []),
+    apiFetch('/api/driver/my-orders').catch(() => [])
+  ]);
+  const todayCompleted = todayHistory.length;
+  const todayActive = myOrdersData.filter(o => o.createdAt && o.createdAt.startsWith(todayStr)).length;
+  const credit = profile.credit || 0;
+
+  c.innerHTML = `
+    <div class="profile-section">
+      <div class="profile-avatar">🛵</div>
+      <div class="profile-name">${profile.name || driverName || 'الطيار'}</div>
+      <div class="profile-phone">${profile.phone || driverPhone || '—'}</div>
+      <div style="display:flex;justify-content:center;margin-top:10px"><span class="badge ${isOnline ? 'badge-green' : 'badge-gray'}">${isOnline ? 'متاح الآن' : 'غير متاح'}</span></div>
+    </div>
+    <div class="stats-row">
+      <div class="stat-mini"><div class="val" style="color:var(--orange)">${todayEarnings.total || 0} ج</div><div class="lbl">أرباح اليوم</div></div>
+      <div class="stat-mini"><div class="val" style="color:var(--green)">${todayCompleted}</div><div class="lbl">مكتملة اليوم</div></div>
+      <div class="stat-mini"><div class="val" style="color:var(--blue)">${todayActive}</div><div class="lbl">نشطة اليوم</div></div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:14px">
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:14px;font-weight:700">💰 الرصيد والعمولات</div>
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><span style="color:var(--text3)">الرصيد الحالي</span><span style="font-weight:800;color:var(--orange)">${credit} ج</span></div>
+        <div class="divider"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center"><span style="color:var(--text3)">نسبة المنصة</span><span style="font-weight:700;color:var(--red)">20% من قيمة المنتجات</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center"><span style="color:var(--text3)">يتم خصمها تلقائياً</span><span style="font-weight:600;color:var(--green)">عند تسليم الطلب</span></div>
+        <button class="btn btn-primary btn-full" onclick="showRechargeModal()">⚡ شحن رصيد</button>
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:14px">
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:14px;font-weight:700">⚙️ إعدادات</div>
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:14px;font-weight:600">الحالة</div><div style="font-size:12px;color:var(--text3)">تفعيل / إيقاف استقبال الطلبات</div></div><div onclick="toggleOnlineStatus()" style="cursor:pointer"><span class="badge ${isOnline ? 'badge-green' : 'badge-gray'}">${isOnline ? 'متاح' : 'غير متاح'}</span></div></div>
+        <div class="divider"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span style="color:var(--text3)">إصدار التطبيق</span><span style="font-weight:700">Drako Rider v2.0</span></div>
+      </div>
+    </div>
+    <a href="/logout" style="text-decoration:none"><div style="background:rgba(239,68,68,.08);border:1.5px solid rgba(239,68,68,.2);border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:700;color:var(--red);cursor:pointer">⏻ تسجيل الخروج</div></a>`;
+}
+
+function showRechargeModal() {
+  openModal('شحن رصيد', `
+    <div class="field"><label>المبلغ المراد شحنه</label><input id="recharge-amount" type="number" placeholder="مثال: 100"></div>
+    <div class="field"><label>آخر 4 أرقام من رقم المحفظة المحول منه</label><input id="recharge-last4" placeholder="مثال: 1234" maxlength="4"></div>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:16px;">قم بتحويل المبلغ على رقم <strong style="color:var(--orange)">01098031344</strong> (فودافون كاش) ثم أدخل آخر 4 أرقام من رقمك.</p>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-primary" style="flex:2" onclick="submitRecharge()">إرسال الطلب</button>
+    </div>
+  `);
+}
+
+async function submitRecharge() {
+  const amount = document.getElementById('recharge-amount').value;
+  const last4 = document.getElementById('recharge-last4').value;
+  if (!amount || amount <= 0) return toast('أدخل مبلغاً صحيحاً', 'error');
+  if (!last4 || last4.length !== 4) return toast('أدخل آخر 4 أرقام صحيحة', 'error');
+  try {
+    const res = await apiFetch('/api/driver/recharge-request', {
+      method: 'POST',
+      body: JSON.stringify({ amount: Number(amount), last4digits: last4 })
+    });
+    if (res.error) return toast(res.error, 'error');
+    toast('✅ تم إرسال طلب الشحن، بانتظار موافقة الأدمن');
+    closeModal();
+  } catch (e) { toast('فشل الاتصال', 'error'); }
+}
+
+/* ========== SOCKET.IO ========== */
+const socket = io();
+socket.on('driver:newJob', (data) => {
+  playSound('newJob');
+  toast(`🚀 في ${data.count} طلب جديد متاح!`, 'info', 2000);
+  if (currentTab === 'available') tabAvailable();
+});
+socket.on('orderStatusUpdate', (data) => {
+  if (data.status === 'DELIVERED') playSound('orderDelivered');
+  if (currentTab === 'active') tabActive();
+  else if (currentTab === 'available') tabAvailable();
+});
+
+/* ── INIT ────────────────────────── */
+async function init() {
+  await loadProfile();
+  await loadEarnings();
+  const profile = await apiFetch('/api/driver/profile').catch(() => ({}));
+  setOnlineUI(profile.isAvailable !== false);
+  switchTab('available');
+}
+init();
 </script>
 </body>
 </html>
