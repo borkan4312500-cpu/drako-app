@@ -316,7 +316,7 @@ function renderOrders() {
 function setOrderFilter(f){ currentOrderFilter=f; renderOrders(); }
 async function updateOrderStatus(id,status){ await apiFetch(API+'/restaurant/orders/'+id,{method:'PATCH',body:JSON.stringify({status})}); showToast('تم تحديث الحالة'); loadOrders(); }
 
-// تفاصيل الطلب الكاملة في نافذة
+// تفاصيل الطلب الكاملة في نافذة (بدون رقم العميل أو المنطقة والعنوان)
 async function viewOrderInvoice(orderId){
   const o = allOrdersCache.find(o=>o.id===orderId); if(!o) return;
   const restaurantPrice = (o.total || 0) - (o.deliveryFee || 0);
@@ -338,11 +338,11 @@ async function viewOrderInvoice(orderId){
         ${notesText}
       </div>`;
   });
+
+  // عرض فقط اسم العميل وطريقة الدفع، بدون رقم الهاتف أو المنطقة أو العنوان
   const body = `
     <div style="margin-bottom:16px;">
-      <p><strong>العميل:</strong> ${o.customerName} (${o.customerPhone || '—'})</p>
-      <p><strong>المنطقة:</strong> ${o.regionName || '—'}</p>
-      <p><strong>العنوان:</strong> ${o.address || '—'}</p>
+      <p><strong>العميل:</strong> ${o.customerName}</p>
       <p><strong>طريقة الدفع:</strong> ${o.paymentMethod === 'CASH' ? 'كاش' : 'فودافون كاش'}</p>
     </div>
     <hr>
@@ -396,7 +396,7 @@ async function addCategory(){ const n=document.getElementById('catName').value; 
 async function deleteCategory(id){ if(confirm('حذف؟')){ await apiFetch(API+'/restaurant/categories/'+id,{method:'DELETE'}); loadCategories(); } }
 async function editCategory(id,old){ const n=prompt('الاسم الجديد:',old); if(n){ await apiFetch(API+'/restaurant/categories/'+id,{method:'PATCH',body:JSON.stringify({name:n})}); loadCategories(); } }
 
-// المنتجات – مع إمكانية بسيط أو متعدد
+// المنتجات – كل المنتجات تقبل مجموعات اختيارات (حتى البسيطة)
 async function loadProducts() {
   await loadCategoriesOptions();
   const prodRes = await apiFetch(API+'/restaurant/products'); const products = await prodRes.json();
@@ -427,13 +427,12 @@ async function loadCategoriesOptions() {
   try { const res = await apiFetch(API+'/restaurant/categories'); const cats = await res.json(); let opts = '<option value="">بدون تصنيف</option>'; cats.forEach(c => opts += `<option value="${c.id}">${c.name}</option>`); window._catOptions = opts; } catch(e) {}
 }
 
-// نافذة إضافة/تعديل منتج
+// نافذة إضافة/تعديل منتج (دائماً تظهر مجموعات الاختيارات)
 function renderProductForm(isEdit = false, productData = null) {
   const nameVal = productData?.name || '';
   const descVal = productData?.description || '';
   const priceVal = productData?.basePrice || 0;
   const catVal = productData?.category || '';
-  const isMulti = productData?.groups && productData.groups.length > 0;
 
   const body = `
     <div class="form-group"><input class="form-input" id="prodName" placeholder="اسم المنتج" value="${nameVal}"></div>
@@ -442,24 +441,15 @@ function renderProductForm(isEdit = false, productData = null) {
     <div class="form-group"><select class="form-input" id="prodCat">${window._catOptions || ''}</select></div>
     <div class="form-group"><input type="file" id="prodImageFile"></div>
     <hr>
-    <div class="form-group">
-      <label style="font-weight:600; display:block; margin-bottom:6px;">نوع المنتج</label>
-      <div style="display:flex; gap:20px;">
-        <label><input type="radio" name="productType" value="simple" ${!isMulti ? 'checked' : ''} onchange="toggleGroupsContainer()"> منتج بسيط</label>
-        <label><input type="radio" name="productType" value="multi" ${isMulti ? 'checked' : ''} onchange="toggleGroupsContainer()"> منتج متعدد (بخيارات)</label>
-      </div>
+    <h4>🧩 مجموعات الاختيارات</h4>
+    <div id="quick-add-buttons" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px">
+      <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroup('size')">📏 أحجام</button>
+      <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroup('hot-cold')">❄️🔥 حار/بارد</button>
+      <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroup('spicy')">🌶️ مستوى الحرارة</button>
+      <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroup('extras')">➕ إضافات</button>
     </div>
-    <div id="groupsWrapper" style="display:${isMulti ? 'block' : 'none'};">
-      <h4>🧩 مجموعات الاختيارات</h4>
-      <div id="quick-add-buttons" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px">
-        <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroup('size')">📏 أحجام</button>
-        <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroup('hot-cold')">❄️🔥 حار/بارد</button>
-        <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroup('spicy')">🌶️ مستوى الحرارة</button>
-        <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroup('extras')">➕ إضافات</button>
-      </div>
-      <div id="groups-container"></div>
-      <button type="button" class="btn btn-sm btn-ghost" onclick="addGroupRow()">+ إضافة مجموعة مخصصة</button>
-    </div>
+    <div id="groups-container"></div>
+    <button type="button" class="btn btn-sm btn-ghost" onclick="addGroupRow()">+ إضافة مجموعة مخصصة</button>
   `;
   const footer = isEdit ?
     `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" id="saveProductBtn">حفظ التعديلات</button>` :
@@ -488,7 +478,8 @@ function renderProductForm(isEdit = false, productData = null) {
           optsContainer.appendChild(row);
         });
       });
-    } else if (!isEdit && document.querySelector('input[name="productType"]:checked')?.value === 'multi') {
+    } else {
+      // منتج جديد: إضافة مجموعة افتراضية فارغة
       addGroupRow();
     }
     const saveBtn = document.getElementById('saveProductBtn');
@@ -496,11 +487,6 @@ function renderProductForm(isEdit = false, productData = null) {
       saveBtn.onclick = isEdit ? () => saveEditProduct(productData.id) : saveProduct;
     }
   }, 100);
-}
-
-function toggleGroupsContainer() {
-  const type = document.querySelector('input[name="productType"]:checked')?.value;
-  document.getElementById('groupsWrapper').style.display = (type === 'multi') ? 'block' : 'none';
 }
 
 function showAddProduct() { renderProductForm(false, null); }
@@ -512,7 +498,7 @@ async function editProductModal(productId) {
   renderProductForm(true, product);
 }
 
-// دوال المجموعات
+// دوال المجموعات (دائماً متاحة)
 function addGroupRow(){
   const container = document.getElementById('groups-container');
   if (!container) return;
@@ -542,8 +528,6 @@ function addOptionToRow(b){
   g.querySelector('.grp-options-container').appendChild(r);
 }
 function collectGroupsData(){
-  const type = document.querySelector('input[name="productType"]:checked')?.value;
-  if (type === 'simple') return [];
   const gs = document.querySelectorAll('#groups-container .group-box');
   const groups = [];
   gs.forEach(b => {
