@@ -6,6 +6,7 @@
   <title>دراكو - لوحة المطعم</title>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; font-family:'Cairo',sans-serif; }
     :root {
@@ -32,7 +33,7 @@
     .login-card p { color:var(--text-muted); margin-bottom:24px; }
     .form-group { margin-bottom:16px; text-align:right; }
     .form-label { display:block; font-size:14px; font-weight:600; margin-bottom:6px; color:var(--text-muted); }
-    .form-input { width:100%; padding:10px 16px; border:1px solid var(--border); border-radius:10px; font-size:15px; background:#f9fafb; outline:none; }
+    .form-input, .form-select, .form-textarea { width:100%; padding:10px 16px; border:1px solid var(--border); border-radius:10px; font-size:15px; background:#f9fafb; outline:none; resize:vertical; }
     .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:12px 24px; border-radius:10px; font-weight:700; font-size:16px; border:none; cursor:pointer; transition:0.2s; width:100%; }
     .btn-primary { background:var(--brand); color:white; }
     .btn-primary:hover { background:var(--brand-dark); }
@@ -124,7 +125,6 @@
     .tab-btn { padding:8px 16px; border-radius:20px; background:#f3f4f6; border:1px solid var(--border); cursor:pointer; font-size:14px; font-weight:600; color:var(--text-muted); transition:0.2s; }
     .tab-btn.active { background:var(--brand); color:white; border-color:var(--brand); }
 
-    /* تنسيقات إضافية للتصنيفات والمنتجات */
     .categories-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:16px; }
     .category-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px 18px; display:flex; align-items:center; justify-content:space-between; transition:0.2s; }
     .category-card:hover { border-color:var(--brand); transform:translateY(-2px); }
@@ -139,6 +139,11 @@
     .items-list { margin:12px 0; }
     .item-row { display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-bottom:1px dashed var(--border); }
     .order-total { display:flex; justify-content:space-between; font-size:16px; font-weight:800; margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
+
+    .btn-add-row { background:#f9fafb; border:1px dashed var(--border); color:var(--text-muted); padding:5px 10px; border-radius:8px; cursor:pointer; font-size:12px; margin-top:4px; display:inline-flex; align-items:center; gap:6px; }
+    .group-box { background:#f9fafb; border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:12px; }
+    .option-row { display:flex; gap:8px; align-items:center; margin-bottom:6px; }
+    .option-row input { flex:1; padding:6px 10px; border:1px solid var(--border); border-radius:6px; }
 
     @media (max-width:768px) {
       .sidebar { transform:translateX(100%); }
@@ -314,6 +319,55 @@ function loadSection(s) {
   }
 }
 
+// ----- نظام الصوت -----
+function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
+  const sampleRate = 44100;
+  const numSamples = Math.floor(sampleRate * duration);
+  const buffer = new Float32Array(numSamples);
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / sampleRate;
+    let sample = 0;
+    if (type === 'sine') sample = Math.sin(2 * Math.PI * frequency * t);
+    else if (type === 'square') sample = Math.sign(Math.sin(2 * Math.PI * frequency * t));
+    else if (type === 'triangle') {
+      const p = (frequency * t) % 1;
+      sample = 4 * Math.abs(p - 0.5) - 1;
+    }
+    buffer[i] = sample * volume;
+  }
+  const dataLength = buffer.length * 2;
+  const bufferArray = new ArrayBuffer(44 + dataLength);
+  const view = new DataView(bufferArray);
+  function writeString(offset, string) { for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i)); }
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + dataLength, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, dataLength, true);
+  let offset = 44;
+  for (let i = 0; i < buffer.length; i++) {
+    const s = Math.max(-1, Math.min(1, buffer[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    offset += 2;
+  }
+  const blob = new Blob([bufferArray], { type: 'audio/wav' });
+  return URL.createObjectURL(blob);
+}
+const soundInstances = {};
+function createSound(name, ...tones) { soundInstances[name] = tones.map(t => new Howl({ src: [t], format: ['wav'], volume: 0.5 })); }
+function playSound(name) { if (soundInstances[name]) soundInstances[name].forEach(h => h.play()); }
+createSound('newOrderBell', generateToneWAV(1200,0.25,'sine'));
+createSound('driverArrived', generateToneWAV(600,0.1,'sine'), generateToneWAV(800,0.1,'sine'));
+createSound('orderCancelled', generateToneWAV(400,0.3,'triangle'));
+
 // ----- الملف الشخصي -----
 async function loadProfile() {
   let profile = null, stats = null;
@@ -473,20 +527,185 @@ async function loadProducts() {
   html += `</div></div>`;
   document.getElementById('mainContent').innerHTML = html;
 }
+
 function showAddProduct() {
+  const catOptions = window._catOptions || '<option value="">بدون تصنيف</option>';
   openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>إضافة منتج</h3>
     <div class="form-group"><input class="form-input" id="prodName" placeholder="اسم المنتج"></div>
-    <div class="form-group"><input class="form-input" id="prodPrice" type="number" placeholder="السعر"></div>
-    <div class="form-group"><input type="file" id="prodImage"></div>
-    <button class="btn btn-primary" onclick="addProduct()">حفظ</button>`);
+    <div class="form-group"><input class="form-input" id="prodDesc" placeholder="الوصف"></div>
+    <div class="form-group"><input class="form-input" type="number" id="prodBasePrice" placeholder="السعر الأساسي (ج)"></div>
+    <div class="form-group"><select class="form-input" id="prodCategory">${catOptions}</select></div>
+    <div class="form-group"><input type="file" id="prodImageFile"></div>
+    <hr><h4>مجموعات الاختيارات</h4>
+    <div id="quick-add-buttons" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px">
+      <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroup('size')">📏 أحجام</button>
+      <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroup('hot-cold')">❄️🔥 حار/بارد</button>
+      <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroup('spicy')">🌶️ مستوى الحرارة</button>
+      <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroup('extras')">➕ إضافات</button>
+    </div>
+    <div id="groups-container"></div>
+    <button type="button" class="btn-add-row" onclick="addGroupRow()">+ إضافة مجموعة مخصصة</button>
+  `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveProduct()">حفظ</button>`);
+  addGroupRow();
 }
-async function addProduct(){
-  const fd=new FormData(); fd.append('name',document.getElementById('prodName').value); fd.append('basePrice',document.getElementById('prodPrice').value);
-  const img=document.getElementById('prodImage').files[0]; if(img) fd.append('image',img);
-  await apiFetch(API+'/restaurant/products',{method:'POST',body:fd}); closeModal(); loadProducts();
+
+function addGroupRow() {
+  const container = document.getElementById('groups-container');
+  if (!container) return;
+  const div = document.createElement('div');
+  div.className = 'group-box';
+  div.innerHTML = `
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <input placeholder="اسم المجموعة (مثال: الحجم)" style="flex:1" class="grp-name form-input">
+      <select class="grp-type form-input" style="width:130px"><option value="single">اختيار واحد</option><option value="multiple">اختيار متعدد</option></select>
+      <label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" class="grp-required" checked> إجباري</label>
+    </div>
+    <div class="grp-options-container"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+      <button type="button" class="btn-add-row" onclick="addOptionToRow(this)">+ إضافة خيار</button>
+      <button type="button" class="btn btn-sm btn-danger" onclick="this.closest('.group-box').remove()">✕ حذف المجموعة</button>
+    </div>
+  `;
+  container.appendChild(div);
+  addOptionToRow(div.querySelector('.btn-add-row'));
 }
-async function deleteProduct(id){ if(confirm('حذف؟')){ await apiFetch(API+'/restaurant/products/'+id,{method:'DELETE'}); loadProducts(); } }
-async function editProduct(id){ const name=prompt('الاسم الجديد:'); if(name){ await apiFetch(API+'/restaurant/products/'+id,{method:'PATCH',body:JSON.stringify({name})}); loadProducts(); } }
+
+function addOptionToRow(buttonEl) {
+  const groupBox = buttonEl.closest('.group-box');
+  const optionsContainer = groupBox.querySelector('.grp-options-container');
+  const row = document.createElement('div');
+  row.className = 'option-row';
+  row.innerHTML = `<input placeholder="القيمة (مثال: صغير)" style="flex:2" class="opt-value form-input"><input placeholder="السعر (ج)" type="number" style="flex:1" class="opt-price form-input" value="0"><button type="button" class="btn btn-sm btn-ghost" onclick="this.parentElement.remove()">✕</button>`;
+  optionsContainer.appendChild(row);
+}
+
+function collectGroupsData() {
+  const groupBoxes = document.querySelectorAll('#groups-container .group-box');
+  const groups = [];
+  groupBoxes.forEach(box => {
+    const name = box.querySelector('.grp-name').value.trim();
+    if (!name) return;
+    const type = box.querySelector('.grp-type').value;
+    const required = box.querySelector('.grp-required').checked;
+    const optionRows = box.querySelectorAll('.option-row');
+    const options = [];
+    optionRows.forEach(row => {
+      const value = row.querySelector('.opt-value').value.trim();
+      const price = Number(row.querySelector('.opt-price').value) || 0;
+      if (value) options.push({ value, price });
+    });
+    if (options.length > 0) groups.push({ id: 'grp_' + Date.now() + Math.random(), name, type, required, options });
+  });
+  return groups;
+}
+
+function addQuickGroup(type) {
+  const templates = {
+    'size': { name: 'الحجم', type: 'single', required: true, options: [{ value: 'صغير', price: 0 }, { value: 'وسط', price: 5 }, { value: 'كبير', price: 10 }] },
+    'hot-cold': { name: 'درجة الحرارة', type: 'single', required: true, options: [{ value: 'حار', price: 0 }, { value: 'بارد', price: 0 }] },
+    'spicy': { name: 'مستوى الحرارة', type: 'single', required: false, options: [{ value: 'عادي', price: 0 }, { value: 'وسط', price: 0 }, { value: 'حار', price: 2 }, { value: 'ناري', price: 4 }] },
+    'extras': { name: 'إضافات', type: 'multiple', required: false, options: [{ value: 'جبنة إضافية', price: 5 }, { value: 'بطاطس', price: 7 }, { value: 'بيبسي', price: 10 }] }
+  };
+  const tpl = templates[type];
+  if (!tpl) return;
+  addGroupRow();
+  const container = document.getElementById('groups-container');
+  const lastGroup = container.lastChild;
+  lastGroup.querySelector('.grp-name').value = tpl.name;
+  lastGroup.querySelector('.grp-type').value = tpl.type;
+  lastGroup.querySelector('.grp-required').checked = tpl.required;
+  const optsContainer = lastGroup.querySelector('.grp-options-container');
+  optsContainer.innerHTML = '';
+  tpl.options.forEach(opt => {
+    const row = document.createElement('div');
+    row.className = 'option-row';
+    row.innerHTML = `<input value="${opt.value}" style="flex:2" class="opt-value form-input"><input type="number" value="${opt.price}" style="flex:1" class="opt-price form-input"><button type="button" class="btn btn-sm btn-ghost" onclick="this.parentElement.remove()">✕</button>`;
+    optsContainer.appendChild(row);
+  });
+}
+
+async function saveProduct() {
+  const name = document.getElementById('prodName').value.trim();
+  if (!name) return showToast('اسم المنتج مطلوب');
+  const desc = document.getElementById('prodDesc').value.trim();
+  const basePrice = Number(document.getElementById('prodBasePrice').value) || 0;
+  const category = document.getElementById('prodCategory').value;
+  const imageFile = document.getElementById('prodImageFile').files[0];
+  const groups = collectGroupsData();
+  const form = new FormData();
+  form.append('name', name);
+  form.append('description', desc);
+  form.append('basePrice', basePrice);
+  form.append('category', category);
+  form.append('groups', JSON.stringify(groups));
+  if (imageFile) form.append('image', imageFile);
+  const res = await apiFetch(API + '/restaurant/products', { method: 'POST', body: form });
+  const data = await res.json();
+  if (data.error) showToast(data.error);
+  else { showToast('تم إضافة المنتج'); closeModal(); loadProducts(); }
+}
+
+async function editProduct(id) {
+  const res = await apiFetch(API + '/restaurant/products');
+  const products = await res.json();
+  const product = products.find(p => p.id === id);
+  if (!product) return showToast('المنتج غير موجود');
+  const catOptions = window._catOptions || '<option value="">بدون تصنيف</option>';
+  openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>تعديل منتج</h3>
+    <div class="form-group"><input class="form-input" id="ep-name" value="${product.name}"></div>
+    <div class="form-group"><input class="form-input" id="ep-desc" value="${product.description||''}"></div>
+    <div class="form-group"><input class="form-input" type="number" id="ep-base-price" value="${product.basePrice || 0}"></div>
+    <div class="form-group"><select class="form-input" id="ep-cat">${catOptions}</select></div>
+    <div class="form-group"><input type="file" id="ep-image"></div>
+    <hr><h4>المجموعات الحالية</h4><div id="groups-container"></div><button type="button" class="btn-add-row" onclick="addGroupRow()">+ إضافة مجموعة</button>
+  `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveEditProduct('${id}')">حفظ التعديلات</button>`);
+  setTimeout(() => {
+    document.getElementById('ep-cat').value = product.category || '';
+    const container = document.getElementById('groups-container');
+    if (product.groups) {
+      product.groups.forEach(g => {
+        addGroupRow();
+        const last = container.lastChild;
+        last.querySelector('.grp-name').value = g.name;
+        last.querySelector('.grp-type').value = g.type;
+        last.querySelector('.grp-required').checked = g.required;
+        const opts = last.querySelector('.grp-options-container');
+        g.options.forEach(opt => {
+          const row = document.createElement('div');
+          row.className = 'option-row';
+          row.innerHTML = `<input value="${opt.value}" style="flex:2" class="opt-value form-input"><input type="number" value="${opt.price}" style="flex:1" class="opt-price form-input"><button type="button" class="btn btn-sm btn-ghost" onclick="this.parentElement.remove()">✕</button>`;
+          opts.appendChild(row);
+        });
+      });
+    } else { addGroupRow(); }
+  }, 100);
+}
+
+async function saveEditProduct(id) {
+  const name = document.getElementById('ep-name').value.trim();
+  const desc = document.getElementById('ep-desc').value.trim();
+  const category = document.getElementById('ep-cat').value;
+  const basePrice = Number(document.getElementById('ep-base-price').value) || 0;
+  const imageFile = document.getElementById('ep-image').files[0];
+  const groups = collectGroupsData();
+  const form = new FormData();
+  form.append('name', name);
+  form.append('description', desc);
+  form.append('category', category);
+  form.append('basePrice', basePrice);
+  form.append('groups', JSON.stringify(groups));
+  if (imageFile) form.append('image', imageFile);
+  const res = await apiFetch(API + '/restaurant/products/' + id, { method: 'PATCH', body: form });
+  const data = await res.json();
+  if (data.error) showToast(data.error);
+  else { showToast('تم التحديث'); closeModal(); loadProducts(); }
+}
+
+async function deleteProduct(id) {
+  if (!confirm('حذف المنتج؟')) return;
+  await apiFetch(API + '/restaurant/products/' + id, { method: 'DELETE' });
+  loadProducts(); showToast('تم الحذف');
+}
 
 // ----- طلب جديد (مباشر) -----
 function loadNewOrderForm() {
@@ -525,12 +744,26 @@ async function loadMyDirectOrders(){
 }
 
 // ----- بدء التشغيل -----
+async function loadCategoriesOptions() {
+  try {
+    const res = await apiFetch(API + '/restaurant/categories');
+    const cats = await res.json();
+    let opts = '<option value="">بدون تصنيف</option>';
+    cats.forEach(c => opts += `<option value="${c.id}">${c.name}</option>`);
+    window._catOptions = opts;
+  } catch(e) {}
+}
+
 function initApp() {
   loadRegions();
+  loadCategoriesOptions();
   navigate('profile');
   const socket = io();
   window._socket = socket;
-  socket.on('newOrder', data => { if (data.restaurantId === windowMyRestaurantId) { showToast('طلب جديد!'); if (currentPage==='orders') loadOrders(); } });
+  socket.on('newOrder', data => { if (data.restaurantId === windowMyRestaurantId) { playSound('newOrderBell'); showToast('طلب جديد!'); if (currentPage==='orders') loadOrders(); } });
+  socket.on('orderStatusUpdate', () => { if (currentPage==='orders') loadOrders(); });
+  socket.on('driverArrived', () => { playSound('driverArrived'); showToast('الطيار وصل لاستلام طلب 🛵'); });
+  socket.on('orderCancelled', () => { playSound('orderCancelled'); showToast('تم إلغاء طلب ❌'); if (currentPage==='orders') loadOrders(); });
 }
 
 async function checkSession() {
