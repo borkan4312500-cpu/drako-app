@@ -157,18 +157,20 @@
     <nav class="sidebar-nav">
       <div class="nav-item active" data-section="dashboard" onclick="navigate('dashboard')">📊 لوحة التحكم</div>
       <div class="nav-item" data-section="dispatch" onclick="navigate('dispatch')">🛵 توزيع الطلبات</div>
+      <div class="nav-item" data-section="orders" onclick="navigate('orders')">📦 الطلبات</div>
+      <div class="nav-item" data-section="restaurant-orders" onclick="navigate('restaurant-orders')">📋 اوردرات المطاعم</div>
       <div class="nav-item" data-section="restaurants" onclick="navigate('restaurants')">🍽️ المطاعم</div>
       <div class="nav-item" data-section="drivers" onclick="navigate('drivers')">👨‍✈️ الطيارين</div>
       <div class="nav-item" data-section="markets" onclick="navigate('markets')">🛒 الأسواق</div>
       <div class="nav-item" data-section="pharmacies" onclick="navigate('pharmacies')">💊 الصيدليات</div>
       <div class="nav-item" data-section="customers" onclick="navigate('customers')">👥 العملاء</div>
       <div class="nav-item" data-section="regions" onclick="navigate('regions')">📍 المناطق</div>
-      <div class="nav-item" data-section="orders" onclick="navigate('orders')">📦 الطلبات</div>
       <div class="nav-item" data-section="products" onclick="navigate('products')">🏷️ المنتجات والتصنيفات</div>
       <div class="nav-item" data-section="sounds" onclick="navigate('sounds')">🎵 الأصوات</div>
       <div class="nav-item" data-section="recharge" onclick="navigate('recharge')">💰 طلبات الشحن</div>
       <div class="nav-item" data-section="reports" onclick="navigate('reports')">📈 التقارير</div>
       <div class="nav-item" data-section="platform" onclick="navigate('platform')">💵 إيرادات المنصة</div>
+
     </nav>
     <div class="sidebar-footer"><button class="btn-logout" onclick="logout()">🚪 تسجيل الخروج</button></div>
   </aside>
@@ -310,6 +312,7 @@ function loadSection(s){
     case 'recharge': loadRecharge(); break;
     case 'reports': loadReports(); break;
     case 'platform': loadPlatformRevenue(); break;
+    case 'restaurant-orders': loadRestaurantDirectOrders(); break;
   }
 }
 
@@ -840,6 +843,57 @@ async function checkSession() {
     }
   } catch (e) {}
   showLogin();
+}
+async function loadRestaurantDirectOrders() {
+  try {
+    const res = await apiFetch(API + '/admin/restaurant-direct-orders');
+    const orders = await res.json();
+    // تجميع حسب المطعم
+    const grouped = {};
+    orders.forEach(o => {
+      const name = o.restaurantName || 'مطعم غير معروف';
+      if (!grouped[name]) grouped[name] = [];
+      grouped[name].push(o);
+    });
+
+    let html = '<div class="section-card"><div class="section-header"><h2>📋 اوردرات المطاعم المباشرة</h2></div>';
+    for (const [restaurant, list] of Object.entries(grouped)) {
+      html += `<h3 style="margin-top:20px;">🍽️ ${restaurant}</h3><div class="table-responsive"><table><thead><tr><th>رقم</th><th>العميل</th><th>المنطقة</th><th>المبلغ</th><th>الحالة</th><th>الطيار</th><th>إجراءات</th></tr></thead><tbody>`;
+      list.forEach(o => {
+        html += `<tr>
+          <td>#${o.orderNumber||'-'}</td>
+          <td>${o.customerName}<br><small>${o.customerPhone}</small></td>
+          <td>${o.regionName}<br><small>${o.address}</small></td>
+          <td>${o.total} ج</td>
+          <td>${statusBadge(o.status)}</td>
+          <td>${o.driverName||'—'}</td>
+          <td>${!o.driverId ? `<button class="btn btn-sm btn-primary" onclick="assignDriverToDirectOrder('${o.id}')">تعيين طيار</button>` : '—'}</td>
+        </tr>`;
+      });
+      html += '</tbody></table></div>';
+    }
+    html += '</div>';
+    document.getElementById('mainContent').innerHTML = html;
+  } catch(e) { showToast('خطأ في تحميل الطلبات'); }
+}
+
+async function assignDriverToDirectOrder(orderId) {
+  const drivers = await apiFetch(API + '/admin/drivers').then(r => r.json());
+  const avail = drivers.filter(d => d.isAvailable);
+  if (!avail.length) return alert('لا يوجد طيارين متاحين');
+  const options = avail.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+  openModal(`<h3>تعيين طيار للطلب</h3><select id="driverSelect" class="form-input">${options}</select><button class="btn btn-primary" onclick="confirmAssign('${orderId}')">تعيين</button>`);
+}
+
+async function confirmAssign(orderId) {
+  const driverId = document.getElementById('driverSelect').value;
+  await apiFetch(API + '/admin/restaurant-direct-orders/' + orderId + '/assign-driver', {
+    method: 'PATCH',
+    body: JSON.stringify({ driverId })
+  });
+  closeModal();
+  showToast('تم تعيين الطيار');
+  loadRestaurantDirectOrders();
 }
 checkSession();
 </script>
