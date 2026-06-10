@@ -103,10 +103,6 @@
     .tab-btn { padding: 8px 18px; border-radius: 30px; background: #f3f4f6; border: 1px solid var(--border); cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-muted); transition: 0.2s; }
     .tab-btn.active { background: var(--brand); color: #fff; border-color: var(--brand); }
 
-    .category-filter-bar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 16px; }
-    .category-filter-btn { padding: 6px 16px; border-radius: 30px; background: #f3f4f6; border: 1px solid var(--border); white-space: nowrap; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-muted); transition: 0.2s; }
-    .category-filter-btn.active { background: var(--brand); color: #fff; border-color: var(--brand); }
-
     @media (max-width: 768px) {
       .sidebar { transform: translateX(100%); }
       .sidebar.open { transform: translateX(0); }
@@ -164,7 +160,7 @@
 // ---------- متغيرات ----------
 const API = '/api', TOKEN_KEY = 'auth_token';
 let currentPage = 'profile', allRegions = [], allOrdersCache = [], windowMyRestaurantId = null;
-let currentCategoryFilter = 'all'; // لتصفية المنتجات
+let currentCategoryFilter = 'all'; // لتصفية المنتجات حسب التصنيف
 
 // ---------- دوال مساعدة ----------
 function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); }
@@ -264,7 +260,7 @@ async function loadDashboard() {
     </div>`;
 }
 
-// ---------- الطلبات (تفاصيل كاملة + تعديل) ----------
+// ---------- الطلبات (مفصلة + تعديل + جاهزة) ----------
 let currentOrderFilter = 'all';
 async function loadOrders() { const res = await apiFetch(API+'/restaurant/orders'); allOrdersCache = await res.json(); renderOrders(); }
 function renderOrders() {
@@ -272,6 +268,7 @@ function renderOrders() {
     if (currentOrderFilter==='new') return o.status==='PENDING';
     if (currentOrderFilter==='accepted') return o.status==='ACCEPTED';
     if (currentOrderFilter==='preparing') return o.status==='PREPARING';
+    if (currentOrderFilter==='ready') return o.status==='READY';
     if (currentOrderFilter==='completed') return ['DELIVERED','CANCELLED'].includes(o.status);
     return true;
   });
@@ -281,6 +278,7 @@ function renderOrders() {
       <div class="tab-btn ${currentOrderFilter==='new'?'active':''}" onclick="setOrderFilter('new')">جديدة</div>
       <div class="tab-btn ${currentOrderFilter==='accepted'?'active':''}" onclick="setOrderFilter('accepted')">مقبولة</div>
       <div class="tab-btn ${currentOrderFilter==='preparing'?'active':''}" onclick="setOrderFilter('preparing')">تحضير</div>
+      <div class="tab-btn ${currentOrderFilter==='ready'?'active':''}" onclick="setOrderFilter('ready')">جاهزة</div>
       <div class="tab-btn ${currentOrderFilter==='completed'?'active':''}" onclick="setOrderFilter('completed')">مكتملة</div>
     </div>`;
   if (!orders.length) html += '<p style="text-align:center;color:var(--text-muted);">لا توجد طلبات</p>';
@@ -289,7 +287,7 @@ function renderOrders() {
     orders.forEach(o => {
       const restaurantPrice = (o.total || 0) - (o.deliveryFee || 0);
       html += `
-        <div class="order-mini-card">
+        <div class="order-mini-card" onclick="viewOrderInvoice('${o.id}')">
           <div class="order-mini-header">
             <span class="order-mini-id">#${o.id.slice(-6)}</span>
             <span class="badge" style="background:#fff1f0; color:var(--brand); padding:4px 10px; border-radius:999px; font-size:12px;">${STATUS_AR[o.status]}</span>
@@ -297,13 +295,13 @@ function renderOrders() {
           <div class="order-mini-customer"><i class="fas fa-user"></i> ${o.customerName}</div>
           <div class="order-mini-total">${restaurantPrice} ج</div>
           <div class="order-mini-actions" onclick="event.stopPropagation()">
-            ${o.status==='PENDING'?`
+            ${(o.status==='PENDING' || o.status==='ACCEPTED') ? `
               <button class="btn btn-sm btn-success" onclick="updateOrderStatus('${o.id}','ACCEPTED')">قبول</button>
               <button class="btn btn-sm btn-danger" onclick="updateOrderStatus('${o.id}','CANCELLED')">رفض</button>
               <button class="btn btn-sm btn-warning" onclick="editOrder('${o.id}')">✏️ تعديل</button>
             `:''}
-            ${o.status==='ACCEPTED'?`<button class="btn btn-sm btn-primary" onclick="updateOrderStatus('${o.id}','PREPARING')">تحضير</button>`:''}
-            ${o.status==='PREPARING'?`<button class="btn btn-sm btn-success" onclick="updateOrderStatus('${o.id}','READY')">تجهيز</button>`:''}
+            ${o.status==='ACCEPTED' ? `<button class="btn btn-sm btn-primary" onclick="updateOrderStatus('${o.id}','PREPARING')">تحضير</button>` : ''}
+            ${o.status==='PREPARING' ? `<button class="btn btn-sm btn-success" onclick="updateOrderStatus('${o.id}','READY')">تجهيز</button>` : ''}
             <button class="btn btn-sm btn-outline" onclick="viewOrderInvoice('${o.id}')">📄 فاتورة</button>
           </div>
         </div>`;
@@ -314,50 +312,55 @@ function renderOrders() {
 }
 function setOrderFilter(f){ currentOrderFilter=f; renderOrders(); }
 async function updateOrderStatus(id,status){ await apiFetch(API+'/restaurant/orders/'+id,{method:'PATCH',body:JSON.stringify({status})}); showToast('تم تحديث الحالة'); loadOrders(); }
+
+// تفاصيل الطلب الكاملة
 async function viewOrderInvoice(orderId){
   const o = allOrdersCache.find(o=>o.id===orderId); if(!o) return;
   const restaurantPrice = (o.total || 0) - (o.deliveryFee || 0);
   let itemsHtml = '';
   (o.items || []).forEach(item => {
-    let optionsHtml = '';
+    let optionsText = '';
     if (item.selectedOptions && item.selectedOptions.length) {
-      optionsHtml = `<div style="font-size:12px; color:var(--text-muted);">الخيارات: ${item.selectedOptions.map(opt => opt.value).join('، ')}</div>`;
+      optionsText = item.selectedOptions.map(opt => opt.value).join('، ');
+      optionsText = `<div style="font-size:12px; color:var(--text-muted); margin-top:2px;">الخيارات: ${optionsText}</div>`;
     }
-    let notesHtml = item.notes ? `<div style="font-size:11px; color:var(--text-muted);">📝 ${item.notes}</div>` : '';
+    let notesText = item.notes ? `<div style="font-size:12px; color:var(--text-muted);">📝 ${item.notes}</div>` : '';
     itemsHtml += `
-      <div style="display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px dashed #eee; padding-bottom:4px;">
-        <div>
-          <strong>${item.name}</strong> × ${item.quantity}
-          ${optionsHtml}
-          ${notesHtml}
+      <div style="border-bottom:1px solid var(--border); padding:8px 0;">
+        <div style="display:flex; justify-content:space-between;">
+          <span><strong>${item.name}</strong> × ${item.quantity}</span>
+          <span style="color:var(--brand);">${item.price} ج</span>
         </div>
-        <span>${item.price} ج</span>
+        ${optionsText}
+        ${notesText}
       </div>`;
   });
-  openModal(`فاتورة #${o.id.slice(-6)}`,`
+  openModal(`تفاصيل الطلب #${o.id.slice(-6)}`, `
     <div style="margin-bottom:16px;">
-      <p><strong>العميل:</strong> ${o.customerName}</p>
-      <p><strong>الهاتف:</strong> ${o.customerPhone || '—'}</p>
+      <p><strong>العميل:</strong> ${o.customerName} (${o.customerPhone || '—'})</p>
       <p><strong>المنطقة:</strong> ${o.regionName || '—'}</p>
       <p><strong>العنوان:</strong> ${o.address || '—'}</p>
-      <p><strong>الحالة:</strong> ${STATUS_AR[o.status]}</p>
+      <p><strong>طريقة الدفع:</strong> ${o.paymentMethod === 'CASH' ? 'كاش' : 'فودافون كاش'}</p>
     </div>
     <hr>
-    <h4>المنتجات المطلوبة</h4>
+    <h4 style="margin-bottom:12px;">🧾 المنتجات المطلوبة</h4>
     ${itemsHtml || '<p>لا توجد منتجات</p>'}
     <hr>
-    <h4 style="color:var(--brand);">سعر المطعم: ${restaurantPrice} ج</h4>
+    <div style="display:flex; justify-content:space-between; font-size:18px; font-weight:800; color:var(--brand); margin-top:12px;">
+      <span>سعر المطعم</span>
+      <span>${restaurantPrice} ج</span>
+    </div>
   `, `<button class="btn btn-primary" onclick="closeModal()">إغلاق</button>`);
 }
 
-// ---------- تعديل الطلب (نفس الفاتورة مع حقول قابلة للتعديل) ----------
+// ---------- تعديل الطلب ----------
 async function editOrder(orderId) {
   const o = allOrdersCache.find(o => o.id === orderId);
   if (!o) return;
-  const itemsStr = JSON.stringify(o.items || [], null, 2);
+  const itemsStr = JSON.stringify(o.items || []);
   const restaurantPrice = (o.total || 0) - (o.deliveryFee || 0);
   openModal(`تعديل الطلب #${o.id.slice(-6)}`, `
-    <div class="form-group"><label>المنتجات (JSON)</label><textarea class="form-input" id="editItems" rows="6">${itemsStr}</textarea></div>
+    <div class="form-group"><label>المنتجات (JSON)</label><textarea class="form-input" id="editItems" rows="4">${itemsStr}</textarea></div>
     <div class="form-group"><label>سعر المطعم</label><input class="form-input" type="number" id="editRestaurantPrice" value="${restaurantPrice}"></div>
     <p style="color:var(--text-muted); font-size:13px;">سيتم إعادة الطلب إلى "قيد الانتظار" بعد التعديل.</p>
   `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveEditOrder('${orderId}')">حفظ</button>`);
@@ -389,30 +392,29 @@ async function addCategory(){ const n=document.getElementById('catName').value; 
 async function deleteCategory(id){ if(confirm('حذف؟')){ await apiFetch(API+'/restaurant/categories/'+id,{method:'DELETE'}); loadCategories(); } }
 async function editCategory(id,old){ const n=prompt('الاسم الجديد:',old); if(n){ await apiFetch(API+'/restaurant/categories/'+id,{method:'PATCH',body:JSON.stringify({name:n})}); loadCategories(); } }
 
-// ---------- المنتجات (مع تصفية بالتصنيفات) ----------
+// ---------- المنتجات (مع تصفية بالتصنيفات كأزرة) ----------
 async function loadProducts() {
   await loadCategoriesOptions();
   const prodRes = await apiFetch(API+'/restaurant/products'); const products = await prodRes.json();
   const catsRes = await apiFetch(API+'/restaurant/categories'); const categories = await catsRes.json();
-  
-  // بناء شريط التصنيفات
-  let filterBar = '<div class="category-filter-bar">';
-  filterBar += `<div class="category-filter-btn ${currentCategoryFilter === 'all' ? 'active' : ''}" onclick="setCategoryFilter('all')">الكل</div>`;
-  categories.forEach(cat => {
-    filterBar += `<div class="category-filter-btn ${currentCategoryFilter === cat.id ? 'active' : ''}" onclick="setCategoryFilter('${cat.id}')">${cat.name}</div>`;
-  });
-  filterBar += '</div>';
 
+  // بناء شريط التصنيفات كأزرة
+  let filterBar = `<div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:8px; margin-bottom:20px; border-bottom:1px solid var(--border);">
+      <button class="btn ${currentCategoryFilter === 'all' ? 'btn-primary' : 'btn-outline'} btn-sm" onclick="setCategoryFilter('all')">الكل</button>`;
+  categories.forEach(cat => {
+    filterBar += `<button class="btn ${currentCategoryFilter === cat.id ? 'btn-primary' : 'btn-outline'} btn-sm" onclick="setCategoryFilter('${cat.id}')">${cat.name}</button>`;
+  });
+  filterBar += `</div>`;
+
+  // تصفية المنتجات
   let filteredProducts = products;
-  if (currentCategoryFilter !== 'all') {
-    filteredProducts = products.filter(p => p.category === currentCategoryFilter);
-  }
+  if (currentCategoryFilter !== 'all') filteredProducts = products.filter(p => p.category === currentCategoryFilter);
 
   let html = `<div class="section-card"><div class="section-header"><h2>🍔 المنتجات</h2><button class="btn btn-primary btn-sm" onclick="showAddProduct()">+ إضافة</button></div>`;
   html += filterBar;
   html += '<div class="grid-cards">';
   filteredProducts.forEach(p => {
-    html += `<div class="product-card"><img src="${p.image || 'https://placehold.co/300/FFF3EB/FF6B00?text=🍔'}" class="product-img"><div class="product-body"><div class="product-name">${p.name}</div><div class="product-price">${p.basePrice || 0} ج</div><div class="product-actions"><button class="btn btn-sm btn-warning" onclick="editProduct('${p.id}')">✏️</button><button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.id}')">🗑️</button></div></div></div>`;
+    html += `<div class="product-card"><img src="${p.image || 'https://placehold.co/300/FFF3EB/FF6B00?text=🍔'}" class="product-img"><div class="product-body"><div class="product-name">${p.name}</div><div class="product-price">${p.basePrice || 0} ج</div><div class="product-actions"><button class="btn btn-sm btn-warning" onclick="editProductModal('${p.id}')">✏️ تعديل</button><button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.id}')">🗑️ حذف</button></div></div></div>`;
   });
   html += '</div></div>';
   document.getElementById('mainContent').innerHTML = html;
@@ -423,218 +425,106 @@ async function loadCategoriesOptions() {
   try { const res = await apiFetch(API+'/restaurant/categories'); const cats = await res.json(); let opts = '<option value="">بدون تصنيف</option>'; cats.forEach(c => opts += `<option value="${c.id}">${c.name}</option>`); window._catOptions = opts; } catch(e) {}
 }
 
-// ---------- إضافة منتج (منفرد/متعدد) ----------
+// ---------- إضافة منتج ----------
 function showAddProduct() {
   openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>إضافة منتج</h3>
     <div class="form-group"><input class="form-input" id="prodName" placeholder="اسم المنتج"></div>
     <div class="form-group"><input class="form-input" id="prodDesc" placeholder="الوصف"></div>
+    <div class="form-group"><input class="form-input" id="prodPrice" type="number" placeholder="السعر الأساسي (ج)"></div>
     <div class="form-group"><select class="form-input" id="prodCat">${window._catOptions||''}</select></div>
     <div class="form-group"><input type="file" id="prodImageFile"></div>
-    <div class="form-group"><label>نوع المنتج</label>
-      <select class="form-input" id="prodType" onchange="toggleProductType()">
-        <option value="single">منفرد (سعر أساسي فقط)</option>
-        <option value="multi">متعدد (مع مجموعات اختيارات)</option>
-      </select>
+    <hr><h4>🧩 مجموعات الاختيارات</h4>
+    <div id="quick-add-buttons" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px">
+      <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroup('size')">📏 أحجام</button>
+      <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroup('hot-cold')">❄️🔥 حار/بارد</button>
+      <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroup('spicy')">🌶️ مستوى الحرارة</button>
+      <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroup('extras')">➕ إضافات</button>
     </div>
-    <div id="singlePriceGroup" class="form-group"><input class="form-input" id="prodPrice" type="number" placeholder="السعر الأساسي"></div>
-    <div id="multiGroupsContainer" style="display:none;">
-      <hr><h4>🧩 مجموعات الاختيارات</h4>
-      <div id="quick-add-buttons" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px">
-        <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroup('size')">📏 أحجام</button>
-        <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroup('hot-cold')">❄️🔥 حار/بارد</button>
-        <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroup('spicy')">🌶️ مستوى الحرارة</button>
-        <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroup('extras')">➕ إضافات</button>
-      </div>
-      <div id="groups-container"></div>
-      <button type="button" class="btn btn-sm btn-ghost" onclick="addGroupRow()">+ إضافة مجموعة مخصصة</button>
-    </div>
+    <div id="groups-container"></div>
+    <button type="button" class="btn btn-sm btn-ghost" onclick="addGroupRow()">+ إضافة مجموعة مخصصة</button>
   `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveProduct()">حفظ</button>`);
-  // إضافة مجموعة افتراضية عند اختيار متعدد
-  if (document.getElementById('prodType').value === 'multi') addGroupRow();
+  addGroupRow(); // بداية بمجموعة فارغة
 }
 
-function toggleProductType() {
-  const type = document.getElementById('prodType').value;
-  document.getElementById('singlePriceGroup').style.display = type === 'single' ? 'block' : 'none';
-  document.getElementById('multiGroupsContainer').style.display = type === 'multi' ? 'block' : 'none';
-  if (type === 'multi') {
-    // إضافة مجموعة إذا لم تكن موجودة
-    if (!document.querySelector('.group-box')) addGroupRow();
-  }
-}
-
-// ---------- تعديل منتج (نفس نموذج الإضافة مع البيانات) ----------
-async function editProduct(id) {
-  const res = await apiFetch(API + '/restaurant/products');
+// ---------- تعديل منتج (نفس نافذة الإضافة بالبيانات) ----------
+async function editProductModal(productId) {
+  const res = await apiFetch(API+'/restaurant/products');
   const products = await res.json();
-  const product = products.find(p => p.id === id);
+  const product = products.find(p => p.id === productId);
   if (!product) return showToast('المنتج غير موجود');
-  
-  const isMulti = product.groups && product.groups.length > 0;
-  const typeSelect = isMulti ? 'multi' : 'single';
-  const catOptions = window._catOptions || '';
 
   openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>تعديل منتج</h3>
-    <div class="form-group"><input class="form-input" id="ep-name" value="${product.name || ''}"></div>
-    <div class="form-group"><input class="form-input" id="ep-desc" value="${product.description || ''}"></div>
-    <div class="form-group"><select class="form-input" id="ep-cat">${catOptions}</select></div>
-    <div class="form-group"><input type="file" id="ep-image"></div>
-    <div class="form-group"><label>نوع المنتج</label>
-      <select class="form-input" id="ep-type" onchange="toggleEditType()">
-        <option value="single" ${!isMulti?'selected':''}>منفرد</option>
-        <option value="multi" ${isMulti?'selected':''}>متعدد</option>
-      </select>
+    <div class="form-group"><input class="form-input" id="prodName" value="${product.name}"></div>
+    <div class="form-group"><input class="form-input" id="prodDesc" value="${product.description||''}"></div>
+    <div class="form-group"><input class="form-input" id="prodPrice" type="number" value="${product.basePrice || 0}"></div>
+    <div class="form-group"><select class="form-input" id="prodCat">${window._catOptions||''}</select></div>
+    <div class="form-group"><input type="file" id="prodImageFile"></div>
+    <hr><h4>🧩 مجموعات الاختيارات</h4>
+    <div id="quick-add-buttons" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px">
+      <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroup('size')">📏 أحجام</button>
+      <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroup('hot-cold')">❄️🔥 حار/بارد</button>
+      <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroup('spicy')">🌶️ مستوى الحرارة</button>
+      <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroup('extras')">➕ إضافات</button>
     </div>
-    <div id="ep-single-price" class="form-group" style="${isMulti?'display:none':''}"><input class="form-input" id="ep-price" type="number" value="${product.basePrice || 0}" placeholder="السعر الأساسي"></div>
-    <div id="ep-multi-groups" style="${!isMulti?'display:none':''}">
-      <hr><h4>المجموعات الحالية</h4>
-      <div id="ep-groups-container"></div>
-      <button type="button" class="btn btn-sm btn-ghost" onclick="addGroupRowEdit()">+ إضافة مجموعة</button>
-      <div id="ep-quick-add-buttons" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px">
-        <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroupEdit('size')">📏 أحجام</button>
-        <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroupEdit('hot-cold')">❄️🔥 حار/بارد</button>
-        <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroupEdit('spicy')">🌶️ مستوى الحرارة</button>
-        <button type="button" class="btn btn-sm btn-outline" onclick="addQuickGroupEdit('extras')">➕ إضافات</button>
-      </div>
-    </div>
-  `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveEditProduct('${id}')">حفظ التعديلات</button>`);
+    <div id="groups-container"></div>
+    <button type="button" class="btn btn-sm btn-ghost" onclick="addGroupRow()">+ إضافة مجموعة مخصصة</button>
+  `, `<button class="btn btn-ghost" onclick="closeModal()">إلغاء</button><button class="btn btn-primary" onclick="saveEditProduct('${productId}')">حفظ التعديلات</button>`);
 
-  // تعبئة البيانات في النموذج
+  // تعبئة التصنيف الحالي
   setTimeout(() => {
-    document.getElementById('ep-cat').value = product.category || '';
-    if (isMulti) {
-      const container = document.getElementById('ep-groups-container');
+    document.getElementById('prodCat').value = product.category || '';
+    const container = document.getElementById('groups-container');
+    container.innerHTML = ''; // تفريغ المجموعات الافتراضية
+    if (product.groups && product.groups.length > 0) {
       product.groups.forEach(g => {
-        addGroupRowEdit();
-        const last = container.lastChild;
-        last.querySelector('.grp-name').value = g.name;
-        last.querySelector('.grp-type').value = g.type;
-        last.querySelector('.grp-required').checked = g.required;
-        const opts = last.querySelector('.grp-options-container');
+        addGroupRow(); // إضافة صف جديد
+        const lastGroup = container.lastChild;
+        lastGroup.querySelector('.grp-name').value = g.name;
+        lastGroup.querySelector('.grp-type').value = g.type;
+        lastGroup.querySelector('.grp-required').checked = g.required;
+        const optsContainer = lastGroup.querySelector('.grp-options-container');
+        optsContainer.innerHTML = ''; // تفريغ الخيارات
         g.options.forEach(opt => {
           const row = document.createElement('div');
           row.className = 'option-row';
-          row.style.cssText = 'display:flex; gap:8px; align-items:center; margin-bottom:6px;';
+          row.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:6px;';
           row.innerHTML = `<input value="${opt.value}" class="form-input opt-value" style="flex:2"><input type="number" value="${opt.price}" class="form-input opt-price" style="flex:1"><button type="button" class="btn btn-sm btn-ghost" onclick="this.parentElement.remove()">✕</button>`;
-          opts.appendChild(row);
+          optsContainer.appendChild(row);
         });
       });
+    } else {
+      addGroupRow(); // إذا لم تكن هناك مجموعات، نضيف واحدة فارغة
     }
   }, 100);
 }
 
-function toggleEditType() {
-  const type = document.getElementById('ep-type').value;
-  document.getElementById('ep-single-price').style.display = type === 'single' ? 'block' : 'none';
-  document.getElementById('ep-multi-groups').style.display = type === 'multi' ? 'block' : 'none';
-  if (type === 'multi' && !document.querySelector('#ep-groups-container .group-box')) addGroupRowEdit();
+// ---------- دوال المجموعات ----------
+function addGroupRow(){ const c=document.getElementById('groups-container'); const d=document.createElement('div'); d.className='group-box'; d.style.cssText='background:#f9fafb;border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;'; d.innerHTML=`<div style="display:flex;gap:8px;margin-bottom:10px"><input placeholder="اسم المجموعة" style="flex:1" class="form-input grp-name"><select class="form-input grp-type" style="width:130px"><option value="single">اختيار واحد</option><option value="multiple">اختيار متعدد</option></select><label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" class="grp-required" checked> إجباري</label></div><div class="grp-options-container"></div><div style="display:flex;justify-content:space-between;margin-top:8px"><button type="button" class="btn btn-sm btn-ghost" onclick="addOptionToRow(this)">+ إضافة خيار</button><button type="button" class="btn btn-sm btn-danger" onclick="this.closest('.group-box').remove()">✕ حذف المجموعة</button></div>`; c.appendChild(d); addOptionToRow(d.querySelector('.btn-ghost')); }
+function addOptionToRow(b){ const g=b.closest('.group-box'); const r=document.createElement('div'); r.className='option-row'; r.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:6px;'; r.innerHTML=`<input placeholder="القيمة" class="form-input opt-value" style="flex:2"><input placeholder="السعر" type="number" class="form-input opt-price" value="0" style="flex:1"><button type="button" class="btn btn-sm btn-ghost" onclick="this.parentElement.remove()">✕</button>`; g.querySelector('.grp-options-container').appendChild(r); }
+function collectGroupsData(){ const gs=document.querySelectorAll('.group-box'); const groups=[]; gs.forEach(b=>{ const n=b.querySelector('.grp-name').value.trim(); if(!n)return; const t=b.querySelector('.grp-type').value; const r=b.querySelector('.grp-required').checked; const rs=b.querySelectorAll('.option-row'); const opts=[]; rs.forEach(r=>{ const v=r.querySelector('.opt-value').value.trim(); const p=Number(r.querySelector('.opt-price').value)||0; if(v)opts.push({value:v,price:p}); }); if(opts.length)groups.push({id:'grp_'+Date.now()+Math.random(),name:n,type:t,required:r,options:opts}); }); return groups; }
+function addQuickGroup(type){ const t={size:{name:'الحجم',type:'single',required:true,options:[{value:'صغير',price:0},{value:'وسط',price:5},{value:'كبير',price:10}]},'hot-cold':{name:'درجة الحرارة',type:'single',required:true,options:[{value:'حار',price:0},{value:'بارد',price:0}]},spicy:{name:'مستوى الحرارة',type:'single',required:false,options:[{value:'عادي',price:0},{value:'وسط',price:0},{value:'حار',price:2},{value:'ناري',price:4}]},extras:{name:'إضافات',type:'multiple',required:false,options:[{value:'جبنة إضافية',price:5},{value:'بطاطس',price:7},{value:'بيبسي',price:10}]}}[type]; if(!t)return; addGroupRow(); const c=document.getElementById('groups-container'); const l=c.lastChild; l.querySelector('.grp-name').value=t.name; l.querySelector('.grp-type').value=t.type; l.querySelector('.grp-required').checked=t.required; const o=l.querySelector('.grp-options-container'); o.innerHTML=''; t.options.forEach(opt=>{ const r=document.createElement('div'); r.className='option-row'; r.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:6px;'; r.innerHTML=`<input value="${opt.value}" class="form-input opt-value" style="flex:2"><input type="number" value="${opt.price}" class="form-input opt-price" style="flex:1"><button type="button" class="btn btn-sm btn-ghost" onclick="this.parentElement.remove()">✕</button>`; o.appendChild(r); }); }
+
+// ---------- حفظ المنتج الجديد ----------
+async function saveProduct(){
+  const n=document.getElementById('prodName').value.trim(); if(!n) return showToast('اسم المنتج مطلوب');
+  const d=document.getElementById('prodDesc').value.trim(); const p=Number(document.getElementById('prodPrice').value)||0;
+  const c=document.getElementById('prodCat').value; const img=document.getElementById('prodImageFile').files[0];
+  const g=collectGroupsData(); const f=new FormData(); f.append('name',n); f.append('description',d); f.append('basePrice',p); f.append('category',c); f.append('groups',JSON.stringify(g)); if(img) f.append('image',img);
+  const res=await apiFetch(API+'/restaurant/products',{method:'POST',body:f}); const data=await res.json();
+  if(data.error) showToast(data.error); else { showToast('تم إضافة المنتج'); closeModal(); loadProducts(); }
 }
 
-// دوال المجموعات (عامة)
-function addGroupRow(containerId = 'groups-container') {
-  const c = document.getElementById(containerId);
-  const d = document.createElement('div'); d.className = 'group-box';
-  d.style.cssText = 'background:#f9fafb;border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;';
-  d.innerHTML = `<div style="display:flex;gap:8px;margin-bottom:10px"><input placeholder="اسم المجموعة" style="flex:1" class="form-input grp-name"><select class="form-input grp-type" style="width:130px"><option value="single">اختيار واحد</option><option value="multiple">اختيار متعدد</option></select><label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" class="grp-required" checked> إجباري</label></div><div class="grp-options-container"></div><div style="display:flex;justify-content:space-between;margin-top:8px"><button type="button" class="btn btn-sm btn-ghost" onclick="addOptionToRow(this)">+ إضافة خيار</button><button type="button" class="btn btn-sm btn-danger" onclick="this.closest('.group-box').remove()">✕ حذف المجموعة</button></div>`;
-  c.appendChild(d);
-  addOptionToRow(d.querySelector('.btn-ghost'));
-}
-function addGroupRowEdit() { addGroupRow('ep-groups-container'); }
-
-function addOptionToRow(buttonEl) {
-  const g = buttonEl.closest('.group-box');
-  const r = document.createElement('div'); r.className = 'option-row';
-  r.style.cssText = 'display:flex; gap:8px; align-items:center; margin-bottom:6px;';
-  r.innerHTML = `<input placeholder="القيمة" class="form-input opt-value" style="flex:2"><input placeholder="السعر" type="number" class="form-input opt-price" value="0" style="flex:1"><button type="button" class="btn btn-sm btn-ghost" onclick="this.parentElement.remove()">✕</button>`;
-  g.querySelector('.grp-options-container').appendChild(r);
+// ---------- حفظ تعديل المنتج ----------
+async function saveEditProduct(productId){
+  const n=document.getElementById('prodName').value.trim(); if(!n) return showToast('اسم المنتج مطلوب');
+  const d=document.getElementById('prodDesc').value.trim(); const p=Number(document.getElementById('prodPrice').value)||0;
+  const c=document.getElementById('prodCat').value; const img=document.getElementById('prodImageFile').files[0];
+  const g=collectGroupsData(); const f=new FormData(); f.append('name',n); f.append('description',d); f.append('basePrice',p); f.append('category',c); f.append('groups',JSON.stringify(g)); if(img) f.append('image',img);
+  const res=await apiFetch(API+'/restaurant/products/'+productId,{method:'PATCH',body:f}); const data=await res.json();
+  if(data.error) showToast(data.error); else { showToast('تم تحديث المنتج'); closeModal(); loadProducts(); }
 }
 
-function collectGroupsData(containerId = 'groups-container') {
-  const gs = document.querySelectorAll(`#${containerId} .group-box`);
-  const groups = [];
-  gs.forEach(b => {
-    const n = b.querySelector('.grp-name').value.trim(); if (!n) return;
-    const t = b.querySelector('.grp-type').value;
-    const r = b.querySelector('.grp-required').checked;
-    const rs = b.querySelectorAll('.option-row');
-    const opts = [];
-    rs.forEach(r => { const v = r.querySelector('.opt-value').value.trim(); const p = Number(r.querySelector('.opt-price').value) || 0; if (v) opts.push({ value: v, price: p }); });
-    if (opts.length) groups.push({ id: 'grp_' + Date.now() + Math.random(), name: n, type: t, required: r, options: opts });
-  });
-  return groups;
-}
-
-function addQuickGroup(type, containerId = 'groups-container') {
-  const t = { size: { name: 'الحجم', type: 'single', required: true, options: [{ value: 'صغير', price: 0 }, { value: 'وسط', price: 5 }, { value: 'كبير', price: 10 }] }, 'hot-cold': { name: 'درجة الحرارة', type: 'single', required: true, options: [{ value: 'حار', price: 0 }, { value: 'بارد', price: 0 }] }, spicy: { name: 'مستوى الحرارة', type: 'single', required: false, options: [{ value: 'عادي', price: 0 }, { value: 'وسط', price: 0 }, { value: 'حار', price: 2 }, { value: 'ناري', price: 4 }] }, extras: { name: 'إضافات', type: 'multiple', required: false, options: [{ value: 'جبنة إضافية', price: 5 }, { value: 'بطاطس', price: 7 }, { value: 'بيبسي', price: 10 }] } }[type];
-  if (!t) return;
-  addGroupRow(containerId);
-  const c = document.getElementById(containerId);
-  const l = c.lastChild;
-  l.querySelector('.grp-name').value = t.name;
-  l.querySelector('.grp-type').value = t.type;
-  l.querySelector('.grp-required').checked = t.required;
-  const o = l.querySelector('.grp-options-container'); o.innerHTML = '';
-  t.options.forEach(opt => { const r = document.createElement('div'); r.className = 'option-row'; r.style.cssText = 'display:flex; gap:8px; align-items:center; margin-bottom:6px;'; r.innerHTML = `<input value="${opt.value}" class="form-input opt-value" style="flex:2"><input type="number" value="${opt.price}" class="form-input opt-price" style="flex:1"><button type="button" class="btn btn-sm btn-ghost" onclick="this.parentElement.remove()">✕</button>`; o.appendChild(r); });
-}
-function addQuickGroupEdit(type) { addQuickGroup(type, 'ep-groups-container'); }
-
-// حفظ منتج جديد
-async function saveProduct() {
-  const type = document.getElementById('prodType').value;
-  const name = document.getElementById('prodName').value.trim();
-  if (!name) return showToast('اسم المنتج مطلوب');
-  const desc = document.getElementById('prodDesc').value.trim();
-  const cat = document.getElementById('prodCat').value;
-  const img = document.getElementById('prodImageFile').files[0];
-
-  let price = 0, groups = [];
-  if (type === 'single') {
-    price = Number(document.getElementById('prodPrice').value) || 0;
-  } else {
-    groups = collectGroupsData();
-  }
-
-  const fd = new FormData();
-  fd.append('name', name); fd.append('description', desc);
-  fd.append('category', cat); fd.append('basePrice', price);
-  fd.append('groups', JSON.stringify(groups));
-  if (img) fd.append('image', img);
-
-  const res = await apiFetch(API + '/restaurant/products', { method: 'POST', body: fd });
-  const data = await res.json();
-  if (data.error) showToast(data.error);
-  else { showToast('تم إضافة المنتج'); closeModal(); loadProducts(); }
-}
-
-// حفظ تعديل منتج
-async function saveEditProduct(id) {
-  const type = document.getElementById('ep-type').value;
-  const name = document.getElementById('ep-name').value.trim();
-  if (!name) return showToast('اسم المنتج مطلوب');
-  const desc = document.getElementById('ep-desc').value.trim();
-  const cat = document.getElementById('ep-cat').value;
-  const img = document.getElementById('ep-image').files[0];
-
-  let price = 0, groups = [];
-  if (type === 'single') {
-    price = Number(document.getElementById('ep-price').value) || 0;
-  } else {
-    groups = collectGroupsData('ep-groups-container');
-  }
-
-  const fd = new FormData();
-  fd.append('name', name); fd.append('description', desc);
-  fd.append('category', cat); fd.append('basePrice', price);
-  fd.append('groups', JSON.stringify(groups));
-  if (img) fd.append('image', img);
-
-  const res = await apiFetch(API + '/restaurant/products/' + id, { method: 'PATCH', body: fd });
-  const data = await res.json();
-  if (data.error) showToast(data.error);
-  else { showToast('تم تحديث المنتج'); closeModal(); loadProducts(); }
-}
-
-async function deleteProduct(id) { if (confirm('حذف؟')) { await apiFetch(API + '/restaurant/products/' + id, { method: 'DELETE' }); loadProducts(); } }
+async function deleteProduct(id){ if(confirm('حذف؟')){ await apiFetch(API+'/restaurant/products/'+id,{method:'DELETE'}); loadProducts(); } }
 
 // ---------- طلب جديد مباشر ----------
 function loadNewOrderForm() { if (!allRegions.length) { loadRegions().then(() => renderNewOrderForm()); } else renderNewOrderForm(); }
@@ -673,6 +563,7 @@ function initApp() {
   loadRegions(); loadCategoriesOptions(); navigate('profile');
   const socket = io(); window._socket = socket;
   socket.on('newOrder', data => { if (data.restaurantId === windowMyRestaurantId) { playSound('newOrderBell'); showToast('طلب جديد!'); if (currentPage==='orders') loadOrders(); } });
+  socket.on('orderStatusUpdate', () => { if (currentPage==='orders') loadOrders(); });
 }
 
 async function checkSession() {
