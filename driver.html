@@ -283,6 +283,8 @@ createSound('newJob', generateToneWAV(800, 0.12, 'square'), generateToneWAV(1000
 createSound('orderDelivered', generateToneWAV(600, 0.15, 'sine'), generateToneWAV(900, 0.15, 'sine'));
 
 /* ── STATE ──────────────────────── */
+const API = '/api';
+const TOKEN_KEY = 'auth_token';
 let currentTab = 'available';
 let isOnline = true;
 let driverEarnings = 0;
@@ -293,20 +295,42 @@ let availableOrders = [];
 let myOrders = [];
 let historySelectedDate = new Date().toISOString().slice(0, 10);
 
-/* ── API FETCH (مع الكوكيز فقط) ───── */
-async function apiFetch(path, opts = {}) {
-  const res = await fetch(path, {
-    ...opts,
-    credentials: 'include',
-    headers: {
-      ...(opts.headers || {}),
-      'Content-Type': opts.body instanceof FormData ? undefined : 'application/json'
+/* ── إدارة الجلسة (مثل واجهة العميل) ── */
+function getToken(){ return localStorage.getItem(TOKEN_KEY); }
+function saveToken(token){ localStorage.setItem(TOKEN_KEY, token); }
+function clearToken(){ localStorage.removeItem(TOKEN_KEY); }
+
+async function refreshTokenFromCookie() {
+  try {
+    const res = await fetch(API + '/whoami', { credentials: 'include' });
+    if (res.ok) {
+      const data = await res.json();
+      saveToken(data.token);
+      return data.token;
     }
-  });
+  } catch(e) {}
+  return null;
+}
+
+async function apiFetch(path, opts = {}) {
+  let token = getToken();
+  if (!token) {
+    token = await refreshTokenFromCookie();
+    if (!token) { showLogin(); throw new Error('NO_TOKEN'); }
+  }
+  const headers = { ...opts.headers, 'Authorization': 'Bearer ' + token };
+  if (!(opts.body instanceof FormData)) headers['Content-Type'] = 'application/json';
+  let res = await fetch(path, { ...opts, headers, credentials: 'include' });
   if (res.status === 401) {
-    // انتهت الجلسة -> نظهر شاشة الدخول
-    showLogin();
-    throw new Error('401');
+    const newToken = await refreshTokenFromCookie();
+    if (newToken) {
+      headers['Authorization'] = 'Bearer ' + newToken;
+      res = await fetch(path, { ...opts, headers, credentials: 'include' });
+    } else {
+      clearToken();
+      showLogin();
+      throw new Error('AUTH_ERROR');
+    }
   }
   return res.json();
 }
@@ -389,6 +413,7 @@ async function driverLogin() {
       document.getElementById('loginError').style.display = 'block';
       return;
     }
+    saveToken(data.token); // حفظ التوكن
     document.getElementById('loginError').style.display = 'none';
     hideLogin();
     initApp();
@@ -399,6 +424,7 @@ async function driverLogin() {
 
 async function logout() {
   try { await fetch('/logout', { credentials: 'include' }); } catch(e) {}
+  clearToken();
   showLogin();
 }
 
@@ -696,7 +722,7 @@ async function tabProfile() {
       <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px">
         <div style="display:flex;justify-content:space-between;align-items:center"><span style="color:var(--text3)">الرصيد الحالي</span><span style="font-weight:800;color:var(--orange)">${credit} ج</span></div>
         <div class="divider"></div>
-        <div style="display:flex;justify-content:space-between;align-items:center"><span style="color:var(--text3)">نسبة المنصة</span><span style="font-weight:700;color:var(--red)">20% من قيمة المنتجات</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center"><span style="color:var(--text3)">نسبة المنصة</span><span style="font-weight:700;color:var(--red)">20% من رسوم التوصيل</span></div>
         <div style="display:flex;justify-content:space-between;align-items:center"><span style="color:var(--text3)">يتم خصمها تلقائياً</span><span style="font-weight:600;color:var(--green)">عند تسليم الطلب</span></div>
         <button class="btn btn-primary btn-full" onclick="showRechargeModal()">⚡ شحن رصيد</button>
       </div>
@@ -769,17 +795,20 @@ async function initApp() {
 
 // التحقق من الجلسة عند التحميل
 async function checkSession() {
-  try {
-    const res = await fetch('/api/whoami', { credentials: 'include' });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.user?.role === 'DRIVER') {
-        hideLogin();
-        initApp();
-        return;
+  const token = getToken();
+  if (token) {
+    try {
+      const res = await fetch(API + '/whoami', { headers: { 'Authorization': 'Bearer ' + token }, credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user?.role === 'DRIVER') {
+          hideLogin();
+          initApp();
+          return;
+        }
       }
-    }
-  } catch(e) {}
+    } catch(e) {}
+  }
   showLogin();
 }
 checkSession();
