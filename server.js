@@ -1168,16 +1168,17 @@ app.patch('/api/driver/orders/:id/status', requireAuth, (req, res) => {
   const { status } = req.body;
   if (!['ON_THE_WAY', 'DELIVERED'].includes(status)) return res.status(400).json({ error: 'حالة غير صالحة' });
   order.status = status;
-  if (status === 'DELIVERED') {
+if (status === 'DELIVERED') {
     const driver = data.drivers.find(d => d.userId === req.user.id);
     if (driver) {
       driver.earnings = (driver.earnings || 0) + (order.deliveryFee || 10);
-      const productValue = (order.total || 0) - (order.deliveryFee || 0);
-      order.platformFee = Math.round(productValue * 0.20);
-      driver.credit = (driver.credit || 0) - order.platformFee;
+      // العمولة 20% من رسوم التوصيل
+      const commission = Math.round((order.deliveryFee || 10) * 0.20);
+      order.platformFee = commission;
+      driver.credit = (driver.credit || 0) - commission;
     }
     order.deliveredAt = new Date().toISOString();
-  }
+}
   writeData(data);
   io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
   res.json({ success: true });
