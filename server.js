@@ -819,9 +819,18 @@ app.patch('/api/restaurant/profile', requireAuth, upload.single('logo'), (req, r
   const data = readData();
   const restaurant = data.restaurants.find(r => r.userId === req.user.id);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
+
+  const { name, description } = req.body;
+  if (name) restaurant.name = name;
+  if (description !== undefined) restaurant.description = description;
   if (req.file) restaurant.logo = '/uploads/' + req.file.filename;
+
   writeData(data);
-  res.json({ logo: restaurant.logo });
+  res.json({
+    name: restaurant.name,
+    description: restaurant.description || '',
+    logo: restaurant.logo || ''
+  });
 });
 
 app.get('/api/restaurant/orders', requireAuth, (req, res) => {
