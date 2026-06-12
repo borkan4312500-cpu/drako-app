@@ -199,6 +199,7 @@ let allRegions = [];
 let audioActivated = false;
 let audioCtx = null;
 let dispatchMode = 'manual'; // manual / auto
+let allOrdersCache=[], allRestaurantsCache=[], allDriversCache=[];
 
 // ---------- نظام الصوت ----------
 function playTone(f,d,t,v=0.3){ if(!audioCtx){ try{audioCtx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){return;} } if(audioCtx.state==='suspended')audioCtx.resume(); var o=audioCtx.createOscillator(); var g=audioCtx.createGain(); o.type=t; o.frequency.value=f; g.gain.setValueAtTime(v,audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+d); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+d); }
@@ -240,51 +241,19 @@ async function adminLogin() {
   const password = document.getElementById('loginPass').value;
   const errorDiv = document.getElementById('loginError');
   errorDiv.style.display = 'none';
-  
-  if (!phone || !password) {
-    errorDiv.textContent = '⚠️ الرجاء إدخال رقم الهاتف وكلمة المرور';
-    errorDiv.style.display = 'block';
-    return;
-  }
-
+  if (!phone || !password) { errorDiv.textContent = '⚠️ الرجاء إدخال رقم الهاتف وكلمة المرور'; errorDiv.style.display = 'block'; return; }
   try {
-    const res = await fetch(API + '/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ phone, password })
-    });
-
+    const res = await fetch(API + '/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ phone, password }) });
     const data = await res.json();
-
-    if (!res.ok || data.error) {
-      errorDiv.textContent = '❌ ' + (data.error || 'فشل تسجيل الدخول، تحقق من الخادم');
-      errorDiv.style.display = 'block';
-      return;
-    }
-
-    if (!data.user || data.user.role !== 'ADMIN') {
-      errorDiv.textContent = '❌ هذا الحساب ليس لديه صلاحية الأدمن';
-      errorDiv.style.display = 'block';
-      return;
-    }
-
-    errorDiv.style.display = 'none';
-    hideLogin();
-    initApp();
-  } catch (e) {
-    errorDiv.textContent = '❌ فشل الاتصال بالخادم. تأكد من تشغيل السيرفر.';
-    errorDiv.style.display = 'block';
-  }
+    if (!res.ok || data.error) { errorDiv.textContent = '❌ ' + (data.error || 'فشل تسجيل الدخول، تحقق من الخادم'); errorDiv.style.display = 'block'; return; }
+    if (!data.user || data.user.role !== 'ADMIN') { errorDiv.textContent = '❌ هذا الحساب ليس لديه صلاحية الأدمن'; errorDiv.style.display = 'block'; return; }
+    errorDiv.style.display = 'none'; hideLogin(); initApp();
+  } catch (e) { errorDiv.textContent = '❌ فشل الاتصال بالخادم. تأكد من تشغيل السيرفر.'; errorDiv.style.display = 'block'; }
 }
 
-async function logout() {
-  try { await fetch('/logout', { credentials: 'include' }); } catch(e) {}
-  showLogin();
-}
+async function logout() { try { await fetch('/logout', { credentials: 'include' }); } catch(e) {} showLogin(); }
 
 // ---------- التطبيق ----------
-let allOrdersCache=[], allRestaurantsCache=[], allDriversCache=[];
 const STATUS_AR={PENDING:'في الانتظار',ACCEPTED:'مقبول',PREPARING:'يتحضر',READY:'جاهز',DRIVER_ASSIGNED:'مع طيار',ON_THE_WAY:'في الطريق',DELIVERED:'تم التوصيل',CANCELLED:'ملغي'};
 function statusBadge(s){ const cl={PENDING:'badge-warning',ACCEPTED:'badge-info',PREPARING:'badge-warning',READY:'badge-info',DRIVER_ASSIGNED:'badge-warning',ON_THE_WAY:'badge-warning',DELIVERED:'badge-success',CANCELLED:'badge-danger'}; return `<span class="badge ${cl[s]||'badge-info'}">${STATUS_AR[s]||s}</span>`; }
 
@@ -340,7 +309,7 @@ async function loadDashboard(){
     </div>`;
 }
 
-// --- توزيع الطلبات (مخصص/تلقائي) ---
+// --- توزيع الطلبات (يدوي / تلقائي) ---
 async function loadDispatch(){
   const [orders,drivers]=await Promise.all([apiFetch(API+'/orders').then(r=>r.json()), apiFetch(API+'/admin/drivers').then(r=>r.json())]);
   const ready=orders.filter(o=>o.status==='READY'&&!o.driverId);
@@ -719,26 +688,30 @@ async function loadRecharge(){
 async function approveRecharge(id){ if(confirm('موافقة؟')){ await apiFetch(API+'/admin/recharge-requests/'+id+'/approve',{method:'PATCH'}); showToast('تم'); loadRecharge(); } }
 async function rejectRecharge(id){ if(confirm('رفض؟')){ await apiFetch(API+'/admin/recharge-requests/'+id+'/reject',{method:'PATCH'}); showToast('تم'); loadRecharge(); } }
 
-// --- التقارير ---
+// --- التقارير (الإصلاح) ---
 async function loadReports(){
-  const data=await apiFetch(API+'/admin/reports/full').then(r=>r.json());
-  document.getElementById('mainContent').innerHTML=`
-    <div class="stats-grid">
-      <div class="stat-card"><h4>يومي</h4><div class="value">${data.daily.count} طلب</div><div>${data.daily.totalRevenue} ج</div></div>
-      <div class="stat-card"><h4>أسبوعي</h4><div class="value">${data.weekly.count} طلب</div><div>${data.weekly.totalRevenue} ج</div></div>
-      <div class="stat-card"><h4>شهري</h4><div class="value">${data.monthly.count} طلب</div><div>${data.monthly.totalRevenue} ج</div></div>
-      <div class="stat-card"><h4>الإجمالي</h4><div class="value">${data.total.count} طلب</div><div>${data.total.totalRevenue} ج</div></div>
-    </div>
-    <div class="grid-2">
-      <div class="section-card"><h3>أفضل المطاعم (شهري)</h3>${data.restaurants.month.map(r=>`<div class="info-item"><span>${r.name}</span><span>${r.netRevenue} ج</span></div>`).join('')}</div>
-      <div class="section-card"><h3>أفضل الطيارين (شهري)</h3>${data.drivers.month.map(d=>`<div class="info-item"><span>${d.name}</span><span>${d.revenue} ج</span></div>`).join('')}</div>
-    </div>`;
+  try {
+    const data = await apiFetch(API+'/admin/reports/full').then(r=>r.json());
+    document.getElementById('mainContent').innerHTML=`
+      <div class="stats-grid">
+        <div class="stat-card"><h4>يومي</h4><div class="value">${data.daily?.count||0} طلب</div><div>${data.daily?.totalRevenue||0} ج</div></div>
+        <div class="stat-card"><h4>أسبوعي</h4><div class="value">${data.weekly?.count||0} طلب</div><div>${data.weekly?.totalRevenue||0} ج</div></div>
+        <div class="stat-card"><h4>شهري</h4><div class="value">${data.monthly?.count||0} طلب</div><div>${data.monthly?.totalRevenue||0} ج</div></div>
+        <div class="stat-card"><h4>الإجمالي</h4><div class="value">${data.total?.count||0} طلب</div><div>${data.total?.totalRevenue||0} ج</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="section-card"><h3>أفضل المطاعم (شهري)</h3>${(data.restaurants?.month||[]).map(r=>`<div class="info-item"><span>${r.name}</span><span>${r.netRevenue} ج</span></div>`).join('')||'<div class="info-item">لا توجد بيانات</div>'}</div>
+        <div class="section-card"><h3>أفضل الطيارين (شهري)</h3>${(data.drivers?.month||[]).map(d=>`<div class="info-item"><span>${d.name}</span><span>${d.revenue} ج</span></div>`).join('')||'<div class="info-item">لا توجد بيانات</div>'}</div>
+      </div>`;
+  } catch(e) { showToast('خطأ في تحميل التقارير'); }
 }
 
 // --- إيرادات المنصة ---
 async function loadPlatformRevenue(){
-  const data=await apiFetch(API+'/admin/platform-revenue').then(r=>r.json());
-  document.getElementById('mainContent').innerHTML=`<div class="stats-grid"><div class="stat-card"><h4>إيرادات المنصة اليوم</h4><div class="value">${data.today} ج</div></div><div class="stat-card"><h4>إجمالي إيرادات المنصة</h4><div class="value">${data.total} ج</div></div></div>`;
+  try {
+    const data = await apiFetch(API+'/admin/platform-revenue').then(r=>r.json());
+    document.getElementById('mainContent').innerHTML=`<div class="stats-grid"><div class="stat-card"><h4>إيرادات المنصة اليوم</h4><div class="value">${data.today||0} ج</div></div><div class="stat-card"><h4>إجمالي إيرادات المنصة</h4><div class="value">${data.total||0} ج</div></div></div>`;
+  } catch(e) { showToast('خطأ في تحميل إيرادات المنصة'); }
 }
 
 // --- اوردرات المطاعم المباشرة ---
