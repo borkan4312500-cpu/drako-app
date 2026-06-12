@@ -12,7 +12,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// الثقة بالبروكسي (مهم للنطاقات مثل drako0.com)
+// الثقة بالبروكسي
 app.set('trust proxy', 1);
 
 // --- إعداد المجلدات الأساسية ---
@@ -46,7 +46,7 @@ const soundStorage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     const event = req.body.event;
-    cb(null, event + '.mp3'); // حفظ دائمًا بامتداد mp3
+    cb(null, event + '.mp3');
   }
 });
 const soundUpload = multer({
@@ -109,7 +109,8 @@ function readData() {
         { id: 'reg_5', name: 'الشيخ زايد', fee: 30 }
       ],
       rechargeRequests: [],
-      dailyOrderCounter: { date: new Date().toISOString().slice(0,10), counter: 0 }
+      dailyOrderCounter: { date: new Date().toISOString().slice(0,10), counter: 0 },
+      dispatchMode: 'manual'
     };
     initial.users.push({
       id: "admin1",
@@ -129,6 +130,7 @@ function readData() {
   if (!data.pharmacies) data.pharmacies = [];
   if (!data.rechargeRequests) data.rechargeRequests = [];
   if (!data.dailyOrderCounter) data.dailyOrderCounter = { date: new Date().toISOString().slice(0,10), counter: 0 };
+  if (!data.dispatchMode) data.dispatchMode = 'manual';
   const adminUser = data.users.find(u => u.phone === '01000000000');
   if (adminUser && adminUser.role !== 'ADMIN') adminUser.role = 'ADMIN';
   return data;
@@ -148,6 +150,21 @@ function getNextOrderNumber() {
   data.dailyOrderCounter.counter += 1;
   writeData(data);
   return data.dailyOrderCounter.counter;
+}
+
+// دالة مساعدة لمعرفة اسم المتجر للطلبات الخاصة
+function getStoreNameForOrder(order, data) {
+  if (order.type === 'special') {
+    if (order.orderType === 'market') {
+      const market = data.markets.find(m => m.id === order.storeId);
+      return market ? market.name : 'ماركت';
+    } else if (order.orderType === 'pharmacy') {
+      const pharmacy = data.pharmacies.find(p => p.id === order.storeId);
+      return pharmacy ? pharmacy.name : 'صيدلية';
+    }
+    return 'طلب خاص';
+  }
+  return null;
 }
 
 // ================== Middlewares ==================
@@ -175,7 +192,7 @@ app.get('/driver', (req, res) => res.sendFile(path.join(__dirname, 'driver.html'
 app.get('/market', (req, res) => res.sendFile(path.join(__dirname, 'market.html')));
 app.get('/pharmacy', (req, res) => res.sendFile(path.join(__dirname, 'pharmacy.html')));
 
-// ================== نقطة تسجيل الدخول الموحدة (JSON فقط) ==================
+// ================== المصادقة ==================
 app.post('/api/login', (req, res) => {
   const { phone, password } = req.body;
   const data = readData();
@@ -221,6 +238,21 @@ app.get('/api/admin/dashboard', requireAuth, adminOnly, (req, res) => {
   res.json({ todayOrders: todayOrders.length, activeOrders: activeOrders.length, restaurants: data.restaurants.length, drivers: data.drivers.length, totalRevenue: data.orders.reduce((s, o) => s + (o.total || 0), 0), recentOrders: data.orders.slice(-10).reverse(), availableDrivers });
 });
 
+// --- إعدادات وضع التوزيع ---
+app.get('/api/admin/dispatch-mode', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  res.json({ mode: data.dispatchMode || 'manual' });
+});
+
+app.patch('/api/admin/dispatch-mode', requireAuth, adminOnly, (req, res) => {
+  const data = readData();
+  const { mode } = req.body;
+  if (!['manual', 'auto'].includes(mode)) return res.status(400).json({ error: 'وضع غير صالح' });
+  data.dispatchMode = mode;
+  writeData(data);
+  res.json({ mode });
+});
+
 // --- المطاعم (أدمن) ---
 app.get('/api/admin/restaurants', requireAuth, adminOnly, (req, res) => {
   const data = readData();
@@ -239,7 +271,7 @@ app.post('/api/admin/restaurants', requireAuth, adminOnly, (req, res) => {
   const restaurantId = 'res_' + Date.now();
   const hashed = bcrypt.hashSync(ownerPassword, 10);
   data.users.push({ id: userId, name, phone: ownerPhone, password: hashed, role: 'RESTAURANT' });
-  data.restaurants.push({ id: restaurantId, userId, name, isOpen: true });
+  data.restaurants.push({ id: restaurantId, userId, name, isOpen: true, visible: true, order: data.restaurants.length });
   writeData(data);
   res.json({ id: restaurantId, name });
 });
@@ -255,12 +287,14 @@ app.patch('/api/admin/restaurants/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const restaurant = data.restaurants.find(r => r.id === req.params.id);
   if (!restaurant) return res.status(404).json({ error: 'غير موجود' });
-  const { name, ownerPhone } = req.body;
-  if (name) restaurant.name = name;
-  if (ownerPhone) {
+  const { name, ownerPhone, visible, order } = req.body;
+  if (name !== undefined) restaurant.name = name;
+  if (ownerPhone !== undefined) {
     const user = data.users.find(u => u.id === restaurant.userId);
     if (user) user.phone = ownerPhone;
   }
+  if (visible !== undefined) restaurant.visible = visible;
+  if (order !== undefined) restaurant.order = order;
   writeData(data);
   res.json({ success: true });
 });
@@ -357,7 +391,7 @@ app.get('/api/admin/drivers/:id/details', requireAuth, adminOnly, (req, res) => 
     customerName: o.customerName,
     total: o.total,
     deliveryFee: o.deliveryFee,
-    restaurantName: data.restaurants.find(r => r.id === o.restaurantId)?.name || 'طلب خاص',
+    restaurantName: data.restaurants.find(r => r.id === o.restaurantId)?.name || getStoreNameForOrder(o, data) || 'طلب خاص',
     address: o.address
   }));
   res.json({
@@ -489,17 +523,27 @@ app.patch('/api/admin/recharge-requests/:id/reject', requireAuth, adminOnly, (re
   res.json({ success: true, message: 'تم رفض الطلب' });
 });
 
-// --- الطلبات وتعيين طيار وتجريبي وتقارير ---
+// --- الطلبات (مع عرض اسم المتجر) ---
 app.get('/api/orders', (req, res) => {
   const data = readData();
-  const enriched = data.orders.map(o => ({
-    ...o,
-    restaurantName: data.restaurants.find(r => r.id === o.restaurantId)?.name,
-    driverName: data.users.find(u => u.id === o.driverId)?.name || '—',
-    customerName: o.customerName || data.users.find(u => u.phone === o.customerPhone)?.name
-  }));
+  const enriched = data.orders.map(o => {
+    let restaurantName = null;
+    let storeName = null;
+    if (o.type === 'special') {
+      storeName = getStoreNameForOrder(o, data);
+    } else {
+      restaurantName = data.restaurants.find(r => r.id === o.restaurantId)?.name;
+    }
+    return {
+      ...o,
+      restaurantName: restaurantName || storeName || '—',
+      driverName: data.users.find(u => u.id === o.driverId)?.name || '—',
+      customerName: o.customerName || data.users.find(u => u.phone === o.customerPhone)?.name
+    };
+  });
   res.json(enriched);
 });
+
 app.patch('/api/admin/orders/:id/assign-driver', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const order = data.orders.find(o => o.id === req.params.id);
@@ -509,6 +553,7 @@ app.patch('/api/admin/orders/:id/assign-driver', requireAuth, adminOnly, (req, r
   writeData(data);
   res.json({ success: true });
 });
+
 app.post('/api/admin/test-order', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const { restaurantId } = req.body;
@@ -536,6 +581,7 @@ app.post('/api/admin/test-order', requireAuth, adminOnly, (req, res) => {
   writeData(data);
   res.json({ success: true, order });
 });
+
 app.get('/api/admin/reports/full', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const orders = data.orders.filter(o => o.status === 'DELIVERED');
@@ -783,7 +829,8 @@ app.get('/api/admin/platform-revenue', requireAuth, adminOnly, (req, res) => {
   const todayPlatform = orders.filter(o => o.deliveredAt?.startsWith(today)).reduce((s, o) => s + (o.platformFee || 0), 0);
   res.json({ total: totalPlatform, today: todayPlatform });
 });
-// عرض الطلبات المباشرة من المطاعم (للأدمن)
+
+// --- اوردرات المطاعم المباشرة ---
 app.get('/api/admin/restaurant-direct-orders', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const orders = data.orders.filter(o => o.isDirect);
@@ -795,7 +842,6 @@ app.get('/api/admin/restaurant-direct-orders', requireAuth, adminOnly, (req, res
   res.json(enriched);
 });
 
-// تعيين طيار لطلب مباشر
 app.patch('/api/admin/restaurant-direct-orders/:id/assign-driver', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const order = data.orders.find(o => o.id === req.params.id);
@@ -819,18 +865,12 @@ app.patch('/api/restaurant/profile', requireAuth, upload.single('logo'), (req, r
   const data = readData();
   const restaurant = data.restaurants.find(r => r.userId === req.user.id);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
-
   const { name, description } = req.body;
   if (name) restaurant.name = name;
   if (description !== undefined) restaurant.description = description;
   if (req.file) restaurant.logo = '/uploads/' + req.file.filename;
-
   writeData(data);
-  res.json({
-    name: restaurant.name,
-    description: restaurant.description || '',
-    logo: restaurant.logo || ''
-  });
+  res.json({ name: restaurant.name, description: restaurant.description || '', logo: restaurant.logo || '' });
 });
 
 app.get('/api/restaurant/orders', requireAuth, (req, res) => {
@@ -867,6 +907,7 @@ app.patch('/api/restaurant/orders/:id', requireAuth, (req, res) => {
   else if (status === 'CANCELLED') io.emit('orderCancelled', { orderId: order.id });
   res.json({ success: true });
 });
+
 // طلب مباشر من المطعم إلى الأدمن
 app.post('/api/restaurant/order-from-restaurant', requireAuth, (req, res) => {
   if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
@@ -893,8 +934,8 @@ app.post('/api/restaurant/order-from-restaurant', requireAuth, (req, res) => {
     paymentMethod: 'CASH',
     status: 'PENDING',
     driverId: null,
-    adminApproved: true, // موافقة تلقائية لأنه من المطعم
-    isDirect: true, // علامة مميزة
+    adminApproved: true,
+    isDirect: true,
     notes: notes || '',
     createdAt: new Date().toISOString(),
     deliveredAt: null
@@ -905,7 +946,6 @@ app.post('/api/restaurant/order-from-restaurant', requireAuth, (req, res) => {
   res.json({ success: true, orderId: newOrder.id });
 });
 
-// عرض الطلبات المباشرة الخاصة بالمطعم
 app.get('/api/restaurant/my-direct-orders', requireAuth, (req, res) => {
   if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
@@ -1075,23 +1115,12 @@ app.get('/api/restaurant/stats', requireAuth, (req, res) => {
 });
 
 // ==================== DRIVER ====================
-function getStoreNameForOrder(order, data) {
-  if (order.type === 'special') {
-    if (order.orderType === 'market') {
-      const market = data.markets.find(m => m.id === order.storeId);
-      return market ? market.name : 'ماركت';
-    } else if (order.orderType === 'pharmacy') {
-      const pharmacy = data.pharmacies.find(p => p.id === order.storeId);
-      return pharmacy ? pharmacy.name : 'صيدلية';
-    }
-    return 'طلب خاص';
-  }
-  return null;
-}
-
 app.get('/api/driver/available-orders', requireAuth, (req, res) => {
   if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
+  if (data.dispatchMode === 'manual') {
+    return res.json([]);
+  }
   const orders = data.orders.filter(o => o.status === 'READY' && !o.driverId).map(o => {
     const restaurant = data.restaurants.find(r => r.id === o.restaurantId);
     const storeName = getStoreNameForOrder(o, data);
@@ -1116,16 +1145,13 @@ app.patch('/api/driver/orders/:id/accept', requireAuth, (req, res) => {
   const data = readData();
   const order = data.orders.find(o => o.id === req.params.id && o.status === 'READY' && !o.driverId);
   if (!order) return res.status(404).json({ error: 'الطلب غير متاح' });
-
   const driver = data.drivers.find(d => d.userId === req.user.id);
   if (!driver) return res.status(404).json({ error: 'لم يتم العثور على ملف السائق' });
-
   const productValue = (order.total || 0) - (order.deliveryFee || 0);
   const estimatedCommission = Math.round(productValue * 0.20);
   if ((driver.credit || 0) < estimatedCommission) {
     return res.status(400).json({ error: `رصيدك غير كافٍ (${driver.credit} ج). العمولة المتوقعة ${estimatedCommission} ج. الرجاء شحن الرصيد.` });
   }
-
   order.driverId = req.user.id;
   order.status = 'DRIVER_ASSIGNED';
   writeData(data);
@@ -1217,7 +1243,6 @@ app.get('/api/driver/history', requireAuth, (req, res) => {
   res.json(enriched);
 });
 
-// طلب شحن الرصيد
 app.post('/api/driver/recharge-request', requireAuth, (req, res) => {
   if (req.user.role !== 'DRIVER') return res.status(403).json({ error: 'غير مسموح' });
   const { amount, last4digits } = req.body;
@@ -1246,7 +1271,10 @@ app.post('/api/driver/recharge-request', requireAuth, (req, res) => {
 // ==================== CUSTOMER & PUBLIC ====================
 app.get('/api/restaurants', (req, res) => {
   const data = readData();
-  const list = data.restaurants.filter(r => r.isOpen).map(r => ({ id: r.id, name: r.name, logo: r.logo || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=150&h=150&fit=crop' }));
+  const list = data.restaurants
+    .filter(r => r.isOpen && r.visible !== false)
+    .sort((a, b) => (a.order || 0) - (b.order || 0))
+    .map(r => ({ id: r.id, name: r.name, logo: r.logo || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=150&h=150&fit=crop' }));
   res.json(list);
 });
 
@@ -1278,7 +1306,6 @@ app.get('/api/pharmacies', (req, res) => {
   res.json(openPharmacies);
 });
 
-// الطلب الخاص
 app.post('/api/orders/special', upload.array('files', 10), async (req, res) => {
   let { orderData } = req.body;
   try { orderData = JSON.parse(orderData); } catch(e) { return res.status(400).json({ error: 'بيانات الطلب غير صحيحة' }); }
@@ -1316,7 +1343,6 @@ app.post('/api/orders/special', upload.array('files', 10), async (req, res) => {
   res.json({ success: true, orderId: newOrder.id });
 });
 
-// طلب عادي
 function customerAuth(req, res, next) {
   const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
   if (token) {
@@ -1390,13 +1416,11 @@ app.get('/api/orders/:id/track', (req, res) => {
   res.json({ ...order, restaurantName, storeName });
 });
 
-// مناطق عامة
 app.get('/api/regions', (req, res) => {
   const data = readData();
   res.json(data.regions);
 });
 
-// حساب العميل
 app.post('/api/customer/register', (req, res) => {
   const { name, phone, password, regionId, address } = req.body;
   if (!name || !phone || !password) return res.status(400).json({ error: 'جميع الحقول مطلوبة' });
@@ -1439,7 +1463,6 @@ app.get('/api/market/profile', requireAuth, (req, res) => {
   const owner = data.users.find(u => u.id === market.userId);
   res.json({ id: market.id, name: market.name, logo: market.logo || '', ownerPhone: owner?.phone });
 });
-
 app.patch('/api/market/profile', requireAuth, upload.single('logo'), (req, res) => {
   if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
@@ -1450,7 +1473,6 @@ app.patch('/api/market/profile', requireAuth, upload.single('logo'), (req, res) 
   writeData(data);
   res.json({ name: market.name, logo: market.logo });
 });
-
 app.get('/api/market/orders', requireAuth, (req, res) => {
   if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
@@ -1459,7 +1481,6 @@ app.get('/api/market/orders', requireAuth, (req, res) => {
   const orders = data.orders.filter(o => o.type === 'special' && o.storeId === market.id);
   res.json(orders);
 });
-
 app.patch('/api/market/orders/:id/items', requireAuth, (req, res) => {
   if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
@@ -1474,7 +1495,6 @@ app.patch('/api/market/orders/:id/items', requireAuth, (req, res) => {
   io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
   res.json({ success: true });
 });
-
 app.patch('/api/market/orders/:id/accept', requireAuth, (req, res) => {
   if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
@@ -1487,7 +1507,6 @@ app.patch('/api/market/orders/:id/accept', requireAuth, (req, res) => {
   io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
   res.json({ success: true });
 });
-
 app.patch('/api/market/orders/:id/invoice', requireAuth, (req, res) => {
   if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
@@ -1504,7 +1523,6 @@ app.patch('/api/market/orders/:id/invoice', requireAuth, (req, res) => {
   io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
   res.json({ success: true });
 });
-
 app.patch('/api/market/orders/:id/ready', requireAuth, (req, res) => {
   if (req.user.role !== 'MARKET') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
@@ -1527,7 +1545,6 @@ app.get('/api/pharmacy/orders', requireAuth, (req, res) => {
   const orders = data.orders.filter(o => o.type === 'special' && o.storeId === pharmacy.id);
   res.json(orders);
 });
-
 app.patch('/api/pharmacy/orders/:id/items', requireAuth, (req, res) => {
   if (req.user.role !== 'PHARMACY') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
@@ -1542,7 +1559,6 @@ app.patch('/api/pharmacy/orders/:id/items', requireAuth, (req, res) => {
   io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
   res.json({ success: true });
 });
-
 app.patch('/api/pharmacy/orders/:id/accept', requireAuth, (req, res) => {
   if (req.user.role !== 'PHARMACY') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
@@ -1555,7 +1571,6 @@ app.patch('/api/pharmacy/orders/:id/accept', requireAuth, (req, res) => {
   io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
   res.json({ success: true });
 });
-
 app.patch('/api/pharmacy/orders/:id/invoice', requireAuth, (req, res) => {
   if (req.user.role !== 'PHARMACY') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
@@ -1572,7 +1587,6 @@ app.patch('/api/pharmacy/orders/:id/invoice', requireAuth, (req, res) => {
   io.emit('orderStatusUpdate', { orderId: order.id, status: order.status });
   res.json({ success: true });
 });
-
 app.patch('/api/pharmacy/orders/:id/ready', requireAuth, (req, res) => {
   if (req.user.role !== 'PHARMACY') return res.status(403).json({ error: 'غير مسموح' });
   const data = readData();
