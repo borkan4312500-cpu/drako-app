@@ -234,6 +234,18 @@ body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;m
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
+const API = '/api';
+const TOKEN_KEY = 'auth_token';
+let currentTab = 'available';
+let isOnline = true;
+let driverEarnings = 0;
+let driverName = '';
+let driverPhone = '';
+let autoTimer = null;
+let availableOrders = [];
+let myOrders = [];
+let historySelectedDate = new Date().toISOString().slice(0, 10);
+
 /* ========== SOUND ENGINE ========== */
 function generateToneWAV(frequency, duration, type = 'sine', volume = 0.3) {
   const sampleRate = 44100;
@@ -282,20 +294,7 @@ function playSound(name) { if (soundInstances[name]) soundInstances[name].forEac
 createSound('newJob', generateToneWAV(800, 0.12, 'square'), generateToneWAV(1000, 0.12, 'square'));
 createSound('orderDelivered', generateToneWAV(600, 0.15, 'sine'), generateToneWAV(900, 0.15, 'sine'));
 
-/* ── STATE ──────────────────────── */
-const API = '/api';
-const TOKEN_KEY = 'auth_token';
-let currentTab = 'available';
-let isOnline = true;
-let driverEarnings = 0;
-let driverName = '';
-let driverPhone = '';
-let autoTimer = null;
-let availableOrders = [];
-let myOrders = [];
-let historySelectedDate = new Date().toISOString().slice(0, 10);
-
-/* ── إدارة الجلسة (مثل واجهة العميل) ── */
+/* ── الجلسة (مُحسَّنة) ── */
 function getToken(){ return localStorage.getItem(TOKEN_KEY); }
 function saveToken(token){ localStorage.setItem(TOKEN_KEY, token); }
 function clearToken(){ localStorage.removeItem(TOKEN_KEY); }
@@ -335,7 +334,7 @@ async function apiFetch(path, opts = {}) {
   return res.json();
 }
 
-/* ── TOAST ──────────────────────── */
+/* ── TOAST / MODAL ── */
 function toast(msg, type = 'success', dur = 3000) {
   const w = document.getElementById('toast-wrap');
   const t = document.createElement('div');
@@ -344,8 +343,6 @@ function toast(msg, type = 'success', dur = 3000) {
   w.appendChild(t);
   setTimeout(() => { t.classList.add('hiding'); setTimeout(() => t.remove(), 300); }, dur);
 }
-
-/* ── MODAL ──────────────────────── */
 function openModal(title, body) {
   document.getElementById('sheet-title').textContent = title;
   document.getElementById('sheet-body').innerHTML = body;
@@ -353,7 +350,7 @@ function openModal(title, body) {
 }
 function closeModal() { document.getElementById('modal').classList.remove('open'); }
 
-/* ── HELPERS ────────────────────── */
+/* ── HELPERS ── */
 const S_AR = { PENDING: 'في الانتظار', ACCEPTED: 'مقبول', PREPARING: 'يتحضر', READY: 'جاهز', DRIVER_ASSIGNED: 'مع طيار', ON_THE_WAY: 'في الطريق', DELIVERED: 'تم التوصيل', CANCELLED: 'ملغي' };
 const S_CL = { PENDING: 'badge-yellow', ACCEPTED: 'badge-blue', PREPARING: 'badge-orange', READY: 'badge-green', DRIVER_ASSIGNED: 'badge-orange', ON_THE_WAY: 'badge-orange', DELIVERED: 'badge-green', CANCELLED: 'badge-red' };
 function sBadge(s) { return `<span class="badge ${S_CL[s] || 'badge-gray'}">${S_AR[s] || s}</span>`; }
@@ -382,7 +379,7 @@ function renderItemsList(items) {
   }).join('');
 }
 
-/* ── LOGIN / SESSION ────────────── */
+/* ── LOGIN / SESSION ── */
 function showLogin() {
   document.getElementById('loginOverlay').classList.remove('hidden');
   document.getElementById('appHeader').style.display = 'none';
@@ -428,7 +425,14 @@ async function logout() {
   showLogin();
 }
 
-/* ── ONLINE STATUS ──────────────── */
+/* ── تجديد التوكن كل 30 دقيقة ── */
+setInterval(async () => {
+  if (getToken()) {
+    await refreshTokenFromCookie();
+  }
+}, 30 * 60 * 1000);
+
+/* ── ONLINE STATUS ── */
 function setOnlineUI(on) {
   isOnline = on;
   const t = document.getElementById('status-toggle');
@@ -445,7 +449,7 @@ async function toggleOnlineStatus() {
   } catch (e) { toast('حدث خطأ', 'error'); }
 }
 
-/* ── EARNINGS & PROFILE ──────────── */
+/* ── EARNINGS & PROFILE ── */
 async function loadEarnings() {
   try {
     const todayData = await apiFetch('/api/driver/earnings?today=true');
@@ -464,7 +468,7 @@ async function loadProfile() {
   } catch (e) {}
 }
 
-/* ── TAB SWITCH ─────────────────── */
+/* ── TAB SWITCH ── */
 function switchTab(tab) {
   currentTab = tab;
   if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
@@ -483,7 +487,7 @@ async function renderTab(tab) {
   } catch (e) { console.error(e); }
 }
 
-/* ── TAB: AVAILABLE ORDERS ──────── */
+/* ── TAB: AVAILABLE ORDERS ── */
 async function tabAvailable() {
   const orders = await apiFetch('/api/driver/available-orders');
   availableOrders = orders;
@@ -532,7 +536,7 @@ function buildAvailableCard(o) {
   </div>`;
 }
 
-/* ── ACCEPT ORDER ─────────────────── */
+/* ── ACCEPT ORDER ── */
 async function acceptOrder(id) {
   try {
     const d = await apiFetch('/api/driver/orders/' + id + '/accept', { method: 'PATCH' });
@@ -543,7 +547,7 @@ async function acceptOrder(id) {
   } catch (e) { toast('حدث خطأ', 'error'); }
 }
 
-/* ── TAB: MY ORDERS ──────────────── */
+/* ── TAB: MY ORDERS ── */
 async function tabActive() {
   const orders = await apiFetch('/api/driver/my-orders');
   myOrders = orders;
@@ -599,7 +603,7 @@ function buildActiveCard(o) {
   </div>`;
 }
 
-/* ── UPDATE STATUS ────────────────── */
+/* ── UPDATE STATUS ── */
 async function updateStatus(id, status) {
   try {
     const d = await apiFetch('/api/driver/orders/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status }) });
@@ -623,7 +627,7 @@ async function doDelivery(id) {
   } catch (e) { toast('حدث خطأ', 'error'); }
 }
 
-/* ── TAB: HISTORY ────────────────── */
+/* ── TAB: HISTORY ── */
 async function renderHistoryView() {
   const c = document.getElementById('scroll-content');
   c.innerHTML = `
@@ -690,7 +694,7 @@ function clearDateFilter() {
   loadHistoryOrders();
 }
 
-/* ── TAB: PROFILE (مع طلب شحن) ──── */
+/* ── TAB: PROFILE (مع طلب شحن) ── */
 async function tabProfile() {
   const c = document.getElementById('scroll-content');
   c.innerHTML = `<div class="skel-card skeleton" style="height:120px"></div>`;
@@ -783,7 +787,7 @@ function connectSocket() {
   });
 }
 
-/* ── INIT ────────────────────────── */
+/* ── INIT ── */
 async function initApp() {
   await loadProfile();
   await loadEarnings();
@@ -793,18 +797,38 @@ async function initApp() {
   switchTab('available');
 }
 
-// التحقق من الجلسة عند التحميل
+/* ── checkSession محسنة ── */
 async function checkSession() {
   const token = getToken();
   if (token) {
     try {
-      const res = await fetch(API + '/whoami', { headers: { 'Authorization': 'Bearer ' + token }, credentials: 'include' });
+      const res = await fetch(API + '/whoami', {
+        headers: { 'Authorization': 'Bearer ' + token },
+        credentials: 'include'
+      });
       if (res.ok) {
         const data = await res.json();
+        saveToken(data.token); // تحديث التوكن بأحدث نسخة
         if (data.user?.role === 'DRIVER') {
           hideLogin();
           initApp();
           return;
+        }
+      } else {
+        const newToken = await refreshTokenFromCookie();
+        if (newToken) {
+          const retryRes = await fetch(API + '/whoami', {
+            headers: { 'Authorization': 'Bearer ' + newToken },
+            credentials: 'include'
+          });
+          if (retryRes.ok) {
+            const data = await retryRes.json();
+            if (data.user?.role === 'DRIVER') {
+              hideLogin();
+              initApp();
+              return;
+            }
+          }
         }
       }
     } catch(e) {}
