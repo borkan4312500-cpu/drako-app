@@ -13,6 +13,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&display=swap" rel="stylesheet">
   <style>
+    /* جميع التنسيقات السابقة كما هي دون تغيير */
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
     html, body { overflow: hidden; height: 100%; overscroll-behavior: none; }
     body { background: #F7F7F7; color: #1A1A1A; max-width: 430px; margin: auto; height: 100%; position: relative; }
@@ -188,6 +189,10 @@
     .payment-details.visible { display: block; }
     .payment-details .phone-number { background: #FF6B00; color: white; padding: 10px 16px; border-radius: 12px; font-size: 20px; font-weight: 900; letter-spacing: 2px; text-align: center; margin-bottom: 12px; }
     .payment-details .fee-note { color: #FF6B00; font-size: 13px; margin-top: 8px; }
+    /* تنسيق قائمة المنتجات في صفحة الدفع */
+    .checkout-items { background: white; border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+    .checkout-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; }
+    .checkout-item:last-child { border-bottom: none; }
   </style>
 </head>
 <body>
@@ -240,7 +245,10 @@
       </section>
       <section class="screen" id="checkoutScreen">
         <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;"><button class="icon-btn" onclick="showScreen('areaScreen')">←</button><div class="logo">إتمام الطلب</div><div></div></div>
-        <div id="checkoutUserInfo"></div><div class="summary" style="margin-bottom:18px;"><div class="summary-row"><span>📍 المنطقة</span><span id="selectedAreaName"></span></div></div>
+        <div id="checkoutUserInfo"></div>
+        <!-- تفاصيل الطلب -->
+        <div class="checkout-items" id="checkoutItemsList"></div>
+        <div class="summary" style="margin-bottom:18px;"><div class="summary-row"><span>📍 المنطقة</span><span id="selectedAreaName"></span></div></div>
         <div class="payment-item active" data-method="CASH" onclick="selectPayment(this, 'CASH')"><div>💵 كاش عند الاستلام</div><div class="radio"></div></div>
         <div class="payment-item" data-method="VODAFONE" onclick="selectPayment(this, 'VODAFONE')"><div>📱 فودافون كاش</div><div class="radio"></div></div>
         <div class="payment-item" data-method="INSTAPAY" onclick="selectPayment(this, 'INSTAPAY')"><div>🟣 انستا باي</div><div class="radio"></div></div>
@@ -409,18 +417,36 @@ function loadSocket() {
 // ========== Main App Functions ==========
 function navigateTo(screenId) { if((screenId==='ordersScreen'||screenId==='accountScreen')&&!currentUser) { showScreen('loginScreen'); return; } showScreen(screenId); }
 function showScreen(id) {
-  // تم إزالة رسالة تأكيد مغادرة السلة تماماً
   document.querySelectorAll('#mainAppWrapper .screen').forEach(s=>s.classList.remove('active'));
   const target=document.getElementById(id); if(target) target.classList.add('active');
   document.querySelectorAll('.nav-item').forEach((n,i)=>{ const navIds=['homeScreen','favScreen','cartScreen','ordersScreen','accountScreen']; if(navIds[i]===id) n.classList.add('active'); else n.classList.remove('active'); });
   if(id==='accountScreen') renderAccountScreen();
   if(id==='areaScreen'){ loadRegions(); preselectArea(); }
-  if(id==='checkoutScreen'){ renderCheckoutUserInfo(); resetPaymentSection(); }
+  if(id==='checkoutScreen'){ renderCheckoutUserInfo(); renderCheckoutItems(); resetPaymentSection(); }
   if(id==='ordersScreen') loadMyOrders();
   if(id==='favScreen') renderFavorites();
   if(id==='restaurantScreen') updateRestaurantFavButton();
   pushToHistory(id); saveCurrentScreen(id);
 }
+
+// دالة عرض تفاصيل الطلب في صفحة الدفع
+function renderCheckoutItems() {
+  const container = document.getElementById('checkoutItemsList');
+  if (!cart.length) {
+    container.innerHTML = '<p style="text-align:center;color:#888;">السلة فارغة</p>';
+    return;
+  }
+  let html = '';
+  cart.forEach(item => {
+    const optionsText = (item.selectedOptions || []).map(o => esc(o.value)).join(', ');
+    html += `<div class="checkout-item">
+      <span>${esc(item.name)} ${optionsText ? '(' + optionsText + ')' : ''}</span>
+      <span>${item.quantity} × ${item.price} ج</span>
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
 function resetPaymentSection() {
   document.getElementById('vodafoneSection').style.display = 'none';
   document.getElementById('instapaySection').style.display = 'none';
@@ -619,11 +645,33 @@ async function submitSpecialOrder() {
 
 // ========== Restaurants ==========
 async function loadRestaurants() { try { const res=await apiFetch(API+'/restaurants'); restaurants=await res.json(); renderHomeItems(); } catch(e){ console.log(e); } }
-async function openRestaurant(id) { selectedRestaurant=restaurants.find(r=>r.id===id); document.getElementById('restaurantName').innerText=selectedRestaurant.name; document.getElementById('restaurantTitleHeader').innerText=selectedRestaurant.name; document.getElementById('restaurantHero').src=(selectedRestaurant.logo&&selectedRestaurant.logo.startsWith('/uploads'))?selectedRestaurant.logo:(selectedRestaurant.logo||'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600'); try { const res=await apiFetch(API+'/restaurants/'+id+'/menu'); products=await res.json(); renderTabs(); showScreen('restaurantScreen'); } catch(e){ console.log(e); } }
+async function openRestaurant(id) {
+  selectedRestaurant = restaurants.find(r => r.id === id);
+  if (!selectedRestaurant) {
+    showToast('⚠️ المطعم غير موجود');
+    return;
+  }
+  document.getElementById('restaurantName').innerText = selectedRestaurant.name;
+  document.getElementById('restaurantTitleHeader').innerText = selectedRestaurant.name;
+  document.getElementById('restaurantHero').src = (selectedRestaurant.logo && selectedRestaurant.logo.startsWith('/uploads')) ? selectedRestaurant.logo : (selectedRestaurant.logo || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600');
+  try {
+    showSpinner();
+    const res = await apiFetch(API + '/restaurants/' + id + '/menu');
+    if (!res.ok) throw new Error('فشل تحميل القائمة');
+    products = await res.json();
+    renderTabs();
+    showScreen('restaurantScreen');
+  } catch (e) {
+    console.error(e);
+    showToast('⚠️ تعذر تحميل قائمة الطعام');
+  } finally {
+    hideSpinner();
+  }
+}
 function renderTabs() { const categories=[...new Set(products.map(p=>p.category||'عام'))]; const tabs=document.getElementById('tabsContainer'); tabs.innerHTML=categories.map((c,i)=>`<div class="tab ${i===0?'active':''}" onclick="filterProducts('${c}', this)">${esc(c)}</div>`).join(''); filterProducts(categories[0],document.querySelector('.tab')); }
 function filterProducts(category,el) { document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); if(el) el.classList.add('active'); const filtered=category?products.filter(p=>(p.category||'عام')===category):products; renderProducts(filtered); }
 
-// ========== Product Sheet ==========
+// ========== Product Sheet (بدون تغيير) ==========
 function openProductSheet(product) {
   currentProduct=product;
   const hasGroups=product.groups&&product.groups.length>0;
@@ -719,7 +767,7 @@ function updateTotals() {
   const extraAmount = document.getElementById('extraFeeAmount');
   if (extraRow && extraAmount) { if (extraFee > 0) { extraRow.style.display = 'flex'; extraAmount.innerText = extraFee + ' ج'; } else { extraRow.style.display = 'none'; } }
 }
-function proceedToCheckout() { if(!cart.length) return showToast('⚠️ السلة فارغة'); if(currentUser&&currentUser.regionId&&allRegions.length){ const region=allRegions.find(r=>r.id===currentUser.regionId); if(region){ selectedArea=region; updateTotals(); document.getElementById('selectedAreaName').innerText=region.name+' - '+region.fee+' ج'; renderCheckoutUserInfo(); showScreen('checkoutScreen'); return; } } showScreen('areaScreen'); }
+function proceedToCheckout() { if(!cart.length) return showToast('⚠️ السلة فارغة'); if(currentUser&&currentUser.regionId&&allRegions.length){ const region=allRegions.find(r=>r.id===currentUser.regionId); if(region){ selectedArea=region; updateTotals(); document.getElementById('selectedAreaName').innerText=region.name+' - '+region.fee+' ج'; renderCheckoutUserInfo(); renderCheckoutItems(); showScreen('checkoutScreen'); return; } } showScreen('areaScreen'); }
 
 // ========== Order Functions ==========
 async function submitOrder() {
