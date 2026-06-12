@@ -72,10 +72,7 @@
     .section-header h2 { font-size:20px; font-weight:800; display:flex; align-items:center; gap:8px; }
 
     .grid-cards { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:16px; }
-    .mini-card {
-      background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm);
-      padding:16px; transition:0.2s; box-shadow:0 2px 8px rgba(0,0,0,0.04);
-    }
+    .mini-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:16px; transition:0.2s; box-shadow:0 2px 8px rgba(0,0,0,0.04); }
     .mini-card:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.08); }
     .mini-card .card-title { font-size:16px; font-weight:700; margin-bottom:8px; }
     .mini-card .card-detail { font-size:13px; color:var(--text-muted); margin-bottom:6px; }
@@ -103,8 +100,6 @@
     .flex-between { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
     .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
     .info-item { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px dashed var(--border); }
-    .info-label { color:var(--text-muted); font-size:14px; }
-    .info-value { font-weight:600; }
 
     .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:2000; display:none; align-items:center; justify-content:center; }
     .modal-overlay.open { display:flex; }
@@ -195,10 +190,11 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const API = '/api';
+const TOKEN_KEY = 'auth_token';
 let allRegions = [];
 let audioActivated = false;
 let audioCtx = null;
-let dispatchMode = 'manual'; // manual / auto
+let dispatchMode = 'manual';
 let allOrdersCache=[], allRestaurantsCache=[], allDriversCache=[];
 
 // ---------- نظام الصوت ----------
@@ -213,13 +209,44 @@ function openModal(html){ document.getElementById('modalBox').innerHTML=html; do
 function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); }
 document.getElementById('modalOverlay').addEventListener('click',function(e){ if(e.target===this) closeModal(); });
 
+// ---------- إدارة الجلسة (محاكية لواجهة العميل) ----------
+function getToken(){ return localStorage.getItem(TOKEN_KEY); }
+function saveToken(token){ localStorage.setItem(TOKEN_KEY, token); }
+function clearToken(){ localStorage.removeItem(TOKEN_KEY); }
+
+async function refreshTokenFromCookie() {
+  try {
+    const res = await fetch(API + '/whoami', { credentials: 'include' });
+    if (res.ok) {
+      const data = await res.json();
+      saveToken(data.token);
+      return data.token;
+    }
+  } catch(e) {}
+  return null;
+}
+
 async function apiFetch(url, options = {}) {
-  const res = await fetch(url, {
-    ...options,
-    credentials: 'include',
-    headers: { ...options.headers, 'Content-Type': options.body instanceof FormData ? undefined : 'application/json' }
-  });
-  if (res.status === 401) { showLogin(); throw new Error('SESSION_EXPIRED'); }
+  let token = getToken();
+  if (!token) {
+    token = await refreshTokenFromCookie();
+    if (!token) { showLogin(); throw new Error('NO_TOKEN'); }
+  }
+  const headers = { ...options.headers, 'Authorization': 'Bearer ' + token };
+  if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
+  let res = await fetch(url, { ...options, headers, credentials: 'include' });
+  if (res.status === 401) {
+    // محاولة تجديد التوكن
+    const newToken = await refreshTokenFromCookie();
+    if (newToken) {
+      headers['Authorization'] = 'Bearer ' + newToken;
+      res = await fetch(url, { ...options, headers, credentials: 'include' });
+    } else {
+      clearToken();
+      showLogin();
+      throw new Error('AUTH_ERROR');
+    }
+  }
   return res;
 }
 
@@ -235,7 +262,6 @@ function hideLogin() {
   document.getElementById('mainWrap').style.display = 'flex';
 }
 
-// ---------- تسجيل الدخول ----------
 async function adminLogin() {
   const phone = document.getElementById('loginPhone').value.trim();
   const password = document.getElementById('loginPass').value;
@@ -243,15 +269,21 @@ async function adminLogin() {
   errorDiv.style.display = 'none';
   if (!phone || !password) { errorDiv.textContent = '⚠️ الرجاء إدخال رقم الهاتف وكلمة المرور'; errorDiv.style.display = 'block'; return; }
   try {
-    const res = await fetch(API + '/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ phone, password }) });
+    const res = await fetch(API + '/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ phone, password })
+    });
     const data = await res.json();
     if (!res.ok || data.error) { errorDiv.textContent = '❌ ' + (data.error || 'فشل تسجيل الدخول، تحقق من الخادم'); errorDiv.style.display = 'block'; return; }
     if (!data.user || data.user.role !== 'ADMIN') { errorDiv.textContent = '❌ هذا الحساب ليس لديه صلاحية الأدمن'; errorDiv.style.display = 'block'; return; }
+    saveToken(data.token); // حفظ التوكن
     errorDiv.style.display = 'none'; hideLogin(); initApp();
   } catch (e) { errorDiv.textContent = '❌ فشل الاتصال بالخادم. تأكد من تشغيل السيرفر.'; errorDiv.style.display = 'block'; }
 }
 
-async function logout() { try { await fetch('/logout', { credentials: 'include' }); } catch(e) {} showLogin(); }
+async function logout() { try { await fetch('/logout', { credentials: 'include' }); } catch(e) {} clearToken(); showLogin(); }
 
 // ---------- التطبيق ----------
 const STATUS_AR={PENDING:'في الانتظار',ACCEPTED:'مقبول',PREPARING:'يتحضر',READY:'جاهز',DRIVER_ASSIGNED:'مع طيار',ON_THE_WAY:'في الطريق',DELIVERED:'تم التوصيل',CANCELLED:'ملغي'};
@@ -259,9 +291,8 @@ function statusBadge(s){ const cl={PENDING:'badge-warning',ACCEPTED:'badge-info'
 
 function navigate(section){
   document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active'));
-  const activeNav = document.querySelector(`[data-section="${section}"]`);
-  if (activeNav) activeNav.classList.add('active');
-  document.getElementById('pageTitle').innerText = (activeNav?.innerText?.trim() || section);
+  const nav = document.querySelector(`[data-section="${section}"]`); if (nav) nav.classList.add('active');
+  document.getElementById('pageTitle').innerText = nav?.innerText?.trim() || section;
   loadSection(section);
   if(window.innerWidth<768) toggleSidebar();
 }
@@ -688,30 +719,26 @@ async function loadRecharge(){
 async function approveRecharge(id){ if(confirm('موافقة؟')){ await apiFetch(API+'/admin/recharge-requests/'+id+'/approve',{method:'PATCH'}); showToast('تم'); loadRecharge(); } }
 async function rejectRecharge(id){ if(confirm('رفض؟')){ await apiFetch(API+'/admin/recharge-requests/'+id+'/reject',{method:'PATCH'}); showToast('تم'); loadRecharge(); } }
 
-// --- التقارير (الإصلاح) ---
+// --- التقارير ---
 async function loadReports(){
-  try {
-    const data = await apiFetch(API+'/admin/reports/full').then(r=>r.json());
-    document.getElementById('mainContent').innerHTML=`
-      <div class="stats-grid">
-        <div class="stat-card"><h4>يومي</h4><div class="value">${data.daily?.count||0} طلب</div><div>${data.daily?.totalRevenue||0} ج</div></div>
-        <div class="stat-card"><h4>أسبوعي</h4><div class="value">${data.weekly?.count||0} طلب</div><div>${data.weekly?.totalRevenue||0} ج</div></div>
-        <div class="stat-card"><h4>شهري</h4><div class="value">${data.monthly?.count||0} طلب</div><div>${data.monthly?.totalRevenue||0} ج</div></div>
-        <div class="stat-card"><h4>الإجمالي</h4><div class="value">${data.total?.count||0} طلب</div><div>${data.total?.totalRevenue||0} ج</div></div>
-      </div>
-      <div class="grid-2">
-        <div class="section-card"><h3>أفضل المطاعم (شهري)</h3>${(data.restaurants?.month||[]).map(r=>`<div class="info-item"><span>${r.name}</span><span>${r.netRevenue} ج</span></div>`).join('')||'<div class="info-item">لا توجد بيانات</div>'}</div>
-        <div class="section-card"><h3>أفضل الطيارين (شهري)</h3>${(data.drivers?.month||[]).map(d=>`<div class="info-item"><span>${d.name}</span><span>${d.revenue} ج</span></div>`).join('')||'<div class="info-item">لا توجد بيانات</div>'}</div>
-      </div>`;
-  } catch(e) { showToast('خطأ في تحميل التقارير'); }
+  const data=await apiFetch(API+'/admin/reports/full').then(r=>r.json());
+  document.getElementById('mainContent').innerHTML=`
+    <div class="stats-grid">
+      <div class="stat-card"><h4>يومي</h4><div class="value">${data.daily?.count||0} طلب</div><div>${data.daily?.totalRevenue||0} ج</div></div>
+      <div class="stat-card"><h4>أسبوعي</h4><div class="value">${data.weekly?.count||0} طلب</div><div>${data.weekly?.totalRevenue||0} ج</div></div>
+      <div class="stat-card"><h4>شهري</h4><div class="value">${data.monthly?.count||0} طلب</div><div>${data.monthly?.totalRevenue||0} ج</div></div>
+      <div class="stat-card"><h4>الإجمالي</h4><div class="value">${data.total?.count||0} طلب</div><div>${data.total?.totalRevenue||0} ج</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="section-card"><h3>أفضل المطاعم (شهري)</h3>${(data.restaurants?.month||[]).map(r=>`<div class="info-item"><span>${r.name}</span><span>${r.netRevenue} ج</span></div>`).join('')||'<div class="info-item">لا توجد بيانات</div>'}</div>
+      <div class="section-card"><h3>أفضل الطيارين (شهري)</h3>${(data.drivers?.month||[]).map(d=>`<div class="info-item"><span>${d.name}</span><span>${d.revenue} ج</span></div>`).join('')||'<div class="info-item">لا توجد بيانات</div>'}</div>
+    </div>`;
 }
 
 // --- إيرادات المنصة ---
 async function loadPlatformRevenue(){
-  try {
-    const data = await apiFetch(API+'/admin/platform-revenue').then(r=>r.json());
-    document.getElementById('mainContent').innerHTML=`<div class="stats-grid"><div class="stat-card"><h4>إيرادات المنصة اليوم</h4><div class="value">${data.today||0} ج</div></div><div class="stat-card"><h4>إجمالي إيرادات المنصة</h4><div class="value">${data.total||0} ج</div></div></div>`;
-  } catch(e) { showToast('خطأ في تحميل إيرادات المنصة'); }
+  const data=await apiFetch(API+'/admin/platform-revenue').then(r=>r.json());
+  document.getElementById('mainContent').innerHTML=`<div class="stats-grid"><div class="stat-card"><h4>إيرادات المنصة اليوم</h4><div class="value">${data.today||0} ج</div></div><div class="stat-card"><h4>إجمالي إيرادات المنصة</h4><div class="value">${data.total||0} ج</div></div></div>`;
 }
 
 // --- اوردرات المطاعم المباشرة ---
@@ -762,10 +789,14 @@ async function loadSettings() {
       <p style="font-size:12px; color:var(--text-muted); margin-top:12px;">في الوضع المخصص، لن تظهر الطلبات الجاهزة للسائقين إلا بعد تعيينك لهم.</p>
     </div>`;
 }
-function setDispatchMode(mode) {
+async function setDispatchMode(mode) {
   dispatchMode = mode;
   localStorage.setItem('drako_dispatch_mode', mode);
-  loadSettings();
+  try {
+    await apiFetch(API + '/admin/dispatch-mode', { method: 'PATCH', body: JSON.stringify({ mode }) });
+    showToast('تم تحديث إعدادات التوزيع');
+    loadSettings();
+  } catch(e) { showToast('فشل تحديث الإعدادات على السيرفر'); }
 }
 
 // --- طلب تجريبي ---
@@ -778,10 +809,21 @@ async function testOrder(){
 }
 
 // --- بدء التشغيل ---
+async function loadDispatchMode() {
+  try {
+    const res = await apiFetch(API + '/admin/dispatch-mode');
+    const data = await res.json();
+    dispatchMode = data.mode || 'manual';
+  } catch(e) {
+    dispatchMode = localStorage.getItem('drako_dispatch_mode') || 'manual';
+  }
+}
+
 function initApp() {
   fetch(API+'/regions').then(r=>r.json()).then(d=>{ allRegions=d; });
-  dispatchMode = localStorage.getItem('drako_dispatch_mode') || 'manual';
-  navigate('dashboard');
+  loadDispatchMode().then(() => {
+    navigate('dashboard');
+  });
   const socket=io(); window._socket = socket;
   socket.on('newOrder',data=>{ playSound('newOrder', 800, 'square'); showToast('طلب جديد من '+data.customerName); });
   socket.on('orderCancelled',data=>{ playSound('orderCancelled', 400, 'triangle'); showToast('تم إلغاء طلب #'+(data.orderId||'').slice(-6),'error'); });
@@ -794,13 +836,16 @@ document.addEventListener('click', function initialActivation() {
 }, { once: true });
 
 async function checkSession() {
-  try {
-    const res = await fetch(API + '/whoami', { credentials: 'include' });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.user?.role === 'ADMIN') { hideLogin(); initApp(); return; }
-    }
-  } catch (e) {}
+  const token = getToken();
+  if (token) {
+    try {
+      const res = await fetch(API + '/whoami', { headers: { 'Authorization': 'Bearer ' + token }, credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user?.role === 'ADMIN') { hideLogin(); initApp(); return; }
+      }
+    } catch(e) {}
+  }
   showLogin();
 }
 checkSession();
