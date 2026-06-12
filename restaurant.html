@@ -250,10 +250,7 @@ createSound('newOrderBell', generateToneWAV(1200,0.25,'sine'));
 
 // ========== لوحة التحكم (Profile) ==========
 async function loadDashboard() {
-  try {
-    const profileRes = await apiFetch(API+'/restaurant/profile');
-    currentProfile = await profileRes.json();
-  } catch(e) { currentProfile = null; }
+  try { const profileRes = await apiFetch(API+'/restaurant/profile'); currentProfile = await profileRes.json(); } catch(e) { currentProfile = null; }
   let stats = null;
   try { stats = await apiFetch(API+'/restaurant/stats').then(r=>r.json()); } catch(e){}
   const name = currentProfile?.name || 'مطعمي';
