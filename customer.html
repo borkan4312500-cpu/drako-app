@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&display=swap" rel="stylesheet">
   <style>
-    /* جميع التنسيقات السابقة كما هي دون تغيير */
+    /* جميع التنسيقات الأصلية التي كانت تعمل */
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
     html, body { overflow: hidden; height: 100%; overscroll-behavior: none; }
     body { background: #F7F7F7; color: #1A1A1A; max-width: 430px; margin: auto; height: 100%; position: relative; }
@@ -118,16 +118,13 @@
     .tabs { display: flex; overflow-x: auto; gap: 10px; margin: 14px 0; padding-bottom: 8px; }
     .tab { padding: 10px 16px; background: #F5F5F5; border-radius: 12px; white-space: nowrap; font-size: 13px; color: #888; cursor: pointer; }
     .tab.active { background: #FFF3EB; color: #FF6B00; border: 1px solid #FF6B00; }
-    .product-card { display: flex; gap: 12px; padding: 14px 0; border-bottom: 1px solid #eee; align-items: center; position: relative; }
+    .product-card { display: flex; gap: 12px; padding: 14px 0; border-bottom: 1px solid #eee; align-items: center; }
     .product-card img { width: 82px; height: 82px; border-radius: 12px; object-fit: cover; }
     .product-content { flex: 1; }
     .product-content h4 { font-size: 15px; margin-bottom: 4px; }
     .product-content p { font-size: 12px; color: #888; margin-bottom: 6px; line-height: 1.6; }
     .price { font-weight: bold; }
     .plus-btn { width: 36px; height: 36px; border-radius: 50%; border: none; background: #FF6B00; color: white; font-size: 22px; cursor: pointer; }
-    .product-fav-btn { position: absolute; top: 14px; left: 10px; background: rgba(255,255,255,0.9); border: none; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; z-index: 2; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
-    .product-fav-btn.liked { color: #E8180E; }
-    .product-fav-btn:not(.liked) { color: #aaa; }
     .cart-item { background: white; border-radius: 14px; padding: 12px; display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
     .cart-item img { width: 70px; height: 70px; border-radius: 12px; object-fit: cover; }
     .cart-content { flex: 1; }
@@ -189,7 +186,6 @@
     .payment-details.visible { display: block; }
     .payment-details .phone-number { background: #FF6B00; color: white; padding: 10px 16px; border-radius: 12px; font-size: 20px; font-weight: 900; letter-spacing: 2px; text-align: center; margin-bottom: 12px; }
     .payment-details .fee-note { color: #FF6B00; font-size: 13px; margin-top: 8px; }
-    /* تنسيق قائمة المنتجات في صفحة الدفع */
     .checkout-items { background: white; border-radius: 16px; padding: 16px; margin-bottom: 16px; }
     .checkout-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; }
     .checkout-item:last-child { border-bottom: none; }
@@ -246,7 +242,6 @@
       <section class="screen" id="checkoutScreen">
         <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;"><button class="icon-btn" onclick="showScreen('areaScreen')">←</button><div class="logo">إتمام الطلب</div><div></div></div>
         <div id="checkoutUserInfo"></div>
-        <!-- تفاصيل الطلب -->
         <div class="checkout-items" id="checkoutItemsList"></div>
         <div class="summary" style="margin-bottom:18px;"><div class="summary-row"><span>📍 المنطقة</span><span id="selectedAreaName"></span></div></div>
         <div class="payment-item active" data-method="CASH" onclick="selectPayment(this, 'CASH')"><div>💵 كاش عند الاستلام</div><div class="radio"></div></div>
@@ -312,7 +307,7 @@ function hideSpinner() { document.getElementById('spinner').style.display = 'non
 const API = '/api';
 let restaurants = [], markets = [], pharmacies = [], products = [];
 let cart = JSON.parse(localStorage.getItem('drako_cart')) || [];
-let favorites = JSON.parse(localStorage.getItem('drako_favorites')) || { restaurants: [], markets: [], pharmacies: [], products: [] };
+let favorites = JSON.parse(localStorage.getItem('drako_favorites')) || { restaurants: [], markets: [], pharmacies: [] };
 let selectedRestaurant = null, selectedArea = null, paymentMethod = 'CASH';
 let currentProduct = null;
 let currentUser = JSON.parse(localStorage.getItem('drako_user')) || null;
@@ -429,13 +424,9 @@ function showScreen(id) {
   pushToHistory(id); saveCurrentScreen(id);
 }
 
-// دالة عرض تفاصيل الطلب في صفحة الدفع
 function renderCheckoutItems() {
   const container = document.getElementById('checkoutItemsList');
-  if (!cart.length) {
-    container.innerHTML = '<p style="text-align:center;color:#888;">السلة فارغة</p>';
-    return;
-  }
+  if (!cart.length) { container.innerHTML = '<p style="text-align:center;color:#888;">السلة فارغة</p>'; return; }
   let html = '';
   cart.forEach(item => {
     const optionsText = (item.selectedOptions || []).map(o => esc(o.value)).join(', ');
@@ -494,83 +485,29 @@ function initCategoryFilters() {
 }
 async function loadMarketsAndPharmacies() { try { const [mRes, pRes] = await Promise.all([ apiFetch(API + '/markets'), apiFetch(API + '/pharmacies') ]); markets = await mRes.json(); pharmacies = await pRes.json(); } catch (e) { console.log(e); markets = []; pharmacies = []; } if (currentCategory === 'markets' || currentCategory === 'pharmacies') { renderHomeItems(); } }
 
-// ========== Favorites (تشمل المنتجات) ==========
-function isFav(type, id) {
-  if (type === 'product') return favorites.products.includes(id);
-  if (type === 'restaurant') return favorites.restaurants.includes(id);
-  if (type === 'market') return favorites.markets.includes(id);
-  if (type === 'pharmacy') return favorites.pharmacies.includes(id);
-  return false;
-}
+// ========== Favorites ==========
+function isFav(type, id) { return type==='restaurant'? favorites.restaurants.includes(id) : type==='market'? favorites.markets.includes(id) : type==='pharmacy'? favorites.pharmacies.includes(id) : false; }
 function toggleFav(id, type, event) {
-  if (event) event.stopPropagation();
-  let arr = type === 'product' ? favorites.products :
-            type === 'restaurant' ? favorites.restaurants :
-            type === 'market' ? favorites.markets : favorites.pharmacies;
+  if(event) event.stopPropagation();
+  let arr = type==='restaurant'? favorites.restaurants : type==='market'? favorites.markets : favorites.pharmacies;
   const idx = arr.indexOf(id);
-  if (idx > -1) arr.splice(idx, 1);
-  else arr.push(id);
+  if(idx>-1) arr.splice(idx,1); else arr.push(id);
   localStorage.setItem('drako_favorites', JSON.stringify(favorites));
-  if (currentScreen === 'homeScreen') renderHomeItems();
-  if (currentScreen === 'favScreen') renderFavorites();
-  if (currentScreen === 'restaurantScreen') {
-    if (selectedRestaurant && type === 'restaurant' && id === selectedRestaurant.id) updateRestaurantFavButton();
-    if (type === 'product') renderProducts(products);
-  }
+  if(currentScreen==='homeScreen') renderHomeItems();
+  if(currentScreen==='favScreen') renderFavorites();
+  if(currentScreen==='restaurantScreen' && selectedRestaurant?.id===id) updateRestaurantFavButton();
 }
-function updateRestaurantFavButton() { const btn = document.getElementById('favBtnInRestaurant'); if (btn && selectedRestaurant) { const liked = isFav('restaurant', selectedRestaurant.id); btn.textContent = liked ? '❤️' : '♡'; } }
-
+function updateRestaurantFavButton() { const btn = document.getElementById('favBtnInRestaurant'); if(btn && selectedRestaurant) { const liked = isFav('restaurant', selectedRestaurant.id); btn.textContent = liked ? '❤️' : '♡'; } }
 function renderFavorites() {
   const container = document.getElementById('favItemsContainer');
-  const favRestaurants = restaurants.filter(r => favorites.restaurants.includes(r.id));
-  const favMarkets = markets.filter(m => favorites.markets.includes(m.id));
-  const favPharmacies = pharmacies.filter(p => favorites.pharmacies.includes(p.id));
-  const favProducts = products.filter(p => favorites.products.includes(p.id));
-  if (!favRestaurants.length && !favMarkets.length && !favPharmacies.length && !favProducts.length) {
-    container.innerHTML = '<div class="empty">❣️ لم تضف أي شيء للمفضلة بعد</div>';
-    return;
-  }
-  let html = '';
-  if (favProducts.length) {
-    html += '<h3 style="margin:16px 0 10px;">🍽 منتجات مفضلة</h3>';
-    favProducts.forEach(p => {
-      html += `<div class="restaurant-card" style="position:relative;" onclick="event.stopPropagation();">
-        <img src="${(p.image&&p.image.startsWith('/uploads'))?p.image:(p.image||'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200')}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'">
-        <div class="restaurant-content"><h3>${esc(p.name)}</h3><div class="price">${p.price||p.basePrice||0} ج</div></div>
-        <button class="fav-btn liked" onclick="toggleFav('${p.id}','product',event); event.stopPropagation();">❤️</button>
-      </div>`;
-    });
-  }
-  if (favRestaurants.length) {
-    html += '<h3 style="margin:16px 0 10px;">🍔 مطاعم</h3>';
-    favRestaurants.forEach(r => {
-      html += `<div class="restaurant-card" onclick="openRestaurant('${r.id}')" style="position:relative;">
-        <img src="${(r.logo&&r.logo.startsWith('/uploads'))?r.logo:(r.logo||'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200')}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'">
-        <div class="restaurant-content"><h3>${esc(r.name)}</h3></div>
-        <button class="fav-btn liked" onclick="event.stopPropagation(); toggleFav('${r.id}','restaurant',event)">❤️</button>
-      </div>`;
-    });
-  }
-  if (favMarkets.length) {
-    html += '<h3 style="margin:16px 0 10px;">🛒 ماركت</h3>';
-    favMarkets.forEach(m => {
-      html += `<div class="restaurant-card" onclick="openSpecialOrder('market','${m.id}')" style="position:relative;">
-        <img src="${(m.logo&&m.logo.startsWith('/uploads'))?m.logo:(m.logo||'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200')}" onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=200'">
-        <div class="restaurant-content"><h3>${esc(m.name)}</h3></div>
-        <button class="fav-btn liked" onclick="event.stopPropagation(); toggleFav('${m.id}','market',event)">❤️</button>
-      </div>`;
-    });
-  }
-  if (favPharmacies.length) {
-    html += '<h3 style="margin:16px 0 10px;">💊 صيدليات</h3>';
-    favPharmacies.forEach(p => {
-      html += `<div class="restaurant-card" onclick="openSpecialOrder('pharmacy','${p.id}')" style="position:relative;">
-        <img src="${(p.logo&&p.logo.startsWith('/uploads'))?p.logo:(p.logo||'https://images.unsplash.com/photo-1584308666744-24d5c6dee668?w=200')}" onerror="this.src='https://images.unsplash.com/photo-1584308666744-24d5c6dee668?w=200'">
-        <div class="restaurant-content"><h3>${esc(p.name)}</h3></div>
-        <button class="fav-btn liked" onclick="event.stopPropagation(); toggleFav('${p.id}','pharmacy',event)">❤️</button>
-      </div>`;
-    });
-  }
+  const favRestaurants = restaurants.filter(r=>favorites.restaurants.includes(r.id));
+  const favMarkets = markets.filter(m=>favorites.markets.includes(m.id));
+  const favPharmacies = pharmacies.filter(p=>favorites.pharmacies.includes(p.id));
+  if(!favRestaurants.length && !favMarkets.length && !favPharmacies.length) { container.innerHTML='<div class="empty">❣️ لم تضف أي شيء للمفضلة بعد</div>'; return; }
+  let html='';
+  if(favRestaurants.length){ html+='<h3 style="margin:16px 0 10px;">🍔 مطاعم</h3>'; favRestaurants.forEach(r=>{ html+=`<div class="restaurant-card" onclick="openRestaurant('${r.id}')" style="position:relative;"><img src="${(r.logo&&r.logo.startsWith('/uploads'))?r.logo:(r.logo||'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200')}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'"><div class="restaurant-content"><h3>${esc(r.name)}</h3></div><button class="fav-btn liked" onclick="event.stopPropagation(); toggleFav('${r.id}','restaurant',event)">❤️</button></div>`; }); }
+  if(favMarkets.length){ html+='<h3 style="margin:16px 0 10px;">🛒 ماركت</h3>'; favMarkets.forEach(m=>{ html+=`<div class="restaurant-card" onclick="openSpecialOrder('market','${m.id}')" style="position:relative;"><img src="${(m.logo&&m.logo.startsWith('/uploads'))?m.logo:(m.logo||'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200')}" onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=200'"><div class="restaurant-content"><h3>${esc(m.name)}</h3></div><button class="fav-btn liked" onclick="event.stopPropagation(); toggleFav('${m.id}','market',event)">❤️</button></div>`; }); }
+  if(favPharmacies.length){ html+='<h3 style="margin:16px 0 10px;">💊 صيدليات</h3>'; favPharmacies.forEach(p=>{ html+=`<div class="restaurant-card" onclick="openSpecialOrder('pharmacy','${p.id}')" style="position:relative;"><img src="${(p.logo&&p.logo.startsWith('/uploads'))?p.logo:(p.logo||'https://images.unsplash.com/photo-1584308666744-24d5c6dee668?w=200')}" onerror="this.src='https://images.unsplash.com/photo-1584308666744-24d5c6dee668?w=200'"><div class="restaurant-content"><h3>${esc(p.name)}</h3></div><button class="fav-btn liked" onclick="event.stopPropagation(); toggleFav('${p.id}','pharmacy',event)">❤️</button></div>`; }); }
   container.innerHTML = html;
 }
 
@@ -591,7 +528,7 @@ function renderHomeItems() {
   }
 }
 
-// ========== renderProducts مع زر المفضلة ==========
+// ========== renderProducts (النسخة الأصلية العاملة) ==========
 function renderProducts(list = products) {
   const container = document.getElementById('productsContainer');
   if (!list.length) { container.innerHTML = '<div class="empty">لا توجد منتجات</div>'; return; }
@@ -605,10 +542,10 @@ function renderProducts(list = products) {
       displayPrice = minPrice;
       priceDisplay = 'يبدأ من ' + displayPrice + ' ج';
     } else {
-      displayPrice = p.price || p.basePrice || 0;
+      const price = p.price || p.basePrice || 0;
+      displayPrice = price;
       priceDisplay = displayPrice + ' ج';
     }
-    const liked = isFav('product', p.id);
     const escapedProduct = JSON.stringify(p).replace(/'/g, "\\'").replace(/"/g, '&quot;');
     return `<div class="product-card">
       <img src="${(p.image && p.image.startsWith('/uploads')) ? p.image : (p.image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500')}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'">
@@ -617,8 +554,7 @@ function renderProducts(list = products) {
         <p>${esc(p.description || 'وجبة لذيذة من دراكو')}</p>
         <div class="price">${priceDisplay}</div>
       </div>
-      <button class="product-fav-btn ${liked ? 'liked' : ''}" onclick="event.stopPropagation(); toggleFav('${p.id}', 'product', event)" style="position:absolute; top:14px; left:10px;">${liked ? '❤️' : '🤍'}</button>
-      <button class="plus-btn" onclick='openProductSheet(${escapedProduct})' style="position:absolute; bottom:14px; left:10px;">+</button>
+      <button class="plus-btn" onclick='openProductSheet(${escapedProduct})'>+</button>
     </div>`;
   }).join('');
 }
@@ -647,10 +583,7 @@ async function submitSpecialOrder() {
 async function loadRestaurants() { try { const res=await apiFetch(API+'/restaurants'); restaurants=await res.json(); renderHomeItems(); } catch(e){ console.log(e); } }
 async function openRestaurant(id) {
   selectedRestaurant = restaurants.find(r => r.id === id);
-  if (!selectedRestaurant) {
-    showToast('⚠️ المطعم غير موجود');
-    return;
-  }
+  if (!selectedRestaurant) { showToast('⚠️ المطعم غير موجود'); return; }
   document.getElementById('restaurantName').innerText = selectedRestaurant.name;
   document.getElementById('restaurantTitleHeader').innerText = selectedRestaurant.name;
   document.getElementById('restaurantHero').src = (selectedRestaurant.logo && selectedRestaurant.logo.startsWith('/uploads')) ? selectedRestaurant.logo : (selectedRestaurant.logo || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600');
@@ -662,8 +595,8 @@ async function openRestaurant(id) {
     renderTabs();
     showScreen('restaurantScreen');
   } catch (e) {
+    showToast('⚠️ ' + e.message);
     console.error(e);
-    showToast('⚠️ تعذر تحميل قائمة الطعام');
   } finally {
     hideSpinner();
   }
@@ -671,7 +604,7 @@ async function openRestaurant(id) {
 function renderTabs() { const categories=[...new Set(products.map(p=>p.category||'عام'))]; const tabs=document.getElementById('tabsContainer'); tabs.innerHTML=categories.map((c,i)=>`<div class="tab ${i===0?'active':''}" onclick="filterProducts('${c}', this)">${esc(c)}</div>`).join(''); filterProducts(categories[0],document.querySelector('.tab')); }
 function filterProducts(category,el) { document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); if(el) el.classList.add('active'); const filtered=category?products.filter(p=>(p.category||'عام')===category):products; renderProducts(filtered); }
 
-// ========== Product Sheet (بدون تغيير) ==========
+// ========== Product Sheet ==========
 function openProductSheet(product) {
   currentProduct=product;
   const hasGroups=product.groups&&product.groups.length>0;
