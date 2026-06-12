@@ -409,7 +409,7 @@ function loadSocket() {
 // ========== Main App Functions ==========
 function navigateTo(screenId) { if((screenId==='ordersScreen'||screenId==='accountScreen')&&!currentUser) { showScreen('loginScreen'); return; } showScreen(screenId); }
 function showScreen(id) {
-  // تمت إزالة رسالة تأكيد مغادرة السلة نهائياً حسب الطلب
+  // تم إزالة رسالة تأكيد مغادرة السلة تماماً
   document.querySelectorAll('#mainAppWrapper .screen').forEach(s=>s.classList.remove('active'));
   const target=document.getElementById(id); if(target) target.classList.add('active');
   document.querySelectorAll('.nav-item').forEach((n,i)=>{ const navIds=['homeScreen','favScreen','cartScreen','ordersScreen','accountScreen']; if(navIds[i]===id) n.classList.add('active'); else n.classList.remove('active'); });
@@ -468,7 +468,7 @@ function initCategoryFilters() {
 }
 async function loadMarketsAndPharmacies() { try { const [mRes, pRes] = await Promise.all([ apiFetch(API + '/markets'), apiFetch(API + '/pharmacies') ]); markets = await mRes.json(); pharmacies = await pRes.json(); } catch (e) { console.log(e); markets = []; pharmacies = []; } if (currentCategory === 'markets' || currentCategory === 'pharmacies') { renderHomeItems(); } }
 
-// ========== Favorites (تشمل الآن المنتجات) ==========
+// ========== Favorites (تشمل المنتجات) ==========
 function isFav(type, id) {
   if (type === 'product') return favorites.products.includes(id);
   if (type === 'restaurant') return favorites.restaurants.includes(id);
@@ -489,7 +489,7 @@ function toggleFav(id, type, event) {
   if (currentScreen === 'favScreen') renderFavorites();
   if (currentScreen === 'restaurantScreen') {
     if (selectedRestaurant && type === 'restaurant' && id === selectedRestaurant.id) updateRestaurantFavButton();
-    if (type === 'product') renderProducts(products); // تحديث المنتجات لإظهار حالة المفضلة
+    if (type === 'product') renderProducts(products);
   }
 }
 function updateRestaurantFavButton() { const btn = document.getElementById('favBtnInRestaurant'); if (btn && selectedRestaurant) { const liked = isFav('restaurant', selectedRestaurant.id); btn.textContent = liked ? '❤️' : '♡'; } }
@@ -597,9 +597,201 @@ function renderProducts(list = products) {
   }).join('');
 }
 
-// ... (باقي الدوال: Special Order, Restaurants, Product Sheet, Cart, Orders, Track, My Orders, Initialization بدون تغيير عن الإصدار الكامل السابق، فقط تم إضافة favorites.products والتعديلات أعلاه)
+// ========== Special Order ==========
+function openSpecialOrder(type, id) { specialOrderType=type; specialOrderStoreId=id; let title=type==='market'?'طلب ماركت':(type==='pharmacy'?'طلب صيدلية':'طلب خاص'); document.getElementById('specialOrderTitle').innerText=title; document.getElementById('specialOrderDetails').value=''; document.getElementById('filePreview').innerHTML=''; selectedFiles=[]; document.getElementById('attachFiles').value=''; updateSpecialDeliveryFee(); showScreen('specialOrderScreen'); }
+function updateSpecialDeliveryFee() { let fee=selectedArea?selectedArea.fee:10; document.getElementById('specialDeliveryFee').innerText=fee+' ج'; document.getElementById('specialTotal').innerText=fee+' ج'; }
+function previewFiles(input) { let preview=document.getElementById('filePreview'); preview.innerHTML=''; selectedFiles=Array.from(input.files); selectedFiles.forEach(file=>{ let img=document.createElement('img'); img.src=URL.createObjectURL(file); preview.appendChild(img); }); }
+async function submitSpecialOrder() {
+  if(!currentUser){ showToast('⚠️ يرجى تسجيل الدخول أولاً'); return; }
+  let details = document.getElementById('specialOrderDetails').value.trim();
+  if(!details && specialOrderType!=='custom'){ showToast('⚠️ اكتب تفاصيل طلبك'); return; }
+  if (!selectedArea) { if (currentUser.regionId && allRegions.length) { const region = allRegions.find(r => r.id === currentUser.regionId); if (region) selectedArea = region; } if (!selectedArea) { pendingSpecialOrderData = { type: specialOrderType, storeId: specialOrderStoreId, details: details }; showToast('⚠️ يرجى اختيار المنطقة أولاً'); showScreen('areaScreen'); return; } }
+  let fee = selectedArea.fee; let total = fee;
+  let orderData = { orderType: specialOrderType, storeId: specialOrderStoreId, items: [], orderNotes: details, customerName: currentUser.name, customerPhone: currentUser.phone, address: currentUser.address || selectedArea.name, regionName: selectedArea.name, paymentMethod: paymentMethod, deliveryFee: fee, total };
+  try {
+    let formData = new FormData(); formData.append('orderData', JSON.stringify(orderData));
+    for (let file of selectedFiles) { formData.append('files', file); }
+    const res = await fetch(API+'/orders/special', { method:'POST', body:formData, credentials:'include' });
+    const data = await res.json(); if(data.error) return showToast('❌ '+data.error);
+    showToast('✅ تم إرسال الطلب بنجاح'); showScreen('homeScreen'); loadMyOrders();
+  } catch(e) { showToast('❌ فشل الاتصال'); }
+}
 
-// ملاحظة: تم تضمين كافة الدوال بالكامل في النسخة المقدمة. في هذا الرد تم عرض الأجزاء المعدلة فقط تجنباً للإطالة، ولكن الملف النهائي المرفق يحتوي على كل شيء متكامل.
+// ========== Restaurants ==========
+async function loadRestaurants() { try { const res=await apiFetch(API+'/restaurants'); restaurants=await res.json(); renderHomeItems(); } catch(e){ console.log(e); } }
+async function openRestaurant(id) { selectedRestaurant=restaurants.find(r=>r.id===id); document.getElementById('restaurantName').innerText=selectedRestaurant.name; document.getElementById('restaurantTitleHeader').innerText=selectedRestaurant.name; document.getElementById('restaurantHero').src=(selectedRestaurant.logo&&selectedRestaurant.logo.startsWith('/uploads'))?selectedRestaurant.logo:(selectedRestaurant.logo||'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600'); try { const res=await apiFetch(API+'/restaurants/'+id+'/menu'); products=await res.json(); renderTabs(); showScreen('restaurantScreen'); } catch(e){ console.log(e); } }
+function renderTabs() { const categories=[...new Set(products.map(p=>p.category||'عام'))]; const tabs=document.getElementById('tabsContainer'); tabs.innerHTML=categories.map((c,i)=>`<div class="tab ${i===0?'active':''}" onclick="filterProducts('${c}', this)">${esc(c)}</div>`).join(''); filterProducts(categories[0],document.querySelector('.tab')); }
+function filterProducts(category,el) { document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); if(el) el.classList.add('active'); const filtered=category?products.filter(p=>(p.category||'عام')===category):products; renderProducts(filtered); }
+
+// ========== Product Sheet ==========
+function openProductSheet(product) {
+  currentProduct=product;
+  const hasGroups=product.groups&&product.groups.length>0;
+  if(!hasGroups){ addToCartSimple(product); return; }
+  const basePrice=product.basePrice||0;
+  let html=`<div style="display:flex;gap:16px;margin-bottom:20px"><img src="${product.image||'placeholder.jpg'}" style="width:100px;height:100px;border-radius:16px;object-fit:cover"><div><h3>${esc(product.name)}</h3><p style="color:#666">${esc(product.description||'')}</p><div style="color:#FF6B00;">السعر الأساسي: ${basePrice} ج</div></div></div>`;
+  product.groups.forEach(group=>{
+    html+=`<div style="margin-top:16px"><strong>${esc(group.name)} ${group.required?'*':''}</strong>`;
+    if(group.type==='single'){
+      group.options.forEach(opt=>{ html+=`<label class="option-label"><input type="radio" name="${group.id}" value="${opt.price}" data-extra="${opt.price}" ${opt.price===0&&group.required?'checked':''}><span style="flex:1">${esc(opt.value)}</span><span style="color:#FF6B00;font-weight:bold">${opt.price>0?'+'+opt.price+' ج':'مجاني'}</span></label>`; });
+    } else {
+      group.options.forEach(opt=>{ html+=`<label class="option-label"><input type="checkbox" name="${group.id}" value="${opt.price}" data-extra="${opt.price}"><span style="flex:1">${esc(opt.value)}</span><span style="color:#FF6B00;font-weight:bold">+${opt.price} ج</span></label>`; });
+    }
+    if(group.maxSelection) html+=`<small style="color:#888">الحد الأقصى ${group.maxSelection} اختيارات</small>`;
+    html+=`</div>`;
+  });
+  html+=`<div style="margin-top:20px;display:flex;gap:12px;align-items:center"><span>الكمية:</span><button class="qty-btn qty-minus" onclick="changeQty(-1)">-</button><strong id="item-qty">1</strong><button class="qty-btn qty-plus" onclick="changeQty(1)">+</button></div><div style="margin-top:16px"><label style="font-size:13px;color:#666">ملاحظات للطلب</label><textarea id="item-notes" style="width:100%;height:60px;border:1px solid #ddd;border-radius:10px;padding:8px;margin-top:4px" placeholder="مثلاً: بدون بصل، زيادة صوص..."></textarea></div><div id="sheet-error" style="color:red; font-size:12px; margin-top:8px; display:none;">⚠️ يرجى اختيار جميع الخيارات الإجبارية</div><div style="font-size:20px;font-weight:900;margin-top:16px;color:#FF6B00">الإجمالي: <span id="sheet-total">${basePrice}</span> ج</div><button class="btn" style="margin-top:16px" onclick="confirmAddToCart()">🛒 أضف للطلب</button>`;
+  document.getElementById('sheetContent').innerHTML=html;
+  document.getElementById('productSheet').classList.add('open');
+  window._requiredGroups=[];
+  product.groups.forEach(g=>{ if(g.required) window._requiredGroups.push(g.id); });
+  const updateTotal=()=>{
+    let total=basePrice;
+    document.querySelectorAll('#sheetContent input:checked').forEach(inp=>total+=Number(inp.value)||0);
+    window._currentUnitPrice=total;
+    document.getElementById('sheet-total').textContent=total*(window._currentQty||1);
+    let allRequired=true;
+    window._requiredGroups.forEach(grpId=>{ if(!document.querySelector(`#sheetContent input[name="${grpId}"]:checked`)) allRequired=false; });
+    document.getElementById('sheet-error').style.display=allRequired?'none':'block';
+  };
+  document.querySelectorAll('#sheetContent input').forEach(inp=>inp.addEventListener('change',updateTotal));
+  window._currentQty=1;
+  updateTotal();
+}
+function changeQty(delta) { window._currentQty=Math.max(1,(window._currentQty||1)+delta); document.getElementById('item-qty').textContent=window._currentQty; const unitPrice=window._currentUnitPrice||0; document.getElementById('sheet-total').textContent=unitPrice*window._currentQty; }
+function closeProductSheet() { document.getElementById('productSheet').classList.remove('open'); currentProduct=null; }
+function confirmAddToCart() {
+  if(!currentProduct) return;
+  let allRequired=true;
+  window._requiredGroups.forEach(grpId=>{ if(!document.querySelector(`#sheetContent input[name="${grpId}"]:checked`)) allRequired=false; });
+  if(!allRequired){ showToast('⚠️ يرجى اختيار جميع الخيارات الإجبارية'); return; }
+  const product=currentProduct;
+  const qty=window._currentQty||1;
+  const notes=document.getElementById('item-notes')?.value||'';
+  const basePrice=product.basePrice||0;
+  const groups=product.groups||[];
+  const selectedOptions=[];
+  let finalPrice=basePrice;
+  groups.forEach(group=>{
+    if(group.type==='single'){
+      const radio=document.querySelector(`#sheetContent input[name="${group.id}"]:checked`);
+      if(radio){ const price=Number(radio.value)||0; finalPrice+=price; selectedOptions.push({ groupId:group.id, groupName:group.name, value:radio.parentElement.textContent.trim().split('(')[0].trim(), price }); }
+    } else {
+      document.querySelectorAll(`#sheetContent input[name="${group.id}"]:checked`).forEach(cb=>{ const price=Number(cb.value)||0; finalPrice+=price; selectedOptions.push({ groupId:group.id, groupName:group.name, value:cb.parentElement.textContent.trim().split('(')[0].trim(), price }); });
+    }
+  });
+  const uniqueId=product.id+'_'+JSON.stringify(selectedOptions);
+  const existing=cart.find(i=>i.id===uniqueId);
+  if(existing){ existing.quantity=(existing.quantity||1)+qty; }
+  else { cart.push({ id:uniqueId, productId:product.id, name:product.name, price:finalPrice, image:product.image, selectedOptions, quantity:qty, notes }); }
+  saveCart(); renderCart(); closeProductSheet(); showToast('✅ تمت إضافة المنتج');
+}
+function addToCartSimple(product) {
+  const existing=cart.find(i=>i.id===product.id);
+  if(existing){ existing.quantity=(existing.quantity||1)+1; }
+  else { cart.push({ id:product.id, productId:product.id, name:product.name, price:product.price||product.basePrice||0, image:product.image, selectedOptions:[], quantity:1, notes:'' }); }
+  saveCart(); renderCart(); showToast('✅ تمت إضافة المنتج');
+}
+
+// ========== Cart Functions ==========
+function saveCart() { localStorage.setItem('drako_cart',JSON.stringify(cart)); const count=cart.reduce((a,b)=>a+(b.quantity||1),0); document.getElementById('cartBadge').innerText=count; document.getElementById('headerBadge').innerText=count; }
+function renderCart() {
+  const container=document.getElementById('cartItems');
+  if(!cart.length){ container.innerHTML='<div class="empty">🛒 السلة فارغة<br><span style="font-size:12px;">أضف بعض المنتجات من المطاعم</span></div>'; updateTotals(); return; }
+  container.innerHTML=cart.map((item,index)=>{ const optionsText=(item.selectedOptions||[]).map(o=>esc(o.value)).join(', '); const notesText=item.notes?`<div style="font-size:11px;color:#888">📝 ${esc(item.notes)}</div>`:''; return `<div class="cart-item"><img src="${(item.image&&item.image.startsWith('/uploads'))?item.image:(item.image||'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500')}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'"><div class="cart-content"><h4>${esc(item.name)}</h4>${optionsText?`<div style="font-size:11px;color:#888">${optionsText}</div>`:''}${notesText}<div>${item.price} ج</div><div class="qty-box"><button class="qty-btn qty-minus" onclick="updateCartItem(${index},-1)">-</button><strong>${item.quantity||1}</strong><button class="qty-btn qty-plus" onclick="updateCartItem(${index},1)">+</button></div></div><button class="icon-btn" onclick="removeCartItem(${index})">🗑</button></div>`; }).join('');
+  updateTotals();
+}
+function updateCartItem(i,d){ let nq=cart[i].quantity+d; if(nq<=0) cart.splice(i,1); else cart[i].quantity=nq; saveCart(); renderCart(); }
+function removeCartItem(i){ cart.splice(i,1); saveCart(); renderCart(); }
+function updateTotals() {
+  const itemsTotal = cart.reduce((a,b)=>a+(b.price*(b.quantity||1)),0);
+  const fee = selectedArea ? selectedArea.fee : 0;
+  let extraFee = 0;
+  if (paymentMethod === 'VODAFONE' || paymentMethod === 'INSTAPAY') extraFee = 5;
+  const final = itemsTotal + fee + extraFee;
+  document.getElementById('itemsTotal').innerText = itemsTotal + ' ج';
+  document.getElementById('deliveryFee').innerText = fee + ' ج';
+  document.getElementById('finalTotal').innerText = final + ' ج';
+  document.getElementById('checkoutItemsTotal').innerText = itemsTotal + ' ج';
+  document.getElementById('checkoutDelivery').innerText = fee + ' ج';
+  document.getElementById('checkoutFinal').innerText = final + ' ج';
+  const extraRow = document.getElementById('extraFeeRow');
+  const extraAmount = document.getElementById('extraFeeAmount');
+  if (extraRow && extraAmount) { if (extraFee > 0) { extraRow.style.display = 'flex'; extraAmount.innerText = extraFee + ' ج'; } else { extraRow.style.display = 'none'; } }
+}
+function proceedToCheckout() { if(!cart.length) return showToast('⚠️ السلة فارغة'); if(currentUser&&currentUser.regionId&&allRegions.length){ const region=allRegions.find(r=>r.id===currentUser.regionId); if(region){ selectedArea=region; updateTotals(); document.getElementById('selectedAreaName').innerText=region.name+' - '+region.fee+' ج'; renderCheckoutUserInfo(); showScreen('checkoutScreen'); return; } } showScreen('areaScreen'); }
+
+// ========== Order Functions ==========
+async function submitOrder() {
+  if(!selectedArea){ showToast('⚠️ يرجى اختيار المنطقة أولاً'); showScreen('areaScreen'); return; }
+  let name, phone, address;
+  if(currentUser){ name=currentUser.name; phone=currentUser.phone; address=currentUser.address; }
+  else { name=document.getElementById('customerName')?.value.trim(); phone=document.getElementById('customerPhone')?.value.trim(); if(!name||!phone){ showToast('⚠️ اكمل البيانات'); return; } }
+  const itemsTotal = cart.reduce((a,b)=>a+(b.price*(b.quantity||1)),0);
+  let extraFee = 0;
+  let transactionData = {};
+  if(paymentMethod==='VODAFONE'){
+    const lastDigits = document.getElementById('vodafoneLastDigits').value.trim();
+    if(!lastDigits||lastDigits.length!==3||isNaN(lastDigits)) return showToast('⚠️ أدخل آخر 3 أرقام من رقمك');
+    extraFee = 5; transactionData = { lastDigits };
+  } else if(paymentMethod==='INSTAPAY'){
+    const txId = document.getElementById('instapayTransactionId').value.trim();
+    if(!txId) return showToast('⚠️ أدخل معرف المعاملة');
+    extraFee = 5; transactionData = { transactionId: txId };
+  }
+  const total = itemsTotal + (selectedArea.fee||0) + extraFee;
+  const orderData = { restaurantId:selectedRestaurant?.id, items:cart.map(i=>({ productId:i.productId, name:i.name, price:i.price, quantity:i.quantity||1, selectedOptions:i.selectedOptions||[], notes:i.notes||'' })), total, customerName:name, customerPhone:phone, address:address||selectedArea.name, regionName:selectedArea.name, paymentMethod, deliveryFee:selectedArea.fee||0, ...transactionData };
+  try{
+    const res=await apiFetch(API+'/orders',{method:'POST',body:JSON.stringify(orderData)});
+    const data=await res.json(); if(data.error){ showToast('❌ '+data.error); return; }
+    cart=[]; saveCart(); renderCart(); trackOrder(data.orderId); showToast('✅ تم إرسال الطلب بنجاح');
+  } catch(e){ console.error(e); showToast('❌ فشل في الاتصال بالسيرفر'); }
+}
+async function trackOrder(orderId) {
+  window._trackingOrderId = orderId;
+  document.getElementById('trackOrderId').innerText = '#' + orderId.slice(-6).toUpperCase();
+  showScreen('trackScreen');
+  const updateTrack = async () => {
+    try {
+      const res = await apiFetch(API + '/orders/' + orderId + '/track');
+      const order = await res.json();
+      const steps = ['PENDING', 'ACCEPTED', 'PREPARING', 'INVOICE_ADDED', 'READY', 'DRIVER_ASSIGNED', 'ON_THE_WAY', 'DELIVERED'];
+      const currentIdx = steps.indexOf(order.status);
+      let statusHtml = '';
+      steps.forEach((s, i) => { if (i <= currentIdx) { statusHtml += `<div class="status-step"><div class="status-dot done"></div><div class="status-text">${i === currentIdx ? '<span class="active">' + getStatusText(s) + '</span>' : getStatusText(s)}</div></div>`; } else { statusHtml += `<div class="status-step"><div class="status-dot"></div><div class="status-text">${getStatusText(s)}</div></div>`; } });
+      document.getElementById('trackStatusContainer').innerHTML = statusHtml;
+      let itemsHtml = '';
+      if (order.items && order.items.length > 0) {
+        itemsHtml = '<div style="margin-top:16px; background:#f9f9f9; border-radius:12px; padding:14px;"><h4 style="margin-bottom:12px;">🧾 المنتجات المطلوبة</h4>';
+        order.items.forEach(item => {
+          let optionsText = ''; if (item.selectedOptions && item.selectedOptions.length) { optionsText = item.selectedOptions.map(opt => esc(opt.value)).join('، '); optionsText = `<div style="font-size:11px; color:#666; margin-top:2px;">الخيارات: ${optionsText}</div>`; }
+          let notesText = item.notes ? `<div style="font-size:11px; color:#888; margin-top:2px;">📝 ${esc(item.notes)}</div>` : '';
+          const itemTotal = item.price * (item.quantity || 1);
+          itemsHtml += `<div style="display:flex; justify-content:space-between; border-bottom:1px dashed #ddd; padding:6px 0;"><div><strong>${esc(item.name)}</strong> × ${item.quantity || 1}${optionsText}${notesText}</div><div style="color:#FF6B00; font-weight:bold;">${itemTotal} ج</div></div>`;
+        });
+        itemsHtml += '</div>';
+      }
+      let invoiceHtml = '';
+      if (order.invoiceAmount) { invoiceHtml = `<div class="detail-row"><span>💰 قيمة الفاتورة</span><strong>${order.invoiceAmount} ج</strong></div>`; }
+      document.getElementById('trackDetails').innerHTML = `<div class="detail-row"><span>المطعم/المتجر</span><strong>${esc(order.restaurantName || order.storeName || 'طلب خاص')}</strong></div><div class="detail-row"><span>العميل</span><strong>${esc(order.customerName)}</strong></div><div class="detail-row"><span>المنطقة</span><strong>${esc(order.regionName || '—')}</strong></div><div class="detail-row"><span>العنوان</span><strong>${esc(order.address || '—')}</strong></div>${invoiceHtml}<div class="detail-row"><span>الإجمالي النهائي</span><strong>${order.total} ج</strong></div><div class="detail-row"><span>رسوم التوصيل</span><strong>${order.deliveryFee} ج</strong></div><div class="detail-row"><span>وقت الطلب</span>${new Date(order.createdAt).toLocaleString('ar-EG')}</div>${itemsHtml}`;
+      if (order.status !== 'DELIVERED' && order.status !== 'CANCELLED') { setTimeout(updateTrack, 10000); }
+    } catch (e) { console.log(e); }
+  };
+  updateTrack();
+}
+function getStatusText(s) { const map={ PENDING:'في الانتظار', ACCEPTED:'مقبول', PREPARING:'قيد التحضير', INVOICE_ADDED:'تم إضافة الفاتورة', READY:'جاهز للتوصيل', DRIVER_ASSIGNED:'مع طيار', ON_THE_WAY:'في الطريق', DELIVERED:'تم التوصيل', CANCELLED:'ملغي' }; return map[s]||s; }
+
+// ========== My Orders ==========
+function switchOrdersTab(tab) { window._ordersTab=tab; document.querySelectorAll('#orders-tab-bar .tab').forEach(t=>t.classList.remove('active')); if(event&&event.target) event.target.classList.add('active'); loadMyOrders(); }
+async function loadMyOrders() {
+  const container=document.getElementById('myOrdersList'); if(!currentUser){ container.innerHTML='<div class="empty">🔐 سجل دخولك أولاً لمشاهدة طلباتك</div>'; return; }
+  try{ const res=await apiFetch(API+'/orders?customerPhone='+encodeURIComponent(currentUser.phone)); let orders=await res.json(); orders=orders.filter(o=>o.customerPhone===currentUser.phone); if(!orders.length){ container.innerHTML='<div class="empty">📋 لا توجد طلبات سابقة</div>'; return; } const tab=window._ordersTab||'active'; let filtered=tab==='active'?orders.filter(o=>!['DELIVERED','CANCELLED'].includes(o.status)):orders.filter(o=>['DELIVERED','CANCELLED'].includes(o.status)); if(!filtered.length){ container.innerHTML='<div class="empty">📋 لا توجد طلبات في هذا القسم</div>'; return; } container.innerHTML=filtered.reverse().map(order=>{ const firstItem=order.items?.[0]; const imgSrc=(firstItem&&firstItem.image&&firstItem.image.startsWith('/uploads'))?firstItem.image:'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'; const itemCount=(order.items||[]).length; const statusColor=order.status==='DELIVERED'?'#2ECC71':(order.status==='CANCELLED'?'#F05252':'#FF6B00'); const statusLabel=getStatusText(order.status); const total=order.total||0; const date=new Date(order.createdAt).toLocaleDateString('ar-EG'); const time=new Date(order.createdAt).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}); return `<div class="order-item"><img src="${imgSrc}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'"><div class="order-info"><h4>طلب #${order.id.slice(-6)}</h4><div class="restaurant">🍽️ ${esc(order.restaurantName||(order.specialOrder?'طلب خاص':'مطعم'))}</div><div class="items-summary">📦 ${itemCount} منتج</div><span class="status-badge" style="background:${statusColor}20; color:${statusColor}; padding:2px 8px; border-radius:20px; font-size:11px;">${statusLabel}</span><div class="order-footer"><span>📅 ${date} - ${time}</span><span class="total">💰 ${total} ج</span></div></div><button class="track-btn" onclick="trackOrder('${order.id}')">📋 تتبع</button></div>`; }).join(''); } catch(e){ console.error(e); container.innerHTML='<div class="empty">⚠️ تعذر تحميل الطلبات</div>'; }
+}
+
+// ========== Initialization ==========
+if(currentUser){ document.getElementById('authWrapper').classList.add('hide'); document.getElementById('mainAppWrapper').classList.add('active'); loadSocket(); loadRestaurants(); loadMarketsAndPharmacies(); renderCart(); loadRegionsForSelect(); loadRegions().then(()=>{ if(currentUser.regionId&&allRegions.length){ selectedArea=allRegions.find(r=>r.id===currentUser.regionId)||null; } }); if(!restoreCurrentScreen()) showScreen('homeScreen'); initCategoryFilters(); } else { document.getElementById('authWrapper').classList.remove('hide'); document.getElementById('mainAppWrapper').classList.remove('active'); loadRegionsForSelect(); }
+saveCart();
+window.addEventListener('beforeunload',()=>{ if(currentUser) localStorage.setItem('drako_current_screen',currentScreen); });
 </script>
 </body>
 </html>
