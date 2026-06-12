@@ -116,7 +116,6 @@
 </head>
 <body>
 <div class="app-layout">
-  <!-- شاشة تسجيل الدخول -->
   <div class="login-overlay" id="loginOverlay">
     <div class="login-card">
       <div class="logo-icon">🍽️</div>
@@ -129,7 +128,6 @@
     </div>
   </div>
 
-  <!-- الشريط الجانبي -->
   <aside class="sidebar" id="sidebar" style="display:none;">
     <div class="sidebar-header"><div class="logo">DRAKO</div></div>
     <nav class="sidebar-nav">
@@ -143,7 +141,6 @@
     <div class="sidebar-footer"><button class="btn-logout" onclick="logout()">🚪 تسجيل الخروج</button></div>
   </aside>
 
-  <!-- المحتوى الرئيسي -->
   <main class="main" id="mainWrap" style="display:none;">
     <div class="topbar">
       <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
@@ -159,13 +156,10 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-// ---------- المتغيرات العامة ----------
 const API = '/api', TOKEN_KEY = 'auth_token';
 let currentPage = 'profile', allRegions = [], allOrdersCache = [], windowMyRestaurantId = null;
-let currentCategoryFilter = 'all';
-let currentProfile = null;
+let currentCategoryFilter = 'all', currentProfile = null;
 
-// ---------- دوال مساعدة ----------
 function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); }
 function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('open'); }
 
@@ -181,7 +175,6 @@ function openModal(title, bodyHTML, footerHTML = '') {
 function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); }
 document.getElementById('modalOverlay').addEventListener('click',function(e){ if(e.target===this) closeModal(); });
 
-// ---------- الجلسة والتوكن ----------
 function getToken(){ return localStorage.getItem(TOKEN_KEY); }
 function saveToken(token){ localStorage.setItem(TOKEN_KEY, token); }
 function clearToken(){ localStorage.removeItem(TOKEN_KEY); }
@@ -226,10 +219,8 @@ async function restaurantLogin() {
 
 async function logout() { try { await fetch('/logout', { credentials:'include' }); } catch(e) {} clearToken(); showLogin(); }
 
-// ---------- الحالات النصية ----------
 const STATUS_AR = { PENDING:'في الانتظار',ACCEPTED:'مقبول',PREPARING:'يتحضر',READY:'جاهز',DRIVER_ASSIGNED:'مع طيار',ON_THE_WAY:'في الطريق',DELIVERED:'تم التوصيل',CANCELLED:'ملغي' };
 
-// ---------- التنقل ----------
 function navigate(section) {
   currentPage = section;
   document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active'));
@@ -250,16 +241,19 @@ function loadSection(s) {
   }
 }
 
-// ---------- الأصوات ----------
+// صوت
 function generateToneWAV(f,d,t,v=0.3){ const sr=44100; const n=Math.floor(sr*d); const b=new Float32Array(n); for(let i=0;i<n;i++){ const x=i/sr; let s=0; if(t==='sine') s=Math.sin(2*Math.PI*f*x); else if(t==='square') s=Math.sign(Math.sin(2*Math.PI*f*x)); else if(t==='triangle'){ const p=(f*x)%1; s=4*Math.abs(p-0.5)-1; } b[i]=s*v; } const l=b.length*2; const a=new ArrayBuffer(44+l); const vw=new DataView(a); function ws(o,s){ for(let i=0;i<s.length;i++) vw.setUint8(o+i,s.charCodeAt(i)); } ws(0,'RIFF'); vw.setUint32(4,36+l,true); ws(8,'WAVE'); ws(12,'fmt '); vw.setUint32(16,16,true); vw.setUint16(20,1,true); vw.setUint16(22,1,true); vw.setUint32(24,sr,true); vw.setUint32(28,sr*2,true); vw.setUint16(32,2,true); vw.setUint16(34,16,true); ws(36,'data'); vw.setUint32(40,l,true); let off=44; for(let i=0;i<b.length;i++){ const s=Math.max(-1,Math.min(1,b[i])); vw.setInt16(off,s<0?s*0x8000:s*0x7FFF,true); off+=2; } return URL.createObjectURL(new Blob([a],{type:'audio/wav'})); }
 const soundInstances = {};
 function createSound(name,...tones){ soundInstances[name]=tones.map(t=>new Howl({src:[t],format:'wav',volume:0.5})); }
 function playSound(name){ if(soundInstances[name]) soundInstances[name].forEach(h=>h.play()); }
 createSound('newOrderBell', generateToneWAV(1200,0.25,'sine'));
 
-// ---------- لوحة التحكم (Profile) ----------
+// ========== لوحة التحكم (Profile) ==========
 async function loadDashboard() {
-  try { const profileRes = await apiFetch(API+'/restaurant/profile'); currentProfile = await profileRes.json(); } catch(e) { currentProfile = null; }
+  try {
+    const profileRes = await apiFetch(API+'/restaurant/profile');
+    currentProfile = await profileRes.json();
+  } catch(e) { currentProfile = null; }
   let stats = null;
   try { stats = await apiFetch(API+'/restaurant/stats').then(r=>r.json()); } catch(e){}
   const name = currentProfile?.name || 'مطعمي';
@@ -332,10 +326,10 @@ async function saveProfile() {
     showToast('✅ تم تحديث الملف الشخصي');
     closeModal();
     loadDashboard();
-  } catch(e) { showToast('❌ فشل الحفظ'); }
+  } catch(e) { showToast('❌ فشل الحفظ - حاول مجدداً'); }
 }
 
-// ---------- الطلبات (مع استبعاد المباشرة) ----------
+// ========== الطلبات (مع استبعاد المباشرة) ==========
 let currentOrderFilter = 'all';
 async function loadOrders() {
   const res = await apiFetch(API+'/restaurant/orders');
@@ -459,7 +453,7 @@ async function saveEditOrder(orderId) {
   } catch(e) { showToast('صيغة JSON غير صحيحة'); }
 }
 
-// ---------- التصنيفات ----------
+// ========== التصنيفات ==========
 async function loadCategories() {
   const res = await apiFetch(API+'/restaurant/categories'); const cats = await res.json();
   let html = `<div class="section-card"><div class="section-header"><h2>🏷️ التصنيفات</h2><button class="btn btn-primary btn-sm" onclick="showAddCategory()">+ إضافة</button></div><div class="categories-grid">`;
@@ -471,7 +465,7 @@ async function addCategory(){ const n=document.getElementById('catName').value; 
 async function deleteCategory(id){ if(confirm('حذف؟')){ await apiFetch(API+'/restaurant/categories/'+id,{method:'DELETE'}); loadCategories(); } }
 async function editCategory(id,old){ const n=prompt('الاسم الجديد:',old); if(n){ await apiFetch(API+'/restaurant/categories/'+id,{method:'PATCH',body:JSON.stringify({name:n})}); loadCategories(); } }
 
-// ---------- المنتجات ----------
+// ========== المنتجات ==========
 async function loadProducts() {
   await loadCategoriesOptions();
   const prodRes = await apiFetch(API+'/restaurant/products'); const products = await prodRes.json();
@@ -502,7 +496,7 @@ async function loadCategoriesOptions() {
   try { const res = await apiFetch(API+'/restaurant/categories'); const cats = await res.json(); let opts = '<option value="">بدون تصنيف</option>'; cats.forEach(c => opts += `<option value="${c.id}">${c.name}</option>`); window._catOptions = opts; } catch(e) {}
 }
 
-// ---------- إضافة / تعديل منتج ----------
+// ========== نافذة إضافة/تعديل منتج ==========
 function renderProductForm(isEdit = false, productData = null) {
   const nameVal = productData?.name || '';
   const descVal = productData?.description || '';
@@ -689,7 +683,7 @@ async function saveEditProduct(productId){
 
 async function deleteProduct(id){ if(confirm('حذف؟')){ await apiFetch(API+'/restaurant/products/'+id,{method:'DELETE'}); loadProducts(); } }
 
-// ---------- طلب جديد مباشر ----------
+// ========== طلب جديد مباشر ==========
 function loadNewOrderForm() { if (!allRegions.length) { loadRegions().then(() => renderNewOrderForm()); } else renderNewOrderForm(); }
 async function loadRegions() { try { const res = await apiFetch(API + '/regions'); allRegions = await res.json(); } catch(e) {} }
 function renderNewOrderForm() {
@@ -726,7 +720,7 @@ async function submitDirectOrder(){
   else { showToast('تم إرسال الطلب المباشر'); loadNewOrderForm(); }
 }
 
-// ---------- طلباتي المباشرة ----------
+// ========== طلباتي المباشرة ==========
 async function loadMyDirectOrders() {
   const res = await apiFetch(API+'/restaurant/my-direct-orders');
   const orders = await res.json();
@@ -805,7 +799,7 @@ async function viewDirectOrderDetails(orderId) {
   openModal(`تفاصيل الطلب #${o.orderNumber || o.id.slice(-6)}`, body, `<button class="btn btn-primary" onclick="closeModal()">إغلاق</button>`);
 }
 
-// ---------- بدء التشغيل ----------
+// ========== بدء التشغيل ==========
 function initApp() {
   loadRegions(); loadCategoriesOptions(); navigate('profile');
   const socket = io(); window._socket = socket;
