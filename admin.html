@@ -190,7 +190,6 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const API = '/api';
-const TOKEN_KEY = 'auth_token';
 let allRegions = [];
 let audioActivated = false;
 let audioCtx = null;
@@ -209,43 +208,16 @@ function openModal(html){ document.getElementById('modalBox').innerHTML=html; do
 function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); }
 document.getElementById('modalOverlay').addEventListener('click',function(e){ if(e.target===this) closeModal(); });
 
-// ---------- إدارة الجلسة (محاكية لواجهة العميل) ----------
-function getToken(){ return localStorage.getItem(TOKEN_KEY); }
-function saveToken(token){ localStorage.setItem(TOKEN_KEY, token); }
-function clearToken(){ localStorage.removeItem(TOKEN_KEY); }
-
-async function refreshTokenFromCookie() {
-  try {
-    const res = await fetch(API + '/whoami', { credentials: 'include' });
-    if (res.ok) {
-      const data = await res.json();
-      saveToken(data.token);
-      return data.token;
-    }
-  } catch(e) {}
-  return null;
-}
-
+// ---------- API (باستخدام الكوكيز فقط) ----------
 async function apiFetch(url, options = {}) {
-  let token = getToken();
-  if (!token) {
-    token = await refreshTokenFromCookie();
-    if (!token) { showLogin(); throw new Error('NO_TOKEN'); }
-  }
-  const headers = { ...options.headers, 'Authorization': 'Bearer ' + token };
+  const headers = { ...options.headers };
   if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
-  let res = await fetch(url, { ...options, headers, credentials: 'include' });
+  const res = await fetch(url, { ...options, headers, credentials: 'include' });
   if (res.status === 401) {
-    // محاولة تجديد التوكن
-    const newToken = await refreshTokenFromCookie();
-    if (newToken) {
-      headers['Authorization'] = 'Bearer ' + newToken;
-      res = await fetch(url, { ...options, headers, credentials: 'include' });
-    } else {
-      clearToken();
-      showLogin();
-      throw new Error('AUTH_ERROR');
-    }
+    // انتهت الجلسة، العودة لشاشة الدخول
+    showToast('انتهت الجلسة، الرجاء تسجيل الدخول');
+    showLogin();
+    throw new Error('SESSION_EXPIRED');
   }
   return res;
 }
@@ -278,12 +250,12 @@ async function adminLogin() {
     const data = await res.json();
     if (!res.ok || data.error) { errorDiv.textContent = '❌ ' + (data.error || 'فشل تسجيل الدخول، تحقق من الخادم'); errorDiv.style.display = 'block'; return; }
     if (!data.user || data.user.role !== 'ADMIN') { errorDiv.textContent = '❌ هذا الحساب ليس لديه صلاحية الأدمن'; errorDiv.style.display = 'block'; return; }
-    saveToken(data.token); // حفظ التوكن
+    // تم تسجيل الدخول بنجاح والكوكي تم ضبطه، لا نحتاج تخزين أي شيء
     errorDiv.style.display = 'none'; hideLogin(); initApp();
   } catch (e) { errorDiv.textContent = '❌ فشل الاتصال بالخادم. تأكد من تشغيل السيرفر.'; errorDiv.style.display = 'block'; }
 }
 
-async function logout() { try { await fetch('/logout', { credentials: 'include' }); } catch(e) {} clearToken(); showLogin(); }
+async function logout() { await fetch('/logout', { credentials: 'include' }); showLogin(); }
 
 // ---------- التطبيق ----------
 const STATUS_AR={PENDING:'في الانتظار',ACCEPTED:'مقبول',PREPARING:'يتحضر',READY:'جاهز',DRIVER_ASSIGNED:'مع طيار',ON_THE_WAY:'في الطريق',DELIVERED:'تم التوصيل',CANCELLED:'ملغي'};
@@ -352,13 +324,13 @@ async function loadDispatch(){
       <p style="color:var(--text-muted); margin-bottom:16px;">${modeText}</p>
       <div class="table-responsive"><table><thead><tr><th>الطلب</th><th>العميل</th><th>المطعم</th><th>المنطقة</th><th>تعيين طيار</th></tr></thead><tbody>
         ${ready.map(o=>`<tr><td><strong>#${o.orderNumber||'-'}</strong></td><td>${o.customerName}</td><td>${o.restaurantName||''}</td><td>${o.regionName||o.address||''}</td><td>
-          <select onchange="assignDriver('${o.id}',this.value)" class="form-input" style="width:auto"><option value="">اختر طيار</option>${avail.map(d=>`<option value="${d.id}">${d.name}</option>`).join('')}</select>
+          <select id="driverSelect_${o.id}" class="form-input" style="width:auto"><option value="">اختر طيار</option>${avail.map(d=>`<option value="${d.id}">${d.name}</option>`).join('')}</select>
           <button class="btn btn-sm btn-primary" onclick="assignDriverFromSelect('${o.id}')">تعيين</button></td></tr>`).join('')}
       </tbody></table></div>
     </div>`;
 }
 function assignDriverFromSelect(orderId) {
-  const select = document.querySelector(`select[onchange="assignDriver('${orderId}',this.value)"]`);
+  const select = document.getElementById('driverSelect_' + orderId);
   if (select && select.value) { assignDriver(orderId, select.value); }
   else { showToast('اختر طياراً أولاً'); }
 }
@@ -535,7 +507,7 @@ async function editCustomer(id){
   openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>تعديل</h3>
     <div class="form-group"><label class="form-label">الاسم</label><input class="form-input" id="ecname" value="${c.name}"></div>
     <div class="form-group"><label class="form-label">الهاتف</label><input class="form-input" id="ecphone" value="${c.phone}"></div>
-    <div class="form-group"><label class="form-label">المنطقة</label><select class="form-select" id="ecregion">${opts}</select></div>
+    <div class="form-group"><label class="form-label">المنطقة</label><select class="form-input" id="ecregion">${opts}</select></div>
     <div class="form-group"><label class="form-label">العنوان</label><input class="form-input" id="ecaddr" value="${c.address}"></div>
     <button class="btn btn-primary" onclick="saveCustomerEdit('${id}')">حفظ</button>`);
 }
@@ -621,7 +593,7 @@ async function rejectOrder(id){ const r=prompt('سبب الرفض:'); if(r===nul
 async function editOrder(id){
   const o=allOrdersCache.find(o=>o.id===id);
   openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>تعديل طلب #${o.orderNumber||id.slice(-6)}</h3>
-    <div class="form-group"><label class="form-label">الأصناف (JSON)</label><textarea class="form-textarea" id="editItems" rows="4">${JSON.stringify(o.items,null,2)}</textarea></div>
+    <div class="form-group"><label class="form-label">الأصناف (JSON)</label><textarea class="form-input" id="editItems" rows="4">${JSON.stringify(o.items,null,2)}</textarea></div>
     <div class="form-group"><label class="form-label">الإجمالي</label><input class="form-input" type="number" id="editTotal" value="${o.total}"></div>
     <div class="form-group"><label class="form-label">ملاحظات الأدمن</label><input class="form-input" id="editAdminNotes" value="${o.adminNotes||''}"></div>
     <button class="btn btn-primary" onclick="saveOrderEdit('${id}')">حفظ</button>`);
@@ -835,17 +807,19 @@ document.addEventListener('click', function initialActivation() {
   document.removeEventListener('click', initialActivation);
 }, { once: true });
 
+// التحقق من الجلسة عند التحميل
 async function checkSession() {
-  const token = getToken();
-  if (token) {
-    try {
-      const res = await fetch(API + '/whoami', { headers: { 'Authorization': 'Bearer ' + token }, credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.user?.role === 'ADMIN') { hideLogin(); initApp(); return; }
+  try {
+    const res = await fetch(API + '/whoami', { credentials: 'include' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.user?.role === 'ADMIN') {
+        hideLogin();
+        initApp();
+        return;
       }
-    } catch(e) {}
-  }
+    }
+  } catch(e) {}
   showLogin();
 }
 checkSession();
