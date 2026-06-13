@@ -38,7 +38,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// --- Multer لملفات الصوت ---
+// --- Multer لملفات الصوت (حفظ دائمًا بامتداد mp3) ---
 const soundStorage = multer.diskStorage({
   destination: function (req, file, cb) {
     if (!fs.existsSync(SOUNDS_DIR)) fs.mkdirSync(SOUNDS_DIR);
@@ -72,6 +72,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'drako_secret_key_fallback';
 
 const isSecure = (req) => req.secure || req.headers['x-forwarded-proto'] === 'https';
 
+// تجديد الكوكي تلقائياً
 app.use((req, res, next) => {
   const token = req.cookies?.token;
   if (token) {
@@ -83,7 +84,7 @@ app.use((req, res, next) => {
         secure: isSecure(req),
         maxAge: 365 * 24 * 60 * 60 * 1000
       });
-    } catch (e) {}
+    } catch (e) { /* منتهي */ }
   }
   next();
 });
@@ -139,6 +140,7 @@ function writeData(data) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 }
 
+// دالة مساعدة للحصول على رقم الطلب اليومي التصاعدي
 function getNextOrderNumber() {
   const data = readData();
   const today = new Date().toISOString().slice(0,10);
@@ -150,6 +152,7 @@ function getNextOrderNumber() {
   return data.dailyOrderCounter.counter;
 }
 
+// دالة مساعدة لمعرفة اسم المتجر للطلبات الخاصة
 function getStoreNameForOrder(order, data) {
   if (order.type === 'special') {
     if (order.orderType === 'market') {
@@ -707,7 +710,7 @@ app.get('/api/admin/customers/:id', requireAuth, adminOnly, (req, res) => {
   const region = data.regions.find(r => r.id === user.regionId);
   const orders = data.orders.filter(o => o.customerPhone === user.phone);
   const lastOrder = orders.length ? orders.reduce((latest, o) => new Date(o.createdAt) > new Date(latest.createdAt) ? o : latest) : null;
-  res.json({ id: user.id, name: user.name, phone: user.phone, regionId: user.regionId || '', regionName: region ? region.name : '—', regionFee: region ? region.fee : 0, address: user.address || '—', totalOrders: orders.length, lastOrderDate: lastOrder ? lastOrder.createdAt : null });
+  res.json({ id: user.id, name: user.name, phone: user.phone, password: user.password, regionId: user.regionId || '', regionName: region ? region.name : '—', regionFee: region ? region.fee : 0, address: user.address || '—', totalOrders: orders.length, lastOrderDate: lastOrder ? lastOrder.createdAt : null });
 });
 app.patch('/api/admin/customers/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
@@ -1073,15 +1076,6 @@ app.delete('/api/restaurant/products/:id', requireAuth, (req, res) => {
   data.products.splice(index, 1);
   writeData(data);
   res.json({ success: true });
-  // داخل المسار PATCH /api/restaurant/products/:id
-  // التعامل مع الصورة
-  if (req.file) {
-    product.image = '/uploads/' + req.file.filename;
-  } else if (req.body.existingImage) {
-    // الإبقاء على الصورة الحالية إذا أُرسلت
-    product.image = req.body.existingImage;
-  }
-  // إذا لم يصل ملف ولا existingImage، تبقى الصورة دون تغيير
 });
 
 // تقارير وإحصائيات المطعم
