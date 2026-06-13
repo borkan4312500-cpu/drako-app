@@ -38,7 +38,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// --- Multer لملفات الصوت (حفظ دائمًا بامتداد mp3) ---
+// --- Multer لملفات الصوت ---
 const soundStorage = multer.diskStorage({
   destination: function (req, file, cb) {
     if (!fs.existsSync(SOUNDS_DIR)) fs.mkdirSync(SOUNDS_DIR);
@@ -72,7 +72,6 @@ const JWT_SECRET = process.env.JWT_SECRET || 'drako_secret_key_fallback';
 
 const isSecure = (req) => req.secure || req.headers['x-forwarded-proto'] === 'https';
 
-// تجديد الكوكي تلقائياً
 app.use((req, res, next) => {
   const token = req.cookies?.token;
   if (token) {
@@ -84,7 +83,7 @@ app.use((req, res, next) => {
         secure: isSecure(req),
         maxAge: 365 * 24 * 60 * 60 * 1000
       });
-    } catch (e) { /* منتهي */ }
+    } catch (e) {}
   }
   next();
 });
@@ -140,7 +139,6 @@ function writeData(data) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 }
 
-// دالة مساعدة للحصول على رقم الطلب اليومي التصاعدي
 function getNextOrderNumber() {
   const data = readData();
   const today = new Date().toISOString().slice(0,10);
@@ -152,7 +150,6 @@ function getNextOrderNumber() {
   return data.dailyOrderCounter.counter;
 }
 
-// دالة مساعدة لمعرفة اسم المتجر للطلبات الخاصة
 function getStoreNameForOrder(order, data) {
   if (order.type === 'special') {
     if (order.orderType === 'market') {
@@ -1360,7 +1357,7 @@ function customerAuth(req, res, next) {
   next();
 }
 
-// المسار الصحيح بعد التعديل
+// المسار الصحيح بعد التعديل النهائي
 app.post('/api/orders', customerAuth, (req, res) => {
   const data = readData();
   let { restaurantId, items, total, customerName, customerPhone, address, paymentMethod, deliveryFee } = req.body;
@@ -1380,7 +1377,7 @@ app.post('/api/orders', customerAuth, (req, res) => {
   const restaurant = data.restaurants.find(r => r.id === restaurantId);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
   const orderNumber = getNextOrderNumber();
-    const order = {
+  const order = {
     id: 'ord_' + Date.now(),
     orderNumber,
     restaurantId,
@@ -1398,13 +1395,11 @@ app.post('/api/orders', customerAuth, (req, res) => {
     createdAt: new Date().toISOString(),
     deliveredAt: null
   };
-  // ⬇️ تأكد من وجود هذه الأسطر الثلاثة بالضبط
+  // حفظ بيانات الدفع الإلكتروني
   if (req.body.lastDigits) order.lastDigits = req.body.lastDigits;
   if (req.body.transactionId) order.transactionId = req.body.transactionId;
   if (req.body.extraFee) order.extraFee = req.body.extraFee;
-  // ⬆️
 
-  data.orders.push(order);
   data.orders.push(order);
   writeData(data);
   io.emit('newOrder', { orderId: order.id, restaurantId, customerName });
