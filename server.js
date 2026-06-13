@@ -577,6 +577,10 @@ app.post('/api/admin/test-order', requireAuth, adminOnly, (req, res) => {
     createdAt: new Date().toISOString(),
     deliveredAt: null
   };
+  // بعد إنشاء كائن order مباشرة:
+if (req.body.lastDigits) order.lastDigits = req.body.lastDigits;
+if (req.body.transactionId) order.transactionId = req.body.transactionId;
+if (req.body.extraFee) order.extraFee = req.body.extraFee;
   data.orders.push(order);
   writeData(data);
   res.json({ success: true, order });
@@ -1355,6 +1359,30 @@ function customerAuth(req, res, next) {
   next();
 }
 app.post('/api/orders', customerAuth, (req, res) => {
+    const order = {
+    id: 'ord_' + Date.now(),
+    orderNumber,
+    restaurantId,
+    items: items || [],
+    total: Number(total),
+    customerName,
+    customerPhone,
+    address,
+    regionName: req.body.regionName || '',
+    paymentMethod: paymentMethod || 'CASH',
+    status: 'PENDING',
+    driverId: null,
+    deliveryFee: deliveryFee || 10,
+    adminApproved: false,
+    createdAt: new Date().toISOString(),
+    deliveredAt: null
+  };
+  // ⬇️ أضف هذه الأسطر
+  if (req.body.lastDigits) order.lastDigits = req.body.lastDigits;
+  if (req.body.transactionId) order.transactionId = req.body.transactionId;
+  if (req.body.extraFee) order.extraFee = req.body.extraFee;
+  // ⬆️
+  data.orders.push(order);
   const data = readData();
   let { restaurantId, items, total, customerName, customerPhone, address, paymentMethod, deliveryFee } = req.body;
   if (req.customer) {
