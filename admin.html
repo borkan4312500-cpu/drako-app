@@ -608,24 +608,43 @@ async function saveOrderEdit(id){
   }catch(e){ showToast('صيغة JSON غير صحيحة'); }
 }
 function viewOrder(id){
-  const o=allOrdersCache.find(o=>o.id===id);
-  if(!o) return;
-  openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>تفاصيل #${o.orderNumber||id.slice(-6)}</h3>
+  const o = allOrdersCache.find(o => o.id === id);
+  if (!o) return;
+  let paymentDetails = '';
+  if (o.paymentMethod === 'VODAFONE') {
+    paymentDetails = `
+      <div><strong>الدفع:</strong> 📱 فودافون كاش</div>
+      <div><strong>آخر 3 أرقام من المحول:</strong> ${o.lastDigits || '—'}</div>
+      ${o.extraFee ? `<div><strong>رسوم تحويل:</strong> ${o.extraFee} ج</div>` : ''}
+    `;
+  } else if (o.paymentMethod === 'INSTAPAY') {
+    paymentDetails = `
+      <div><strong>الدفع:</strong> 🟣 انستا باي</div>
+      <div><strong>معرف المعاملة:</strong> ${o.transactionId || '—'}</div>
+      ${o.extraFee ? `<div><strong>رسوم تحويل:</strong> ${o.extraFee} ج</div>` : ''}
+    `;
+  } else {
+    paymentDetails = `<div><strong>الدفع:</strong> 💵 كاش عند الاستلام</div>`;
+  }
+
+  openModal(`
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3>تفاصيل #${o.orderNumber || id.slice(-6)}</h3>
     <div style="display:flex;flex-direction:column;gap:8px">
       <div><strong>العميل:</strong> ${o.customerName} (${o.customerPhone})</div>
-      <div><strong>المطعم:</strong> ${o.restaurantName||'—'}</div>
+      <div><strong>المطعم:</strong> ${o.restaurantName || '—'}</div>
       <div><strong>المنطقة:</strong> ${o.regionName} | <strong>العنوان:</strong> ${o.address}</div>
       <div><strong>الإجمالي:</strong> ${o.total} ج</div>
-      <div><strong>الدفع:</strong> ${o.paymentMethod==='CASH'?'كاش':'فودافون كاش'}</div>
+      ${paymentDetails}
       <div><strong>الحالة:</strong> ${STATUS_AR[o.status]}</div>
-      <div><strong>الطيار:</strong> ${o.driverName||'—'}</div>
-      ${o.orderNotes?`<div><strong>ملاحظات:</strong> ${o.orderNotes}</div>`:''}
-      ${o.invoiceAmount?`<div><strong>الفاتورة:</strong> ${o.invoiceAmount} ج (${o.invoiceBy})</div>`:''}
-      <div><strong>الأصناف:</strong><ul>${(o.items||[]).map(i=>`<li>${i.name} ×${i.quantity||1} (${i.price} ج) ${i.selectedOptions?.length?`(${i.selectedOptions.map(o=>o.value).join(',')})`:''} ${i.notes?`- ${i.notes}`:''}</li>`).join('')}</ul></div>
-      ${o.attachments?.length?`<div><strong>مرفقات:</strong><br>${o.attachments.map(u=>`<img src="${u}" style="width:80px;margin:4px;border-radius:8px">`).join('')}</div>`:''}
-    </div>`);
+      <div><strong>الطيار:</strong> ${o.driverName || '—'}</div>
+      ${o.orderNotes ? `<div><strong>ملاحظات:</strong> ${o.orderNotes}</div>` : ''}
+      ${o.invoiceAmount ? `<div><strong>الفاتورة:</strong> ${o.invoiceAmount} ج (${o.invoiceBy})</div>` : ''}
+      <div><strong>الأصناف:</strong><ul>${(o.items || []).map(i => `<li>${i.name} ×${i.quantity || 1} (${i.price} ج) ${i.selectedOptions?.length ? '(' + i.selectedOptions.map(o => o.value).join(',') + ')' : ''} ${i.notes ? '- ' + i.notes : ''}</li>`).join('')}</ul></div>
+      ${o.attachments?.length ? `<div><strong>مرفقات:</strong><br>${o.attachments.map(u => `<img src="${u}" style="width:80px;margin:4px;border-radius:8px">`).join('')}</div>` : ''}
+    </div>
+  `);
 }
-
 // --- المنتجات والتصنيفات ---
 async function loadProducts(){
   const [p,c]=await Promise.all([apiFetch(API+'/admin/products'), apiFetch(API+'/admin/categories')]);
