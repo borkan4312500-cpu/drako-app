@@ -1,873 +1,813 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Drako">
+  <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+  <link rel="manifest" href="/manifest.json">
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>دراكو - لوحة تحكم الأدمن</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>دراكو - العميل</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&display=swap" rel="stylesheet">
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; font-family:'Cairo',sans-serif; }
-    :root {
-      --brand: #E8180E; --brand-dark: #B80F09; --brand-light: #FF4B43;
-      --bg: #f4f5f7; --card: #ffffff; --text: #1a1a1a; --text-muted: #6b7280;
-      --border: #e5e7eb; --radius: 16px; --radius-sm: 12px;
-      --sidebar-width: 260px;
-    }
-    body { background:var(--bg); color:var(--text); direction:rtl; min-height:100vh; }
-    .app-layout { display:flex; min-height:100vh; }
-
-    /* شاشة تسجيل الدخول */
-    .login-overlay {
-      position:fixed; inset:0; background:var(--bg); z-index:9999;
-      display:flex; align-items:center; justify-content:center; padding:24px;
-    }
-    .login-overlay.hidden { display:none; }
-    .login-card {
-      background:var(--card); border-radius:24px; padding:32px 24px; width:100%; max-width:380px;
-      box-shadow:0 10px 40px rgba(0,0,0,0.1); text-align:center;
-    }
-    .login-card h2 { font-size:28px; font-weight:900; color:var(--brand); margin-bottom:8px; }
-    .login-card p { color:var(--text-muted); margin-bottom:24px; }
-    .form-group { margin-bottom:16px; text-align:right; }
-    .form-label { display:block; font-size:14px; font-weight:600; margin-bottom:6px; color:var(--text-muted); }
-    .form-input { width:100%; padding:10px 16px; border:1px solid var(--border); border-radius:10px; font-size:15px; background:#f9fafb; outline:none; }
-    .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:12px 24px; border-radius:10px; font-weight:700; font-size:16px; border:none; cursor:pointer; transition:0.2s; width:100%; }
-    .btn-primary { background:var(--brand); color:white; }
-    .error-msg { color:#F44336; font-size:13px; margin-top:8px; display:none; }
-
-    /* الشريط الجانبي */
-    .sidebar {
-      width:var(--sidebar-width); background:#1f2937; color:white; display:flex;
-      flex-direction:column; position:fixed; top:0; right:0; bottom:0; z-index:1000;
-      transition:transform 0.3s; overflow-y:auto;
-    }
-    .sidebar-header { padding:24px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.1); }
-    .sidebar-header h2 { font-size:24px; font-weight:900; color:var(--brand-light); }
-    .sidebar-nav { flex:1; padding:16px 0; }
-    .nav-item {
-      display:flex; align-items:center; gap:12px; padding:12px 24px;
-      color:#d1d5db; cursor:pointer; transition:0.2s; font-size:15px; font-weight:500;
-      border-right:3px solid transparent;
-    }
-    .nav-item:hover, .nav-item.active { background:rgba(255,255,255,0.08); color:white; border-right-color:var(--brand); }
-    .sidebar-footer { padding:16px 24px; border-top:1px solid rgba(255,255,255,0.1); }
-    .btn-logout { background:rgba(255,255,255,0.1); color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; width:100%; font-weight:600; }
-
-    .main { flex:1; margin-right:var(--sidebar-width); display:flex; flex-direction:column; }
-    .topbar {
-      background:var(--card); padding:16px 24px; display:flex; justify-content:space-between;
-      align-items:center; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:50;
-    }
-    .topbar h1 { font-size:22px; font-weight:800; }
-    .menu-toggle { display:none; background:none; border:none; font-size:26px; cursor:pointer; }
-
-    .content { flex:1; padding:24px; overflow-y:auto; }
-
-    .stats-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:20px; margin-bottom:30px; }
-    .stat-card { background:var(--card); border-radius:var(--radius); padding:20px; box-shadow:0 4px 12px rgba(0,0,0,0.04); }
-    .stat-card h4 { color:var(--text-muted); font-size:14px; margin-bottom:8px; }
-    .stat-card .value { font-size:32px; font-weight:900; color:var(--brand); }
-    .section-card { background:var(--card); border-radius:var(--radius); padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.04); margin-bottom:20px; border:1px solid var(--border); }
-    .section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:16px; }
-    .section-header h2 { font-size:20px; font-weight:800; display:flex; align-items:center; gap:8px; }
-
-    .grid-cards { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:16px; }
-    .mini-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:16px; transition:0.2s; box-shadow:0 2px 8px rgba(0,0,0,0.04); }
-    .mini-card:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.08); }
-    .mini-card .card-title { font-size:16px; font-weight:700; margin-bottom:8px; }
-    .mini-card .card-detail { font-size:13px; color:var(--text-muted); margin-bottom:6px; }
-    .mini-card .card-actions { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
-
-    .table-responsive { overflow-x:auto; }
-    table { width:100%; border-collapse:collapse; }
-    th, td { padding:12px 16px; text-align:right; border-bottom:1px solid var(--border); }
-    th { font-weight:700; color:var(--text-muted); font-size:13px; background:#f9fafb; }
-    tr:hover { background:#f9fafb; }
-
-    .btn-sm { padding:6px 12px; font-size:12px; }
-    .btn-success { background:#10b981; color:white; }
-    .btn-danger { background:#ef4444; color:white; }
-    .btn-warning { background:#f59e0b; color:white; }
-    .btn-info { background:#3b82f6; color:white; }
-    .btn-outline { background:transparent; border:1px solid var(--brand); color:var(--brand); }
-
-    .badge { padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700; }
-    .badge-success { background:#d1fae5; color:#065f46; }
-    .badge-warning { background:#fef3c7; color:#92400e; }
-    .badge-danger { background:#fee2e2; color:#991b1b; }
-    .badge-info { background:#dbeafe; color:#1e40af; }
-
-    .flex-between { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
-    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
-    .info-item { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px dashed var(--border); }
-
-    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:2000; display:none; align-items:center; justify-content:center; }
-    .modal-overlay.open { display:flex; }
-    .modal-box { background:white; border-radius:20px; width:90%; max-width:500px; max-height:80vh; overflow-y:auto; padding:24px; animation:modalFadeIn 0.3s ease; }
-    @keyframes modalFadeIn { from{transform:scale(0.9); opacity:0;} to{transform:scale(1); opacity:1;} }
-    .modal-close { float:left; background:none; border:none; font-size:24px; cursor:pointer; }
-
-    .toast { position:fixed; bottom:30px; left:50%; transform:translateX(-50%) translateY(80px);
-      background:#1f2937; color:white; padding:12px 30px; border-radius:100px; z-index:9999;
-      transition:0.35s; opacity:0; white-space:nowrap; }
-    .toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
-
-    .tab-bar { display:flex; gap:8px; margin-bottom:16px; }
-    .tab-btn { padding:8px 16px; border-radius:20px; background:#f3f4f6; border:1px solid var(--border); cursor:pointer; font-size:14px; font-weight:600; color:var(--text-muted); transition:0.2s; }
-    .tab-btn.active { background:var(--brand); color:white; border-color:var(--brand); }
-
-    @media (max-width:768px) {
-      .sidebar { transform:translateX(100%); }
-      .sidebar.open { transform:translateX(0); }
-      .main { margin-right:0; }
-      .menu-toggle { display:block; }
-      .grid-2, .grid-cards { grid-template-columns:1fr; }
-    }
-    .action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
-.btn-act {
-  padding: 5px 12px; font-size: 12px; font-weight: 700;
-  border-radius: 30px; border: none; cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  display: inline-flex; align-items: center; gap: 4px;
-}
-.btn-act:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
-.btn-act-approve { background: linear-gradient(135deg, #10b981, #059669); color: white; }
-.btn-act-reject  { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
-.btn-act-edit    { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
-.btn-act-view    { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; }
+    /* جميع التنسيقات الأصلية التي كانت تعمل */
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
+    html, body { overflow: hidden; height: 100%; overscroll-behavior: none; }
+    body { background: #F7F7F7; color: #1A1A1A; max-width: 430px; margin: auto; height: 100%; position: relative; }
+    :root { --brand: #E8180E; --brand-dark: #B80F09; --brand-light: #FF4B43; --brand-glow: rgba(232,24,14,0.18); --bg: #F7F7F7; --card: #FFFFFF; --text: #1A1A1A; --text-muted: #7A7A7A; --border: #EBEBEB; --radius: 18px; --radius-sm: 12px; }
+    .app-container { display: flex; flex-direction: column; height: 100%; position: relative; }
+    .swipe-overlay { position: fixed; left: 0; top: 0; width: 20px; height: 100%; z-index: 1000; background: transparent; touch-action: pan-y; }
+    .auth-wrapper { width: 100%; height: 100%; position: relative; overflow: hidden; background: var(--bg); display: block; }
+    .auth-wrapper.hide { display: none; }
+    .auth-screen { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; transition: transform 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.4s ease; will-change: transform, opacity; }
+    .auth-screen.hidden-right { transform: translateX(-100%); opacity: 0; pointer-events: none; }
+    .auth-screen.hidden-left { transform: translateX(100%); opacity: 0; pointer-events: none; }
+    .auth-screen.visible { transform: translateX(0); opacity: 1; }
+    .login-hero { position: relative; height: 310px; background: var(--brand); overflow: hidden; flex-shrink: 0; }
+    .hero-circles span { position: absolute; border-radius: 50%; background: rgba(255,255,255,0.06); }
+    .hero-circles span:nth-child(1) { width: 280px; height: 280px; top: -80px; right: -60px; }
+    .hero-circles span:nth-child(2) { width: 180px; height: 180px; bottom: -40px; left: -40px; background: rgba(0,0,0,0.08); }
+    .hero-circles span:nth-child(3) { width: 100px; height: 100px; top: 60px; left: 40px; background: rgba(255,255,255,0.04); }
+    .hero-logo-wrap { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 0; }
+    .logo-icon { width: 80px; height: 80px; margin-bottom: 14px; animation: logoPop 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+    @keyframes logoPop { from { transform: scale(0.5) rotate(-10deg); opacity: 0; } to { transform: scale(1) rotate(0deg); opacity: 1; } }
+    .hero-logo-wrap h1 { font-size: 42px; font-weight: 900; color: #fff; letter-spacing: -1px; line-height: 1; animation: fadeUp 0.5s 0.2s ease both; }
+    .hero-logo-wrap p { font-size: 13px; font-weight: 400; color: rgba(255,255,255,0.75); letter-spacing: 3px; text-transform: uppercase; margin-top: 6px; animation: fadeUp 0.5s 0.35s ease both; }
+    @keyframes fadeUp { from { transform: translateY(14px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .login-wave { position: absolute; bottom: -2px; left: 0; right: 0; }
+    .login-body { flex: 1; background: var(--bg); padding: 28px 24px 40px; animation: fadeUp 0.5s 0.4s ease both; }
+    .login-body h2 { font-size: 22px; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+    .login-body .subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 28px; }
+    .field-group { margin-bottom: 16px; }
+    .field-label { font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; display: block; }
+    .field-wrap { position: relative; }
+    .field-icon { position: absolute; top: 50%; right: 16px; transform: translateY(-50%); font-size: 20px; pointer-events: none; color: var(--text-muted); }
+    .field-wrap input, .field-wrap select, .field-wrap textarea { width: 100%; background: var(--card); border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: 'Cairo', sans-serif; font-size: 15px; color: var(--text); padding: 0 48px 0 16px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+    .field-wrap input, .field-wrap select { height: 54px; }
+    .field-wrap textarea { padding-top: 12px; padding-bottom: 12px; resize: vertical; }
+    .field-wrap input:focus, .field-wrap select:focus, .field-wrap textarea:focus { border-color: var(--brand); box-shadow: 0 0 0 4px var(--brand-glow); }
+    .password-toggle { position: absolute; top: 50%; left: 16px; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 19px; color: var(--text-muted); }
+    .btn-primary { width: 100%; height: 56px; background: var(--brand); border: none; border-radius: var(--radius-sm); color: #fff; font-size: 17px; font-weight: 700; cursor: pointer; transition: all 0.2s; box-shadow: 0 8px 24px rgba(232,24,14,0.28); margin-top: 8px; }
+    .btn-primary:hover { background: var(--brand-dark); transform: translateY(-1px); }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-ghost { width: 100%; height: 52px; background: transparent; border: 1.5px solid var(--brand); border-radius: var(--radius-sm); color: var(--brand); font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 12px; transition: 0.2s; }
+    .btn-ghost:hover { background: rgba(232,24,14,0.05); }
+    .divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; color: var(--border); }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .divider span { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+    .reg-header { position: sticky; top: 0; z-index: 10; background: var(--card); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 14px; padding: 16px 20px; }
+    .back-btn { width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--border); background: var(--bg); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+    .reg-header-info h2 { font-size: 18px; font-weight: 700; }
+    .reg-header-info p { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .progress-bar-wrap { height: 3px; background: var(--border); position: relative; }
+    .progress-bar-fill { height: 100%; background: var(--brand); width: 50%; transition: width 0.4s ease; }
+    .reg-body { flex: 1; padding: 24px 20px 40px; }
+    .reg-step { display: none; }
+    .reg-step.active { display: block; animation: fadeUp 0.3s ease both; }
+    .step-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(232,24,14,0.08); border: 1px solid rgba(232,24,14,0.2); border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600; color: var(--brand); margin-bottom: 16px; }
+    .step-title { font-size: 22px; font-weight: 900; margin-bottom: 4px; }
+    .step-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.6; }
+    .terms-note { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 16px; }
+    .terms-note a { color: var(--brand); text-decoration: none; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1200; display: none; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: white; border-radius: 24px; width: 90%; max-width: 380px; padding: 24px; animation: modalFadeIn 0.3s ease; }
+    @keyframes modalFadeIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .modal-box h3 { font-size: 20px; margin-bottom: 16px; text-align: center; }
+    .modal-close { float: left; background: none; border: none; font-size: 24px; cursor: pointer; }
+    .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1A1A1A; color: #fff; font-size: 14px; font-weight: 600; padding: 12px 24px; border-radius: 100px; white-space: nowrap; z-index: 9999; transition: 0.35s; opacity: 0; pointer-events: none; }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    .main-app-wrapper { display: none; flex-direction: column; height: 100%; }
+    .main-app-wrapper.active { display: flex; }
+    .header { display: flex; justify-content: space-between; align-items: center; padding: 18px 16px 24px; background: rgba(255,255,255,0.92); backdrop-filter: blur(14px); position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; z-index: 100; height: 70px; }
+    .main-content { flex: 1; overflow-y: auto; padding: 16px; margin-top: 70px; margin-bottom: 70px; -webkit-overflow-scrolling: touch; }
+    .screen { display: none; animation: fade .25s ease; }
+    .screen.active { display: block; }
+    @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .logo { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+    .logo-main { font-size: 26px; font-weight: 900; background: linear-gradient(135deg,#FF6B00,#ff9f5a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: .5px; }
+    .logo-sub { color: #999; font-size: 11px; font-weight: 600; letter-spacing: 1px; }
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+    .icon-btn { width: 40px; height: 40px; border-radius: 12px; border: none; background: #F5F5F5; font-size: 20px; cursor: pointer; position: relative; box-shadow: 0 4px 14px rgba(0,0,0,0.07); transition: .25s; display: flex; align-items: center; justify-content: center; }
+    .icon-btn:hover { transform: translateY(-2px); }
+    .badge { position: absolute; top: -4px; left: -4px; width: 18px; height: 18px; border-radius: 50%; background: #FF6B00; color: #fff; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+    .slogan { color: #888; font-size: 13px; margin-bottom: 16px; }
+    .search-box { height: 48px; background: #F5F5F5; border-radius: 14px; display: flex; align-items: center; padding: 0 14px; gap: 10px; margin-bottom: 20px; }
+    .search-box input { flex: 1; border: none; background: transparent; outline: none; font-size: 14px; }
+    .section-title { font-size: 17px; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .category-filters { display: flex; gap: 12px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 8px; }
+    .filter-btn { background: #F5F5F5; border: none; padding: 8px 20px; border-radius: 30px; font-size: 14px; font-weight: 600; color: #666; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+    .filter-btn.active { background: #FF6B00; color: white; box-shadow: 0 4px 12px rgba(255,107,0,0.3); }
+    .restaurant-card { position: relative; background: linear-gradient(180deg, #ffffff 0%, #fffaf6 100%); border: 1px solid #f0f0f0; border-radius: 22px; padding: 14px; display: flex; gap: 14px; margin-bottom: 16px; align-items: center; box-shadow: 0 8px 24px rgba(0,0,0,0.06); overflow: hidden; cursor: pointer; }
+    .restaurant-card::before { content: ''; position: absolute; top: 0; right: 0; width: 5px; height: 100%; background: linear-gradient(180deg,#FF6B00,#ff934d); }
+    .restaurant-card img { width: 110px; height: 110px; border-radius: 18px; object-fit: cover; box-shadow: 0 6px 18px rgba(0,0,0,0.12); border: 3px solid #fff; }
+    .restaurant-content { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+    .restaurant-content h3 { font-size: 18px; margin-bottom: 8px; font-weight: 800; color: #1A1A1A; }
+    .meta { display: flex; gap: 8px; color: #777; font-size: 12px; margin-bottom: 8px; flex-wrap: wrap; align-items: center; }
+    .meta span { background: #fff; border: 1px solid #eee; padding: 4px 8px; border-radius: 10px; }
+    .minimum { color: #888; font-size: 12px; margin-bottom: 12px; font-weight: 600; }
+    .btn { border: none; background: linear-gradient(135deg,#FF6B00,#ff8a33); color: white; border-radius: 14px; height: 52px; width: 100%; font-size: 14px; font-weight: bold; cursor: pointer; transition: .25s; box-shadow: 0 8px 18px rgba(255,107,0,.25); }
+    .btn:hover { transform: translateY(-2px); }
+    .menu-btn { width: fit-content; padding: 10px 18px; height: auto; border-radius: 12px; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+    .outline-btn { background: transparent; border: 1.5px solid #FF6B00; color: #FF6B00; }
+    .hero-image { width: 100%; height: 240px; object-fit: cover; border-radius: 18px; }
+    .restaurant-info { background: white; border-radius: 20px 20px 0 0; margin-top: -18px; position: relative; padding: 18px 0 10px; }
+    .tabs { display: flex; overflow-x: auto; gap: 10px; margin: 14px 0; padding-bottom: 8px; }
+    .tab { padding: 10px 16px; background: #F5F5F5; border-radius: 12px; white-space: nowrap; font-size: 13px; color: #888; cursor: pointer; }
+    .tab.active { background: #FFF3EB; color: #FF6B00; border: 1px solid #FF6B00; }
+    .product-card { display: flex; gap: 12px; padding: 14px 0; border-bottom: 1px solid #eee; align-items: center; }
+    .product-card img { width: 82px; height: 82px; border-radius: 12px; object-fit: cover; }
+    .product-content { flex: 1; }
+    .product-content h4 { font-size: 15px; margin-bottom: 4px; }
+    .product-content p { font-size: 12px; color: #888; margin-bottom: 6px; line-height: 1.6; }
+    .price { font-weight: bold; }
+    .plus-btn { width: 36px; height: 36px; border-radius: 50%; border: none; background: #FF6B00; color: white; font-size: 22px; cursor: pointer; }
+    .cart-item { background: white; border-radius: 14px; padding: 12px; display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+    .cart-item img { width: 70px; height: 70px; border-radius: 12px; object-fit: cover; }
+    .cart-content { flex: 1; }
+    .cart-content h4 { font-size: 14px; margin-bottom: 4px; }
+    .qty-box { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+    .qty-btn { width: 28px; height: 28px; border-radius: 50%; border: none; cursor: pointer; font-weight: bold; }
+    .qty-plus { background: #FF6B00; color: white; }
+    .qty-minus { background: #eee; }
+    .summary { background: white; border-radius: 16px; padding: 16px; margin-top: 18px; }
+    .summary-row { display: flex; justify-content: space-between; margin-bottom: 12px; color: #666; font-size: 14px; }
+    .summary-total { color: #FF6B00; font-size: 20px; font-weight: bold; }
+    .bottom-nav { position: fixed; bottom: 0; right: 50%; transform: translateX(50%); width: 100%; max-width: 430px; background: rgba(255,255,255,0.94); backdrop-filter: blur(16px); border-top: 1px solid rgba(0,0,0,0.05); box-shadow: 0 -4px 10px rgba(0,0,0,.05); display: flex; justify-content: space-around; padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px)); z-index: 999; height: 65px; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 10px; color: #999; cursor: pointer; position: relative; transition: .25s; min-width: 45px; }
+    .nav-item:hover { transform: translateY(-2px); }
+    .nav-item.active { color: #FF6B00; font-weight: bold; }
+    .nav-item.active::before { content: ''; position: absolute; top: -4px; width: 30px; height: 3px; border-radius: 20px; background: #FF6B00; }
+    .empty { text-align: center; color: #888; margin-top: 60px; }
+    .sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1100; display: none; align-items: flex-end; justify-content: center; }
+    .sheet-overlay.open { display: flex; }
+    .sheet-box { background: white; border-radius: 20px 20px 0 0; width: 100%; max-width: 430px; max-height: 80vh; overflow-y: auto; padding: 20px; animation: slideUp 0.3s ease; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .sheet-close { width: 30px; height: 30px; background: #f5f5f5; border: none; border-radius: 50%; font-size: 16px; cursor: pointer; float: left; }
+    .option-label { display: flex; align-items: center; gap: 10px; padding: 12px; background: #f9f9f9; border-radius: 10px; margin-bottom: 6px; cursor: pointer; }
+    .option-label input { accent-color: #FF6B00; }
+    .status-track { background: #fff; border-radius: 16px; padding: 20px; margin: 16px 0; box-shadow: 0 4px 12px rgba(0,0,0,.05); }
+    .status-step { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .status-dot { width: 12px; height: 12px; border-radius: 50%; background: #ddd; }
+    .status-dot.done { background: #2ECC71; }
+    .status-text.active { font-weight: bold; color: #FF6B00; }
+    .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #E0E0E0; font-size: 14px; }
+    .order-item { background: white; border-radius: 14px; padding: 14px; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(0,0,0,.05); display: flex; gap: 12px; align-items: center; }
+    .order-item img { width: 60px; height: 60px; border-radius: 12px; object-fit: cover; background: #f5f5f5; }
+    .order-info { flex: 1; }
+    .order-info h4 { font-size: 14px; margin-bottom: 4px; }
+    .order-info .restaurant { font-size: 12px; color: #888; }
+    .order-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 12px; color: #888; }
+    .order-footer .total { font-weight: bold; color: #FF6B00; font-size: 14px; }
+    .track-btn { background: none; border: 1px solid #FF6B00; color: #FF6B00; padding: 6px 12px; border-radius: 10px; font-size: 12px; cursor: pointer; font-weight: 600; }
+    .profile-card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .profile-avatar { width: 80px; height: 80px; background: linear-gradient(135deg,#FF6B00,#ff9a4d); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 40px; color: white; }
+    .info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; }
+    .info-label { color: #888; font-size: 14px; }
+    .info-value { font-weight: 600; font-size: 14px; }
+    .area-item, .payment-item { background: white; border-radius: 14px; padding: 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border: 1px solid #E0E0E0; cursor: pointer; }
+    .area-item.active, .payment-item.active { border-color: #FF6B00; background: #FFF3EB; }
+    .radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; }
+    .active .radio { border-color: #FF6B00; }
+    .active .radio::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #FF6B00; }
+    .special-order-card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .file-attachment { margin: 16px 0; padding: 12px; background: #f9f9f9; border-radius: 12px; border: 1px dashed var(--border); text-align: center; }
+    .file-attachment input { display: none; }
+    .file-attachment label { display: inline-block; padding: 8px 16px; background: var(--brand); color: white; border-radius: 30px; font-size: 13px; cursor: pointer; }
+    .preview-images { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .preview-images img { width: 70px; height: 70px; object-fit: cover; border-radius: 10px; border: 1px solid #ddd; }
+    .fav-btn { position: absolute; top: 10px; left: 10px; background: rgba(255,255,255,0.9); border: none; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; z-index: 5; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: 0.2s; }
+    .fav-btn.liked { color: #E8180E; }
+    .fav-btn:not(.liked) { color: #aaa; }
+    .payment-details { background: #FFF9F2; border: 1px solid #FFD2A8; border-radius: 16px; padding: 16px; margin-top: 12px; display: none; }
+    .payment-details.visible { display: block; }
+    .payment-details .phone-number { background: #FF6B00; color: white; padding: 10px 16px; border-radius: 12px; font-size: 20px; font-weight: 900; letter-spacing: 2px; text-align: center; margin-bottom: 12px; }
+    .payment-details .fee-note { color: #FF6B00; font-size: 13px; margin-top: 8px; }
+    .checkout-items { background: white; border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+    .checkout-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; }
+    .checkout-item:last-child { border-bottom: none; }
   </style>
 </head>
 <body>
-<div class="app-layout">
-  <!-- شاشة تسجيل الدخول -->
-  <div class="login-overlay" id="loginOverlay">
-    <div class="login-card">
-      <div style="font-size:48px;">🛡️</div>
-      <h2>لوحة التحكم</h2>
-      <p>سجّل دخولك لإدارة المنصة</p>
-      <div class="form-group">
-        <label class="form-label">رقم الهاتف</label>
-        <input class="form-input" type="tel" id="loginPhone" placeholder="01000000000" value="01000000000">
+<div class="app-container">
+  <div class="swipe-overlay" id="swipeOverlay"></div>
+  <div class="modal-overlay" id="editModal">
+    <div class="modal-box"><button class="modal-close" onclick="closeEditModal()">✕</button><h3>تعديل الحساب</h3><div class="field-group"><label class="field-label">الاسم</label><input type="text" id="editName" placeholder="اسمك"></div><div class="field-group"><label class="field-label">رقم الهاتف</label><input type="tel" id="editPhone" placeholder="01xxxxxxxxx"></div><div class="field-group"><label class="field-label">العنوان</label><input type="text" id="editAddress" placeholder="عنوانك"></div><div class="field-group"><label class="field-label">المنطقة</label><select id="editRegion"></select></div><button class="btn-primary" onclick="updateProfile()">حفظ التغييرات</button></div>
+  </div>
+  <div class="auth-wrapper" id="authWrapper">
+    <div id="loginScreen" class="auth-screen visible">
+      <div class="login-hero"><div class="hero-circles"><span></span><span></span><span></span></div><div class="hero-logo-wrap"><svg class="logo-icon" viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="22" fill="rgba(255,255,255,0.15)"/><path d="M22 35 L52 20 Q82 20 82 38 Q82 55 60 55 L45 55 L45 58 L62 80 L38 80 L22 58 Z" fill="white"/><path d="M38 42 L58 42 Q66 42 66 50 Q66 58 58 58 L38 58 Z" fill="#E8180E"/></svg><h1>Drako</h1><p>Food Delivery</p></div><svg class="login-wave" viewBox="0 0 430 38" preserveAspectRatio="none" height="38"><path d="M0 38 C80 0 180 20 260 10 C330 2 390 28 430 18 L430 38 Z" fill="#F7F7F7"/></svg></div>
+      <div class="login-body"><h2>أهلاً بك! 👋</h2><p class="subtitle">سجّل دخولك لتبدأ طلباتك اللذيذة</p><div class="field-group"><label class="field-label">رقم الهاتف</label><div class="field-wrap"><span class="field-icon">📱</span><input type="tel" id="loginPhone" placeholder="01xxxxxxxxx"></div></div><div class="field-group"><label class="field-label">كلمة المرور</label><div class="field-wrap"><span class="field-icon">🔒</span><input type="password" id="loginPass" placeholder="••••••••"><button class="password-toggle" onclick="togglePass('loginPass', this)" type="button">👁️</button></div></div><button class="btn-primary" onclick="customerLogin()">دخول</button><div class="divider"><span>أو</span></div><button class="btn-ghost" onclick="goToRegister()">إنشاء حساب جديد</button></div>
+    </div>
+    <div id="registerScreen" class="auth-screen hidden-left">
+      <div class="reg-header"><button class="back-btn" onclick="goToLogin()">←</button><div class="reg-header-info"><h2>إنشاء حساب جديد</h2><p id="step-subtitle">الخطوة 1 من 2 – بياناتك الشخصية</p></div></div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressBar"></div></div>
+      <div class="reg-body">
+        <div class="reg-step active" id="step1"><div class="step-badge">✨ الخطوة الأولى</div><h2 class="step-title">من أنت؟</h2><p class="step-desc">نحتاج بياناتك الأساسية لإنشاء حسابك</p><div class="field-group"><label class="field-label">الاسم بالكامل</label><div class="field-wrap"><span class="field-icon">👤</span><input type="text" id="regName" placeholder="اكتب اسمك هنا"></div></div><div class="field-group"><label class="field-label">رقم الهاتف</label><div class="field-wrap"><span class="field-icon">📱</span><input type="tel" id="regPhone" placeholder="01xxxxxxxxx"></div></div><div class="field-group"><label class="field-label">كلمة المرور</label><div class="field-wrap"><span class="field-icon">🔒</span><input type="password" id="regPass" placeholder="6 أحرف على الأقل"><button class="password-toggle" onclick="togglePass('regPass', this)" type="button">👁️</button></div></div><div class="field-group"><label class="field-label">تأكيد كلمة المرور</label><div class="field-wrap"><span class="field-icon">🔐</span><input type="password" id="regPassConfirm" placeholder="أعد كتابة كلمة المرور"><button class="password-toggle" onclick="togglePass('regPassConfirm', this)" type="button">👁️</button></div></div><button class="btn-primary" onclick="goStep2()">التالي ←</button></div>
+        <div class="reg-step" id="step2"><div class="step-badge">📍 الخطوة الثانية</div><h2 class="step-title">عنوانك التوصيل</h2><p class="step-desc">اختر منطقتك وعنوانك عشان نوصّل لحد بابك 🚀</p><div class="field-group"><label class="field-label">المنطقة</label><div class="field-wrap select-wrap"><span class="field-icon">🗺️</span><select id="regRegion"><option value="">اختر منطقتك</option></select></div></div><div class="field-group"><label class="field-label">العنوان التفصيلي</label><div class="field-wrap"><span class="field-icon">🏠</span><input type="text" id="regAddress" placeholder="مثال: شارع النيل، عمارة 5، شقة 2"></div></div><button class="btn-primary" onclick="customerRegister()">إنشاء الحساب 🎉</button><p class="terms-note">بإنشاء حساب أنت توافق على <a href="#">شروط الاستخدام</a> و<a href="#">سياسة الخصوصية</a></p></div>
       </div>
-      <div class="form-group">
-        <label class="form-label">كلمة المرور</label>
-        <input class="form-input" type="password" id="loginPass" placeholder="123456" value="123456">
-      </div>
-      <button class="btn btn-primary" onclick="adminLogin()">دخول</button>
-      <div class="error-msg" id="loginError">بيانات الدخول غير صحيحة</div>
     </div>
   </div>
+  <div class="main-app-wrapper" id="mainAppWrapper">
+    <div class="header" id="mainHeader"><div class="top-actions"><button class="icon-btn">☰</button></div><div class="logo"><div class="logo-main">Drako</div><div class="logo-sub">FOOD DELIVERY</div></div><div class="top-actions"><button class="icon-btn" onclick="showScreen('cartScreen')">🛒<span class="badge" id="headerBadge">0</span></button></div></div>
+    <div class="main-content" id="mainContent">
+      <section class="screen" id="homeScreen">
+        <div style="background:linear-gradient(135deg,#FF6B00,#ff9a4d);padding:20px;border-radius:24px;color:white;position:relative;overflow:hidden;margin-bottom:20px;box-shadow:0 12px 30px rgba(255,107,0,.28);"><div style="position:relative;z-index:2;"><div style="font-size:24px;font-weight:900;line-height:1.6;">اطلب أكلك المفضل<br>في أسرع وقت 🚀</div><div class="slogan" style="color:#fff;margin-top:8px;font-size:13px;">أفضل المطاعم والعروض اليومية والتوصيل السريع لحد باب البيت.</div></div></div>
+        <div class="slogan">أكل تحبه... يوصل لحد عندك</div>
+        <div class="search-box">🔍<input type="text" placeholder="ابحث عن مطعم أو منتج" id="searchInput" oninput="filterHomeItems()"></div>
+        <div class="category-filters" id="categoryFilters"><button class="filter-btn active" data-cat="restaurants">🍔 مطاعم</button><button class="filter-btn" data-cat="markets">🛒 ماركت</button><button class="filter-btn" data-cat="pharmacies">💊 صيدليات</button><button class="filter-btn" data-cat="special">✨ طلب خاص</button></div>
+        <div class="section-title" id="homeSectionTitle">🍔 المطاعم</div>
+        <div id="restaurantsContainer"></div>
+      </section>
+      <section class="screen" id="restaurantScreen">
+        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;"><button class="icon-btn" onclick="showScreen('homeScreen')">←</button><div class="logo"><span id="restaurantTitleHeader">المطعم</span></div><button class="icon-btn" id="favBtnInRestaurant" onclick="toggleFav(selectedRestaurant?.id, 'restaurant')">♡</button></div>
+        <img id="restaurantHero" class="hero-image" src="">
+        <div class="restaurant-info"><h2 id="restaurantName"></h2><div class="meta" style="margin-top:10px;"><span>⭐ 4.8</span><span>⏱ 30 دقيقة</span><span>+120 تقييم</span></div><div class="tabs" id="tabsContainer"></div><div id="productsContainer"></div></div>
+      </section>
+      <section class="screen" id="specialOrderScreen">
+        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;"><button class="icon-btn" onclick="showScreen('homeScreen')">←</button><div class="logo"><span id="specialOrderTitle">طلب ماركت</span></div><div></div></div>
+        <div class="special-order-card"><div class="field-group"><label class="field-label">📝 تفاصيل الطلب</label><div class="field-wrap"><textarea id="specialOrderDetails" rows="5" placeholder="اكتب طلبك بالتفصيل (أسماء المنتجات، الكميات، ملاحظات...)"></textarea></div></div><div class="file-attachment"><label for="attachFiles">📎 إرفاق ملفات (صور)</label><input type="file" id="attachFiles" multiple accept="image/*" onchange="previewFiles(this)"><div class="preview-images" id="filePreview"></div></div><div class="summary"><div class="summary-row"><span>🚚 رسوم التوصيل</span><span id="specialDeliveryFee">0 ج</span></div><div class="summary-row"><strong>الإجمالي</strong><strong class="summary-total" id="specialTotal">0 ج</strong></div></div><button class="btn" onclick="submitSpecialOrder()">📦 إرسال الطلب</button></div>
+      </section>
+      <section class="screen" id="cartScreen">
+        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;"><button class="icon-btn" onclick="showScreen('homeScreen')">←</button><div class="logo">السلة</div><div></div></div>
+        <div id="cartItems"></div><div class="summary" id="cartSummary"><div class="summary-row"><span>إجمالي المنتجات</span><span id="itemsTotal">0 ج</span></div><div class="summary-row"><span>رسوم التوصيل</span><span id="deliveryFee">0 ج</span></div><div class="summary-row"><strong>الإجمالي النهائي</strong><strong class="summary-total" id="finalTotal">0 ج</strong></div></div><button class="btn" id="checkoutBtn" onclick="proceedToCheckout()">إتمام الطلب</button>
+      </section>
+      <section class="screen" id="areaScreen">
+        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;"><button class="icon-btn" onclick="showScreen('cartScreen')">←</button><div class="logo">اختر منطقتك</div><div></div></div>
+        <div class="slogan">اختر المنطقة لعرض رسوم التوصيل</div><div id="areasContainer"></div><button class="btn" onclick="confirmArea()">تأكيد المنطقة</button>
+      </section>
+      <section class="screen" id="checkoutScreen">
+        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;"><button class="icon-btn" onclick="showScreen('areaScreen')">←</button><div class="logo">إتمام الطلب</div><div></div></div>
+        <div id="checkoutUserInfo"></div>
+        <div class="checkout-items" id="checkoutItemsList"></div>
+        <div class="summary" style="margin-bottom:18px;"><div class="summary-row"><span>📍 المنطقة</span><span id="selectedAreaName"></span></div></div>
+        <div class="payment-item active" data-method="CASH" onclick="selectPayment(this, 'CASH')"><div>💵 كاش عند الاستلام</div><div class="radio"></div></div>
+        <div class="payment-item" data-method="VODAFONE" onclick="selectPayment(this, 'VODAFONE')"><div>📱 فودافون كاش</div><div class="radio"></div></div>
+        <div class="payment-item" data-method="INSTAPAY" onclick="selectPayment(this, 'INSTAPAY')"><div>🟣 انستا باي</div><div class="radio"></div></div>
 
-  <!-- الشريط الجانبي -->
-  <aside class="sidebar" id="sidebar" style="display:none;">
-    <div class="sidebar-header"><h2>🛡️ Drako Admin</h2></div>
-    <nav class="sidebar-nav">
-      <div class="nav-item active" data-section="dashboard" onclick="navigate('dashboard')">📊 لوحة التحكم</div>
-      <div class="nav-item" data-section="dispatch" onclick="navigate('dispatch')">🛵 توزيع الطلبات</div>
-      <div class="nav-item" data-section="orders" onclick="navigate('orders')">📦 الطلبات</div>
-      <div class="nav-item" data-section="restaurant-orders" onclick="navigate('restaurant-orders')">📋 اوردرات المطاعم</div>
-      <div class="nav-item" data-section="restaurants" onclick="navigate('restaurants')">🍽️ المطاعم</div>
-      <div class="nav-item" data-section="drivers" onclick="navigate('drivers')">👨‍✈️ الطيارين</div>
-      <div class="nav-item" data-section="markets" onclick="navigate('markets')">🛒 الأسواق</div>
-      <div class="nav-item" data-section="pharmacies" onclick="navigate('pharmacies')">💊 الصيدليات</div>
-      <div class="nav-item" data-section="customers" onclick="navigate('customers')">👥 العملاء</div>
-      <div class="nav-item" data-section="regions" onclick="navigate('regions')">📍 المناطق</div>
-      <div class="nav-item" data-section="products" onclick="navigate('products')">🏷️ المنتجات والتصنيفات</div>
-      <div class="nav-item" data-section="sounds" onclick="navigate('sounds')">🎵 الأصوات</div>
-      <div class="nav-item" data-section="recharge" onclick="navigate('recharge')">💰 طلبات الشحن</div>
-      <div class="nav-item" data-section="reports" onclick="navigate('reports')">📈 التقارير</div>
-      <div class="nav-item" data-section="platform" onclick="navigate('platform')">💵 إيرادات المنصة</div>
-      <div class="nav-item" data-section="settings" onclick="navigate('settings')">⚙️ الإعدادات</div>
-    </nav>
-    <div class="sidebar-footer"><button class="btn-logout" onclick="logout()">🚪 تسجيل الخروج</button></div>
-  </aside>
+        <div class="payment-details" id="vodafoneSection">
+          <div>حول إلى الرقم:</div>
+          <div class="phone-number">01098031344</div>
+          <div class="field-group"><label class="field-label">آخر 3 أرقام من رقمك المحول منه</label><div class="field-wrap"><input type="text" id="vodafoneLastDigits" maxlength="3" placeholder="مثال: 123"></div></div>
+          <div class="fee-note">➕ رسوم خدمة تحويل: 5 جنيه</div>
+        </div>
 
-  <!-- المحتوى الرئيسي -->
-  <main class="main" id="mainWrap" style="display:none;">
-    <div class="topbar">
-      <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
-      <h1 id="pageTitle">لوحة التحكم</h1>
-      <div style="display:flex; gap:8px;">
-        <button class="btn btn-sm" style="background:#3b82f6;color:white;" onclick="activateAudio()">🔊 تفعيل الصوت</button>
-        <button class="btn btn-primary btn-sm" onclick="testOrder()">🧪 طلب تجريبي</button>
-      </div>
+        <div class="payment-details" id="instapaySection">
+          <div>حول إلى رقم انستا باي:</div>
+          <div class="phone-number">01098031344</div>
+          <div class="field-group"><label class="field-label">معرف المعاملة (Transaction ID)</label><div class="field-wrap"><input type="text" id="instapayTransactionId" maxlength="10" placeholder="أدخل معرف العملية"></div><small style="color:#888;">ستتم مراجعة التحويل يدوياً</small></div>
+          <div class="fee-note">➕ رسوم خدمة تحويل: 5 جنيه</div>
+        </div>
+
+        <div class="summary"><div class="summary-row"><span>الإجمالي</span><span id="checkoutItemsTotal"></span></div><div class="summary-row"><span>التوصيل</span><span id="checkoutDelivery"></span></div><div class="summary-row" id="extraFeeRow" style="display:none;"><span>➕ رسوم تحويل</span><span id="extraFeeAmount">0 ج</span></div><div class="summary-row"><strong>الإجمالي النهائي</strong><strong class="summary-total" id="checkoutFinal"></strong></div></div>
+        <button class="btn" onclick="submitOrder()">تأكيد الطلب</button>
+      </section>
+      <section class="screen" id="trackScreen">
+        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;"><button class="icon-btn" onclick="showScreen('homeScreen')">←</button><div class="logo">تتبع الطلب</div><div></div></div>
+        <div style="text-align:center; margin:20px 0;"><h2>حالة الطلب</h2><div style="color:#FF6B00; font-weight:bold; font-size:18px;" id="trackOrderId"></div></div><div class="status-track" id="trackStatusContainer"></div><div class="details" id="trackDetails"></div><button class="btn" onclick="showScreen('homeScreen')">العودة للرئيسية</button>
+      </section>
+      <section class="screen" id="ordersScreen">
+        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;"><button class="icon-btn" onclick="showScreen('homeScreen')">←</button><div class="logo">طلباتي</div><div></div></div>
+        <div class="tab-bar" id="orders-tab-bar" style="display:flex; gap:10px; margin-bottom:16px;"><div class="tab active" onclick="switchOrdersTab('active')">🔄 النشطة</div><div class="tab" onclick="switchOrdersTab('archive')">📦 الأرشيف</div></div><div id="myOrdersList"></div>
+      </section>
+      <section class="screen" id="accountScreen">
+        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;"><button class="icon-btn" onclick="showScreen('homeScreen')">←</button><div class="logo">حسابي</div><div></div></div>
+        <div style="padding:16px;" id="accountInfo"><button class="btn outline-btn" onclick="showScreen('loginScreen')">تسجيل الدخول</button></div>
+      </section>
+      <section class="screen" id="favScreen">
+        <div class="header" style="position:static;height:auto;padding:18px 0 24px;background:transparent;backdrop-filter:none;transform:none;left:auto;width:auto;max-width:none;"><button class="icon-btn" onclick="showScreen('homeScreen')">←</button><div class="logo">❤️ المفضلة</div><div></div></div>
+        <div id="favItemsContainer"></div>
+      </section>
     </div>
-    <div class="content" id="mainContent"></div>
-  </main>
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="navigateTo('homeScreen')">🏠<span>الرئيسية</span></div>
+      <div class="nav-item" onclick="navigateTo('favScreen')">❤️<span>المفضلة</span></div>
+      <div class="nav-item" onclick="navigateTo('cartScreen')">🛒<span>السلة</span><span class="badge" id="cartBadge">0</span></div>
+      <div class="nav-item" onclick="navigateTo('ordersScreen')">📦<span>طلباتي</span></div>
+      <div class="nav-item" onclick="navigateTo('accountScreen')">👤<span>حساب</span></div>
+    </div>
+  </div>
 </div>
-
-<div class="modal-overlay" id="modalOverlay"><div class="modal-box" id="modalBox"></div></div>
+<div class="sheet-overlay" id="productSheet"><div class="sheet-box"><button class="sheet-close" onclick="closeProductSheet()">✕</button><div id="sheetContent"></div></div></div>
 <div class="toast" id="toast"></div>
+<div id="spinner" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:9999; background:rgba(0,0,0,0.7); color:white; padding:20px 30px; border-radius:12px;">⏳ جاري التحميل...</div>
 
-<script src="/socket.io/socket.io.js"></script>
 <script>
+// ========== Helper Functions ==========
+function showToast(msg) { let t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2800); }
+function togglePass(id, btn) { let inp = document.getElementById(id); if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; } else { inp.type = 'password'; btn.textContent = '👁️'; } }
+function esc(text) { if (!text) return ''; return String(text).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
+function showSpinner() { document.getElementById('spinner').style.display = 'block'; }
+function hideSpinner() { document.getElementById('spinner').style.display = 'none'; }
+
+// ========== Global Variables ==========
 const API = '/api';
+let restaurants = [], markets = [], pharmacies = [], products = [];
+let cart = JSON.parse(localStorage.getItem('drako_cart')) || [];
+let favorites = JSON.parse(localStorage.getItem('drako_favorites')) || { restaurants: [], markets: [], pharmacies: [] };
+let selectedRestaurant = null, selectedArea = null, paymentMethod = 'CASH';
+let currentProduct = null;
+let currentUser = JSON.parse(localStorage.getItem('drako_user')) || null;
 let allRegions = [];
-let audioActivated = false;
-let audioCtx = null;
-let dispatchMode = 'manual';
-let allOrdersCache=[], allRestaurantsCache=[], allDriversCache=[];
+let socket = null;
+let currentScreen = 'homeScreen';
+let touchStartX = 0, touchEndX = 0;
+let currentCategory = 'restaurants';
+let selectedFiles = [];
+let specialOrderType = null, specialOrderStoreId = null;
+let pendingSpecialOrderData = null;
 
-// ---------- نظام الصوت ----------
-function playTone(f,d,t,v=0.3){ if(!audioCtx){ try{audioCtx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){return;} } if(audioCtx.state==='suspended')audioCtx.resume(); var o=audioCtx.createOscillator(); var g=audioCtx.createGain(); o.type=t; o.frequency.value=f; g.gain.setValueAtTime(v,audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+d); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+d); }
-function playSound(name, fallbackFreq=800, fallbackType='square') { if (!audioActivated) return; const url = `/sounds/admin_${name}.mp3`; const audio = new Audio(url); audio.volume=0.5; audio.play().catch(() => playTone(fallbackFreq,0.2,fallbackType)); }
-async function activateAudio() { if (audioActivated) return; try { if (!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); if (audioCtx.state === 'suspended') await audioCtx.resume(); var o=audioCtx.createOscillator(); var g=audioCtx.createGain(); g.gain.value=0.001; o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+0.001); audioActivated=true; showToast('✅ تم تفعيل الإشعارات الصوتية'); } catch(e) { showToast('❌ فشل تفعيل الصوت'); } }
+window._ordersTab = 'active';
+window._trackingOrderId = null;
+window._currentQty = 1;
+window._currentUnitPrice = 0;
 
-// ---------- دوال عامة ----------
-function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); }
-function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('open'); }
-function openModal(html){ document.getElementById('modalBox').innerHTML=html; document.getElementById('modalOverlay').classList.add('open'); }
-function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); }
-document.getElementById('modalOverlay').addEventListener('click',function(e){ if(e.target===this) closeModal(); });
+// ========== نظام الصوت ==========
+const SOUNDS = { newOrder: '/sounds/new_order.mp3', orderAccepted: '/sounds/order_accepted.mp3', orderCancelled: '/sounds/order_cancelled.mp3', onTheWay: '/sounds/on_the_way.mp3', delivered: '/sounds/delivered.mp3' };
+function playSound(name) { try { const audio = new Audio(SOUNDS[name]); audio.volume = 0.5; audio.play().catch(()=>{}); } catch(e) {} }
 
-// ---------- API (باستخدام الكوكيز فقط) ----------
+// ========== Swipe to Go Back ==========
+document.getElementById('swipeOverlay').addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; });
+document.getElementById('swipeOverlay').addEventListener('touchend', (e) => { touchEndX = e.changedTouches[0].screenX; handleSwipe(); });
+function handleSwipe() { if (touchEndX - touchStartX > 50) goBack(); }
+function goBack() { let history = getScreenHistory(); if (history.length > 1) { showScreen(history[history.length-2]); history.pop(); localStorage.setItem('drako_screen_history', JSON.stringify(history)); } else showScreen('homeScreen'); }
+function getScreenHistory() { try { return JSON.parse(localStorage.getItem('drako_screen_history')) || ['homeScreen']; } catch(e) { return ['homeScreen']; } }
+function pushToHistory(screen) { let history = getScreenHistory(); if (history[history.length-1] !== screen) { history.push(screen); localStorage.setItem('drako_screen_history', JSON.stringify(history)); } }
+function saveCurrentScreen(screen) { localStorage.setItem('drako_current_screen', screen); currentScreen = screen; }
+function restoreCurrentScreen() { let saved = localStorage.getItem('drako_current_screen'); if (saved && !['loginScreen','registerScreen'].includes(saved)) { showScreen(saved); return true; } return false; }
+
+// ========== API Helper ==========
 async function apiFetch(url, options = {}) {
-  const headers = { ...options.headers };
-  if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
-  const res = await fetch(url, { ...options, headers, credentials: 'include' });
-  if (res.status === 401) {
-    // انتهت الجلسة، العودة لشاشة الدخول
-    showToast('انتهت الجلسة، الرجاء تسجيل الدخول');
-    showLogin();
-    throw new Error('SESSION_EXPIRED');
-  }
+  const headers = {};
+  if (!(options.body instanceof FormData)) { headers['Content-Type'] = 'application/json'; }
+  const res = await fetch(url, { ...options, credentials: 'include', headers: { ...headers, ...(options.headers || {}) } });
+  if (res.status === 401 && currentUser) { logout(); showToast('انتهت الجلسة، الرجاء تسجيل الدخول'); throw new Error('Unauthorized'); }
   return res;
 }
 
-function showLogin() {
-  document.getElementById('loginOverlay').classList.remove('hidden');
-  document.getElementById('sidebar').style.display = 'none';
-  document.getElementById('mainWrap').style.display = 'none';
-  if (window._socket) window._socket.disconnect();
-}
-function hideLogin() {
-  document.getElementById('loginOverlay').classList.add('hidden');
-  document.getElementById('sidebar').style.display = 'flex';
-  document.getElementById('mainWrap').style.display = 'flex';
-}
+// ========== Auth Navigation ==========
+function goToRegister() { document.getElementById('loginScreen').classList.replace('visible','hidden-right'); document.getElementById('registerScreen').classList.replace('hidden-left','visible'); loadRegionsForSelect(); }
+function goToLogin() { document.getElementById('registerScreen').classList.replace('visible','hidden-left'); document.getElementById('loginScreen').classList.replace('hidden-right','visible'); resetRegisterSteps(); }
+function resetRegisterSteps() { document.getElementById('step1').classList.add('active'); document.getElementById('step2').classList.remove('active'); document.getElementById('progressBar').style.width='50%'; document.getElementById('step-subtitle').textContent='الخطوة 1 من 2 – بياناتك الشخصية'; }
+function goStep2() { let n=document.getElementById('regName').value.trim(), p=document.getElementById('regPhone').value.trim(), ps=document.getElementById('regPass').value, pc=document.getElementById('regPassConfirm').value; if(!n) return showToast('⚠️ اكتب اسمك'); if(p.length<11) return showToast('⚠️ رقم هاتف غير صحيح'); if(ps.length<6) return showToast('⚠️ كلمة المرور قصيرة'); if(ps!==pc) return showToast('❌ كلمتا المرور غير متطابقتين'); document.getElementById('step1').classList.remove('active'); document.getElementById('step2').classList.add('active'); document.getElementById('progressBar').style.width='100%'; document.getElementById('step-subtitle').textContent='الخطوة 2 من 2 – عنوان التوصيل'; }
+async function loadRegionsForSelect() { try { const res=await apiFetch(API+'/regions'); allRegions=await res.json(); } catch(e) { allRegions=[{id:'reg_1',name:'مساكن جمصة',fee:10},{id:'reg_2',name:'15 مايو',fee:15},{id:'reg_3',name:'المنصورة الجديدة',fee:20},{id:'reg_4',name:'الدلتا',fee:25},{id:'reg_5',name:'الشيخ زايد',fee:30}]; } let sel=document.getElementById('regRegion'); if(sel) sel.innerHTML='<option value="">اختر منطقتك</option>'+allRegions.map(r=>`<option value="${r.id}">${r.name} — ${r.fee} ج توصيل</option>`).join(''); let editSel=document.getElementById('editRegion'); if(editSel) editSel.innerHTML=allRegions.map(r=>`<option value="${r.id}">${r.name} — ${r.fee} ج</option>`).join(''); }
 
-async function adminLogin() {
-  const phone = document.getElementById('loginPhone').value.trim();
-  const password = document.getElementById('loginPass').value;
-  const errorDiv = document.getElementById('loginError');
-  errorDiv.style.display = 'none';
-  if (!phone || !password) { errorDiv.textContent = '⚠️ الرجاء إدخال رقم الهاتف وكلمة المرور'; errorDiv.style.display = 'block'; return; }
+// ========== Auth Functions ==========
+async function customerLogin() {
+  let phone=document.getElementById('loginPhone').value.trim(), pass=document.getElementById('loginPass').value;
+  if(!phone||!pass) return showToast('⚠️ أكمل الحقول');
   try {
-    const res = await fetch(API + '/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ phone, password })
+    const res=await apiFetch(API+'/customer/login',{method:'POST',body:JSON.stringify({phone,password:pass})});
+    const data=await res.json(); if(data.error) return showToast('❌ '+data.error);
+    currentUser={ name:data.name, phone:data.phone, regionId:data.regionId||'', address:data.address||'' };
+    localStorage.setItem('drako_user',JSON.stringify(currentUser));
+    document.getElementById('authWrapper').classList.add('hide'); document.getElementById('mainAppWrapper').classList.add('active');
+    loadSocket(); loadRestaurants(); loadMarketsAndPharmacies(); renderCart();
+    if(!restoreCurrentScreen()) showScreen('homeScreen');
+    showToast('✅ مرحباً '+data.name);
+  } catch(e){ showToast('❌ فشل الاتصال'); }
+}
+async function customerRegister() {
+  let name=document.getElementById('regName').value.trim(), phone=document.getElementById('regPhone').value.trim(), pass=document.getElementById('regPass').value, regionId=document.getElementById('regRegion').value, address=document.getElementById('regAddress').value.trim();
+  if(!name||!phone||!pass) return showToast('⚠️ أكمل الحقول');
+  if(!regionId) return showToast('⚠️ اختر المنطقة');
+  if(!address) return showToast('⚠️ أدخل العنوان التفصيلي');
+  try {
+    const res=await apiFetch(API+'/customer/register',{method:'POST',body:JSON.stringify({name,phone,password:pass,regionId,address})});
+    const data=await res.json(); if(data.error) return showToast('❌ '+data.error);
+    currentUser={ name:data.name, phone:data.phone, regionId:data.regionId||'', address:data.address||'' };
+    localStorage.setItem('drako_user',JSON.stringify(currentUser));
+    document.getElementById('authWrapper').classList.add('hide'); document.getElementById('mainAppWrapper').classList.add('active');
+    loadSocket(); loadRestaurants(); loadMarketsAndPharmacies(); renderCart();
+    showScreen('homeScreen'); showToast('🎉 تم إنشاء حسابك بنجاح');
+  } catch(e){ showToast('❌ فشل الاتصال'); }
+}
+function openEditModal() { document.getElementById('editName').value=currentUser?.name||''; document.getElementById('editPhone').value=currentUser?.phone||''; document.getElementById('editAddress').value=currentUser?.address||''; let er=document.getElementById('editRegion'); if(er&&currentUser?.regionId) er.value=currentUser.regionId; document.getElementById('editModal').classList.add('open'); }
+function closeEditModal() { document.getElementById('editModal').classList.remove('open'); }
+async function updateProfile() {
+  let n=document.getElementById('editName').value.trim(), p=document.getElementById('editPhone').value.trim(), a=document.getElementById('editAddress').value.trim(), r=document.getElementById('editRegion').value;
+  if(!n||p.length<11||!a||!r) return showToast('⚠️ بيانات ناقصة');
+  currentUser.name=n; currentUser.phone=p; currentUser.address=a; currentUser.regionId=r;
+  localStorage.setItem('drako_user',JSON.stringify(currentUser));
+  renderAccountScreen(); closeEditModal(); showToast('✅ تم تحديث البيانات');
+}
+
+// ========== Socket.io ==========
+function loadSocket() {
+  if (socket) return;
+  const script = document.createElement('script'); script.src = '/socket.io/socket.io.js';
+  script.onload = () => {
+    socket = io();
+    socket.on('orderStatusUpdate', (data) => {
+      if (window._trackingOrderId === data.orderId) { trackOrder(data.orderId); if (data.status === 'ACCEPTED') playSound('orderAccepted'); else if (data.status === 'ON_THE_WAY') playSound('onTheWay'); else if (data.status === 'DELIVERED') playSound('delivered'); else if (data.status === 'CANCELLED') playSound('orderCancelled'); }
+      if (currentUser) loadMyOrders();
     });
-    const data = await res.json();
-    if (!res.ok || data.error) { errorDiv.textContent = '❌ ' + (data.error || 'فشل تسجيل الدخول، تحقق من الخادم'); errorDiv.style.display = 'block'; return; }
-    if (!data.user || data.user.role !== 'ADMIN') { errorDiv.textContent = '❌ هذا الحساب ليس لديه صلاحية الأدمن'; errorDiv.style.display = 'block'; return; }
-    // تم تسجيل الدخول بنجاح والكوكي تم ضبطه، لا نحتاج تخزين أي شيء
-    errorDiv.style.display = 'none'; hideLogin(); initApp();
-  } catch (e) { errorDiv.textContent = '❌ فشل الاتصال بالخادم. تأكد من تشغيل السيرفر.'; errorDiv.style.display = 'block'; }
+  };
+  document.body.appendChild(script);
 }
 
-async function logout() { await fetch('/logout', { credentials: 'include' }); showLogin(); }
-
-// ---------- التطبيق ----------
-const STATUS_AR={PENDING:'في الانتظار',ACCEPTED:'مقبول',PREPARING:'يتحضر',READY:'جاهز',DRIVER_ASSIGNED:'مع طيار',ON_THE_WAY:'في الطريق',DELIVERED:'تم التوصيل',CANCELLED:'ملغي'};
-function statusBadge(s){ const cl={PENDING:'badge-warning',ACCEPTED:'badge-info',PREPARING:'badge-warning',READY:'badge-info',DRIVER_ASSIGNED:'badge-warning',ON_THE_WAY:'badge-warning',DELIVERED:'badge-success',CANCELLED:'badge-danger'}; return `<span class="badge ${cl[s]||'badge-info'}">${STATUS_AR[s]||s}</span>`; }
-
-function navigate(section){
-  document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active'));
-  const nav = document.querySelector(`[data-section="${section}"]`); if (nav) nav.classList.add('active');
-  document.getElementById('pageTitle').innerText = nav?.innerText?.trim() || section;
-  loadSection(section);
-  if(window.innerWidth<768) toggleSidebar();
+// ========== Main App Functions ==========
+function navigateTo(screenId) { if((screenId==='ordersScreen'||screenId==='accountScreen')&&!currentUser) { showScreen('loginScreen'); return; } showScreen(screenId); }
+function showScreen(id) {
+  document.querySelectorAll('#mainAppWrapper .screen').forEach(s=>s.classList.remove('active'));
+  const target=document.getElementById(id); if(target) target.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach((n,i)=>{ const navIds=['homeScreen','favScreen','cartScreen','ordersScreen','accountScreen']; if(navIds[i]===id) n.classList.add('active'); else n.classList.remove('active'); });
+  if(id==='accountScreen') renderAccountScreen();
+  if(id==='areaScreen'){ loadRegions(); preselectArea(); }
+  if(id==='checkoutScreen'){ renderCheckoutUserInfo(); renderCheckoutItems(); resetPaymentSection(); }
+  if(id==='ordersScreen') loadMyOrders();
+  if(id==='favScreen') renderFavorites();
+  if(id==='restaurantScreen') updateRestaurantFavButton();
+  pushToHistory(id); saveCurrentScreen(id);
 }
 
-function loadSection(s){
-  switch(s){
-    case 'dashboard': loadDashboard(); break;
-    case 'dispatch': loadDispatch(); break;
-    case 'restaurants': loadRestaurants(); break;
-    case 'drivers': loadDrivers(); break;
-    case 'markets': loadMarkets(); break;
-    case 'pharmacies': loadPharmacies(); break;
-    case 'customers': loadCustomers(); break;
-    case 'regions': loadRegions(); break;
-    case 'orders': loadOrders(); break;
-    case 'products': loadProducts(); break;
-    case 'sounds': loadSounds(); break;
-    case 'recharge': loadRecharge(); break;
-    case 'reports': loadReports(); break;
-    case 'platform': loadPlatformRevenue(); break;
-    case 'restaurant-orders': loadRestaurantDirectOrders(); break;
-    case 'settings': loadSettings(); break;
-  }
-}
-
-// --- لوحة التحكم ---
-async function loadDashboard(){
-  const stats=await apiFetch(API+'/admin/stats').then(r=>r.json()).catch(()=>({}));
-  const orders=await apiFetch(API+'/orders').then(r=>r.json()).catch(()=>[]);
-  allOrdersCache=orders;
-  const platformRev=await apiFetch(API+'/admin/platform-revenue').then(r=>r.json()).catch(()=>({}));
-  const today=orders.filter(o=>new Date(o.createdAt).toDateString()===new Date().toDateString());
-  const active=orders.filter(o=>!['DELIVERED','CANCELLED'].includes(o.status));
-  document.getElementById('mainContent').innerHTML=`
-    <div class="stats-grid">
-      <div class="stat-card"><h4>نسبة المنصة اليوم</h4><div class="value">${platformRev.today||0} ج</div></div>
-      <div class="stat-card"><h4>طلبات اليوم</h4><div class="value">${today.length}</div></div>
-      <div class="stat-card"><h4>طلبات نشطة</h4><div class="value">${active.length}</div></div>
-      <div class="stat-card"><h4>المطاعم</h4><div class="value">${stats.restaurants||0}</div></div>
-      <div class="stat-card"><h4>إجمالي الإيرادات</h4><div class="value">${(stats.totalRevenue||0).toLocaleString()} ج</div></div>
-    </div>
-    <div class="section-card">
-      <div class="section-header"><h2>📦 أحدث الطلبات</h2></div>
-      ${orders.slice(-6).reverse().map(o=>`<div class="info-item" style="cursor:pointer" onclick="viewOrder('${o.id}')"><span><strong>#${o.orderNumber||'-'}</strong></span><span>${o.customerName}</span><span>${o.total} ج</span>${statusBadge(o.status)}</div>`).join('')}
+function renderCheckoutItems() {
+  const container = document.getElementById('checkoutItemsList');
+  if (!cart.length) { container.innerHTML = '<p style="text-align:center;color:#888;">السلة فارغة</p>'; return; }
+  let html = '';
+  cart.forEach(item => {
+    const optionsText = (item.selectedOptions || []).map(o => esc(o.value)).join(', ');
+    html += `<div class="checkout-item">
+      <span>${esc(item.name)} ${optionsText ? '(' + optionsText + ')' : ''}</span>
+      <span>${item.quantity} × ${item.price} ج</span>
     </div>`;
+  });
+  container.innerHTML = html;
 }
 
-// --- توزيع الطلبات (يدوي / تلقائي) ---
-async function loadDispatch(){
-  const [orders,drivers]=await Promise.all([apiFetch(API+'/orders').then(r=>r.json()), apiFetch(API+'/admin/drivers').then(r=>r.json())]);
-  const ready=orders.filter(o=>o.status==='READY'&&!o.driverId);
-  const avail=drivers.filter(d=>d.isAvailable);
-  const modeText = dispatchMode === 'manual' ? 'التوزيع <strong>مخصص</strong>: لن تظهر هذه الطلبات للسائقين حتى تقوم بتعيين طيار.' : 'التوزيع <strong>تلقائي</strong>: الطلبات تظهر للسائقين مباشرة.';
-  document.getElementById('mainContent').innerHTML=`
-    <div class="section-card">
-      <div class="section-header"><h2>🛵 توزيع الطلبات الجاهزة (${ready.length})</h2></div>
-      <p style="color:var(--text-muted); margin-bottom:16px;">${modeText}</p>
-      <div class="table-responsive"><table><thead><tr><th>الطلب</th><th>العميل</th><th>المطعم</th><th>المنطقة</th><th>تعيين طيار</th></tr></thead><tbody>
-        ${ready.map(o=>`<tr><td><strong>#${o.orderNumber||'-'}</strong></td><td>${o.customerName}</td><td>${o.restaurantName||''}</td><td>${o.regionName||o.address||''}</td><td>
-          <select id="driverSelect_${o.id}" class="form-input" style="width:auto"><option value="">اختر طيار</option>${avail.map(d=>`<option value="${d.id}">${d.name}</option>`).join('')}</select>
-          <button class="btn btn-sm btn-primary" onclick="assignDriverFromSelect('${o.id}')">تعيين</button></td></tr>`).join('')}
-      </tbody></table></div>
+function resetPaymentSection() {
+  document.getElementById('vodafoneSection').style.display = 'none';
+  document.getElementById('instapaySection').style.display = 'none';
+  document.getElementById('vodafoneLastDigits').value = '';
+  document.getElementById('instapayTransactionId').value = '';
+  selectPayment(document.querySelector('.payment-item[data-method="CASH"]'), 'CASH');
+}
+function renderCheckoutUserInfo() { const div=document.getElementById('checkoutUserInfo'); if(currentUser) div.innerHTML=`<p style="color:#888">مرحباً، ${esc(currentUser.name)}</p>`; else div.innerHTML=`<div class="input-group"><label>الاسم</label><input id="customerName" placeholder="اكتب اسمك" /></div><div class="input-group"><label>رقم الهاتف</label><input id="customerPhone" placeholder="01xxxxxxxxx" /></div>`; }
+function renderAccountScreen() {
+  const cont=document.getElementById('accountInfo');
+  if(currentUser){ const rn=allRegions.find(r=>r.id===currentUser.regionId)?.name||'غير محدد'; cont.innerHTML=`<div class="profile-card"><div class="profile-avatar">👤</div><div class="info-row"><span class="info-label">الاسم</span><span class="info-value">${esc(currentUser.name)}</span></div><div class="info-row"><span class="info-label">رقم الهاتف</span><span class="info-value">${esc(currentUser.phone)}</span></div><div class="info-row"><span class="info-label">المنطقة</span><span class="info-value">${esc(rn)}</span></div><div class="info-row"><span class="info-label">العنوان</span><span class="info-value">${esc(currentUser.address||'—')}</span></div><button class="btn-primary" style="margin-top:16px;" onclick="openEditModal()">✏️ تعديل البيانات</button><button class="btn-ghost" style="margin-top:12px;" onclick="logout()">🚪 تسجيل الخروج</button></div>`; }
+  else cont.innerHTML=`<div class="profile-card"><button class="btn" onclick="location.reload()">تسجيل الدخول</button><button class="btn-ghost" style="margin-top:10px;" onclick="location.reload()">إنشاء حساب</button></div>`;
+}
+function logout() {
+  currentUser=null; localStorage.removeItem('drako_user'); localStorage.removeItem('drako_current_screen'); localStorage.removeItem('drako_screen_history');
+  if(socket) { socket.disconnect(); socket=null; }
+  document.getElementById('mainAppWrapper').classList.remove('active'); document.getElementById('authWrapper').classList.remove('hide');
+  cart=[]; saveCart();
+  fetch('/logout', { credentials: 'include' });
+  goToLogin();
+}
+
+// ========== Regions ==========
+async function loadRegions() { try { const res=await apiFetch(API+'/regions'); allRegions=await res.json(); } catch(e){} renderAreas(); }
+function renderAreas() { const container=document.getElementById('areasContainer'); if(!allRegions.length) return; container.innerHTML=allRegions.map(a=>`<div class="area-item ${selectedArea?.id===a.id?'active':''}" onclick="selectArea('${a.id}')"><div><strong>${esc(a.name)}</strong></div><div style="display:flex;align-items:center;gap:12px;"><strong>${a.fee} ج</strong><div class="radio"></div></div></div>`).join(''); }
+function preselectArea() { if(currentUser&&currentUser.regionId&&!selectedArea){ selectedArea=allRegions.find(r=>r.id===currentUser.regionId)||null; renderAreas(); } }
+function selectArea(id) { selectedArea=allRegions.find(a=>a.id===id); renderAreas(); }
+function confirmArea() {
+  if(!selectedArea){ showToast('⚠️ اختر منطقة'); return; }
+  if(pendingSpecialOrderData){ const { type, storeId, details } = pendingSpecialOrderData; specialOrderType = type; specialOrderStoreId = storeId; document.getElementById('specialOrderDetails').value = details; pendingSpecialOrderData = null; submitSpecialOrder(); return; }
+  document.getElementById('selectedAreaName').innerText = selectedArea.name + ' - ' + selectedArea.fee + ' ج';
+  updateTotals(); showScreen('checkoutScreen');
+}
+function selectPayment(el, method) {
+  document.querySelectorAll('.payment-item').forEach(i=>i.classList.remove('active')); el.classList.add('active'); paymentMethod = method;
+  document.getElementById('vodafoneSection').style.display = 'none'; document.getElementById('instapaySection').style.display = 'none';
+  if(method==='VODAFONE') document.getElementById('vodafoneSection').style.display = 'block';
+  else if(method==='INSTAPAY') document.getElementById('instapaySection').style.display = 'block';
+  updateTotals();
+}
+
+// ========== Home Screen Category Logic ==========
+function initCategoryFilters() {
+  document.querySelectorAll('.filter-btn').forEach(btn=>{ btn.addEventListener('click',()=>{ document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); currentCategory=btn.dataset.cat; let title=''; if(currentCategory==='restaurants') title='🍔 المطاعم'; else if(currentCategory==='markets') title='🛒 الماركت'; else if(currentCategory==='pharmacies') title='💊 الصيدليات'; else if(currentCategory==='special') title='✨ طلب خاص'; document.getElementById('homeSectionTitle').innerHTML=title; renderHomeItems(); }); });
+}
+async function loadMarketsAndPharmacies() { try { const [mRes, pRes] = await Promise.all([ apiFetch(API + '/markets'), apiFetch(API + '/pharmacies') ]); markets = await mRes.json(); pharmacies = await pRes.json(); } catch (e) { console.log(e); markets = []; pharmacies = []; } if (currentCategory === 'markets' || currentCategory === 'pharmacies') { renderHomeItems(); } }
+
+// ========== Favorites ==========
+function isFav(type, id) { return type==='restaurant'? favorites.restaurants.includes(id) : type==='market'? favorites.markets.includes(id) : type==='pharmacy'? favorites.pharmacies.includes(id) : false; }
+function toggleFav(id, type, event) {
+  if(event) event.stopPropagation();
+  let arr = type==='restaurant'? favorites.restaurants : type==='market'? favorites.markets : favorites.pharmacies;
+  const idx = arr.indexOf(id);
+  if(idx>-1) arr.splice(idx,1); else arr.push(id);
+  localStorage.setItem('drako_favorites', JSON.stringify(favorites));
+  if(currentScreen==='homeScreen') renderHomeItems();
+  if(currentScreen==='favScreen') renderFavorites();
+  if(currentScreen==='restaurantScreen' && selectedRestaurant?.id===id) updateRestaurantFavButton();
+}
+function updateRestaurantFavButton() { const btn = document.getElementById('favBtnInRestaurant'); if(btn && selectedRestaurant) { const liked = isFav('restaurant', selectedRestaurant.id); btn.textContent = liked ? '❤️' : '♡'; } }
+function renderFavorites() {
+  const container = document.getElementById('favItemsContainer');
+  const favRestaurants = restaurants.filter(r=>favorites.restaurants.includes(r.id));
+  const favMarkets = markets.filter(m=>favorites.markets.includes(m.id));
+  const favPharmacies = pharmacies.filter(p=>favorites.pharmacies.includes(p.id));
+  if(!favRestaurants.length && !favMarkets.length && !favPharmacies.length) { container.innerHTML='<div class="empty">❣️ لم تضف أي شيء للمفضلة بعد</div>'; return; }
+  let html='';
+  if(favRestaurants.length){ html+='<h3 style="margin:16px 0 10px;">🍔 مطاعم</h3>'; favRestaurants.forEach(r=>{ html+=`<div class="restaurant-card" onclick="openRestaurant('${r.id}')" style="position:relative;"><img src="${(r.logo&&r.logo.startsWith('/uploads'))?r.logo:(r.logo||'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200')}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'"><div class="restaurant-content"><h3>${esc(r.name)}</h3></div><button class="fav-btn liked" onclick="event.stopPropagation(); toggleFav('${r.id}','restaurant',event)">❤️</button></div>`; }); }
+  if(favMarkets.length){ html+='<h3 style="margin:16px 0 10px;">🛒 ماركت</h3>'; favMarkets.forEach(m=>{ html+=`<div class="restaurant-card" onclick="openSpecialOrder('market','${m.id}')" style="position:relative;"><img src="${(m.logo&&m.logo.startsWith('/uploads'))?m.logo:(m.logo||'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200')}" onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=200'"><div class="restaurant-content"><h3>${esc(m.name)}</h3></div><button class="fav-btn liked" onclick="event.stopPropagation(); toggleFav('${m.id}','market',event)">❤️</button></div>`; }); }
+  if(favPharmacies.length){ html+='<h3 style="margin:16px 0 10px;">💊 صيدليات</h3>'; favPharmacies.forEach(p=>{ html+=`<div class="restaurant-card" onclick="openSpecialOrder('pharmacy','${p.id}')" style="position:relative;"><img src="${(p.logo&&p.logo.startsWith('/uploads'))?p.logo:(p.logo||'https://images.unsplash.com/photo-1584308666744-24d5c6dee668?w=200')}" onerror="this.src='https://images.unsplash.com/photo-1584308666744-24d5c6dee668?w=200'"><div class="restaurant-content"><h3>${esc(p.name)}</h3></div><button class="fav-btn liked" onclick="event.stopPropagation(); toggleFav('${p.id}','pharmacy',event)">❤️</button></div>`; }); }
+  container.innerHTML = html;
+}
+
+// ========== renderHomeItems with Favorites ==========
+function renderHomeItems() {
+  const container=document.getElementById('restaurantsContainer');
+  if(currentCategory==='restaurants') {
+    if(!restaurants.length) { container.innerHTML='<div class="empty">لا توجد مطاعم</div>'; return; }
+    container.innerHTML=restaurants.map(r=>{ const liked = isFav('restaurant', r.id); return `<div class="restaurant-card" onclick="openRestaurant('${r.id}')" style="position:relative;"><img src="${(r.logo&&r.logo.startsWith('/uploads'))?r.logo:(r.logo||'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200')}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'"><div class="restaurant-content"><h3>${esc(r.name)}</h3><div class="meta"><span>⭐ 4.8</span><span>⏱ 30-45 دقيقة</span></div><div class="minimum">🚚 توصيل سريع • حد أدنى 50 ج</div><button class="btn menu-btn" onclick="event.stopPropagation(); openRestaurant('${r.id}')">🍽 عرض المنيو</button></div><button class="fav-btn ${liked?'liked':''}" onclick="event.stopPropagation(); toggleFav('${r.id}','restaurant',event)">${liked?'❤️':'🤍'}</button></div>`; }).join('');
+  } else if(currentCategory==='markets') {
+    if(!markets.length){ container.innerHTML='<div class="empty">لا توجد أسواق</div>'; return; }
+    container.innerHTML=markets.map(m=>{ const liked = isFav('market', m.id); const imgSrc = (m.logo && m.logo.startsWith('/uploads')) ? m.logo : (m.logo || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200'); return `<div class="restaurant-card" onclick="openSpecialOrder('market','${m.id}')" style="position:relative;"><img src="${imgSrc}" onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=200'"><div class="restaurant-content"><h3>${esc(m.name)}</h3><div class="meta"><span>⭐ 4.5</span><span>⏱ توصيل سريع</span></div><div class="minimum">🛒 أضف طلبك بالتفاصيل والصور</div><button class="btn menu-btn" onclick="event.stopPropagation(); openSpecialOrder('market','${m.id}')">📝 طلب الآن</button></div><button class="fav-btn ${liked?'liked':''}" onclick="event.stopPropagation(); toggleFav('${m.id}','market',event)">${liked?'❤️':'🤍'}</button></div>`; }).join('');
+  } else if(currentCategory==='pharmacies') {
+    if(!pharmacies.length){ container.innerHTML='<div class="empty">لا توجد صيدليات</div>'; return; }
+    container.innerHTML=pharmacies.map(p=>{ const liked = isFav('pharmacy', p.id); const imgSrc = (p.logo && p.logo.startsWith('/uploads')) ? p.logo : (p.logo || 'https://images.unsplash.com/photo-1584308666744-24d5c6dee668?w=200'); return `<div class="restaurant-card" onclick="openSpecialOrder('pharmacy','${p.id}')" style="position:relative;"><img src="${imgSrc}" onerror="this.src='https://images.unsplash.com/photo-1584308666744-24d5c6dee668?w=200'"><div class="restaurant-content"><h3>${esc(p.name)}</h3><div class="meta"><span>⭐ 4.7</span><span>⏱ توصيل فوري</span></div><div class="minimum">💊 اطلب أدويتك ومستلزماتك</div><button class="btn menu-btn" onclick="event.stopPropagation(); openSpecialOrder('pharmacy','${p.id}')">📝 طلب الآن</button></div><button class="fav-btn ${liked?'liked':''}" onclick="event.stopPropagation(); toggleFav('${p.id}','pharmacy',event)">${liked?'❤️':'🤍'}</button></div>`; }).join('');
+  } else if(currentCategory==='special') {
+    container.innerHTML=`<div class="restaurant-card" onclick="openSpecialOrder('custom',null)"><img src="https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=200"><div class="restaurant-content"><h3>طلب خاص</h3><div class="meta"><span>✨ مخصص</span><span>📝 اكتب طلبك</span></div><div class="minimum">أي طلب غير موجود في القوائم - أرفق الصور والتفاصيل</div><button class="btn menu-btn" onclick="event.stopPropagation(); openSpecialOrder('custom',null)">📝 تقديم طلب</button></div></div>`;
+  }
+}
+
+// ========== renderProducts (النسخة الأصلية العاملة) ==========
+function renderProducts(list = products) {
+  const container = document.getElementById('productsContainer');
+  if (!list.length) { container.innerHTML = '<div class="empty">لا توجد منتجات</div>'; return; }
+  container.innerHTML = list.map(p => {
+    const hasGroups = p.groups && p.groups.length > 0;
+    let displayPrice = 0;
+    let priceDisplay = '';
+    if (hasGroups) {
+      let minPrice = p.basePrice || 0;
+      p.groups.forEach(g => { if (g.required && g.options.length) minPrice += Math.min(...g.options.map(o => o.price)); });
+      displayPrice = minPrice;
+      priceDisplay = 'يبدأ من ' + displayPrice + ' ج';
+    } else {
+      const price = p.price || p.basePrice || 0;
+      displayPrice = price;
+      priceDisplay = displayPrice + ' ج';
+    }
+    const escapedProduct = JSON.stringify(p).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    return `<div class="product-card">
+      <img src="${(p.image && p.image.startsWith('/uploads')) ? p.image : (p.image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500')}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'">
+      <div class="product-content">
+        <h4>${esc(p.name)}</h4>
+        <p>${esc(p.description || 'وجبة لذيذة من دراكو')}</p>
+        <div class="price">${priceDisplay}</div>
+      </div>
+      <button class="plus-btn" onclick='openProductSheet(${escapedProduct})'>+</button>
     </div>`;
-}
-function assignDriverFromSelect(orderId) {
-  const select = document.getElementById('driverSelect_' + orderId);
-  if (select && select.value) { assignDriver(orderId, select.value); }
-  else { showToast('اختر طياراً أولاً'); }
-}
-async function assignDriver(orderId,driverId){
-  if(!driverId) return;
-  await apiFetch(API+'/admin/orders/'+orderId+'/assign-driver',{method:'PATCH',body:JSON.stringify({driverId})});
-  showToast('تم تعيين الطيار'); loadDispatch();
-}
-
-// --- المطاعم (مع الترتيب والظهور) ---
-async function loadRestaurants(){
-  const res=await apiFetch(API+'/admin/restaurants').then(r=>r.json());
-  allRestaurantsCache=res;
-  res.sort((a,b) => (a.order||0) - (b.order||0));
-  let html = `<div class="section-card"><div class="section-header"><h2>🍽️ المطاعم</h2><button class="btn btn-primary btn-sm" onclick="showAddRestaurant()">+ إضافة</button></div>
-    <div class="table-responsive"><table><thead><tr><th>الاسم</th><th>المالك</th><th>الهاتف</th><th>ظهور</th><th>ترتيب</th><th>حالة</th><th>إجراءات</th></tr></thead><tbody>`;
-  res.forEach(r => {
-    html += `<tr>
-      <td><strong>${r.name}</strong></td><td>${r.ownerName||'—'}</td><td>${r.ownerPhone||'—'}</td>
-      <td><button class="btn btn-sm ${r.visible!==false?'btn-success':'btn-danger'}" onclick="toggleRestaurantVisibility('${r.id}')">${r.visible!==false?'ظاهر':'مخفي'}</button></td>
-      <td>
-        <button class="btn btn-sm btn-outline" onclick="moveRestaurant('${r.id}','up')">⬆️</button>
-        <button class="btn btn-sm btn-outline" onclick="moveRestaurant('${r.id}','down')">⬇️</button>
-      </td>
-      <td>${r.isOpen?'<span class="badge badge-success">مفتوح</span>':'<span class="badge badge-danger">مغلق</span>'}</td>
-      <td>
-        <button class="btn btn-sm btn-warning" onclick="editRestaurant('${r.id}')">✏️</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteRestaurant('${r.id}')">🗑️</button>
-      </td>
-    </tr>`;
-  });
-  html += `</tbody></table></div></div>`;
-  document.getElementById('mainContent').innerHTML = html;
-}
-async function toggleRestaurantVisibility(id) {
-  const r = allRestaurantsCache.find(r=>r.id===id);
-  if (!r) return;
-  await apiFetch(API+'/admin/restaurants/'+id, { method:'PATCH', body:JSON.stringify({ visible: r.visible===false ? true : false }) });
-  loadRestaurants();
-}
-async function moveRestaurant(id, direction) {
-  const list = [...allRestaurantsCache].sort((a,b) => (a.order||0) - (b.order||0));
-  const idx = list.findIndex(r => r.id === id);
-  if (idx === -1) return;
-  if (direction === 'up' && idx > 0) {
-    [list[idx-1].order, list[idx].order] = [idx, idx-1];
-  } else if (direction === 'down' && idx < list.length - 1) {
-    [list[idx+1].order, list[idx].order] = [idx+2, idx+1];
-  }
-  for (const r of list) {
-    await apiFetch(API+'/admin/restaurants/'+r.id, { method:'PATCH', body:JSON.stringify({ order: r.order }) });
-  }
-  loadRestaurants();
-}
-async function toggleRestaurant(id){ await apiFetch(API+'/admin/restaurants/'+id+'/toggle',{method:'PATCH'}); loadRestaurants(); }
-function showAddRestaurant(){
-  openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>إضافة مطعم</h3>
-    <div class="form-group"><label class="form-label">الاسم</label><input class="form-input" id="rname"></div>
-    <div class="form-group"><label class="form-label">هاتف المالك</label><input class="form-input" id="rphone"></div>
-    <div class="form-group"><label class="form-label">كلمة المرور</label><input class="form-input" type="password" id="rpass"></div>
-    <button class="btn btn-primary" onclick="addRestaurant()">حفظ</button>`);
-}
-async function addRestaurant(){
-  const n=document.getElementById('rname').value,p=document.getElementById('rphone').value,ps=document.getElementById('rpass').value;
-  if(!n||!p||!ps) return showToast('أكمل الحقول');
-  await apiFetch(API+'/admin/restaurants',{method:'POST',body:JSON.stringify({name:n,ownerPhone:p,ownerPassword:ps})});
-  closeModal(); loadRestaurants(); showToast('تمت الإضافة');
-}
-async function editRestaurant(id){
-  const r=allRestaurantsCache.find(r=>r.id===id);
-  openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>تعديل</h3>
-    <div class="form-group"><label class="form-label">الاسم</label><input class="form-input" id="editRname" value="${r.name}"></div>
-    <button class="btn btn-primary" onclick="saveRestaurantEdit('${id}')">حفظ</button>`);
-}
-async function saveRestaurantEdit(id){
-  const name=document.getElementById('editRname').value;
-  await apiFetch(API+'/admin/restaurants/'+id,{method:'PATCH',body:JSON.stringify({name})});
-  closeModal(); loadRestaurants();
-}
-async function deleteRestaurant(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/restaurants/'+id,{method:'DELETE'}); loadRestaurants(); } }
-
-// --- الطيارين (بطاقات صغيرة) ---
-async function loadDrivers(){
-  const res=await apiFetch(API+'/admin/drivers').then(r=>r.json());
-  allDriversCache=res;
-  let html = `<div class="section-card"><div class="section-header"><h2>👨‍✈️ الطيارين</h2><button class="btn btn-primary btn-sm" onclick="showAddDriver()">+ إضافة</button></div><div class="grid-cards">`;
-  res.forEach(d => {
-    html += `<div class="mini-card"><div class="card-title">${d.name}</div><div class="card-detail">📞 ${d.phone}</div><div class="card-detail">💰 أرباح: ${d.earnings} ج | رصيد: ${d.credit||0} ج</div><div>${d.isAvailable?'✅ متاح':'❌ مشغول'} | ${d.isActive?'✅ نشط':'🚫 محظور'}</div><div class="card-actions"><button class="btn btn-sm btn-outline" onclick="toggleDriver('${d.id}')">توفر</button><button class="btn btn-sm btn-warning" onclick="blockDriver('${d.id}')">${d.isActive?'حظر':'تفعيل'}</button><button class="btn btn-sm btn-danger" onclick="deleteDriver('${d.id}')">حذف</button><button class="btn btn-sm btn-info" onclick="driverDetails('${d.id}')">تفاصيل</button></div></div>`;
-  });
-  html += `</div></div>`; document.getElementById('mainContent').innerHTML = html;
-}
-async function toggleDriver(id){ await apiFetch(API+'/admin/drivers/'+id+'/toggle',{method:'PATCH'}); loadDrivers(); }
-async function blockDriver(id){ await apiFetch(API+'/admin/drivers/'+id+'/block',{method:'PATCH'}); loadDrivers(); }
-function showAddDriver(){
-  openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>إضافة طيار</h3>
-    <div class="form-group"><label class="form-label">الاسم</label><input class="form-input" id="dname"></div>
-    <div class="form-group"><label class="form-label">الهاتف</label><input class="form-input" id="dphone"></div>
-    <div class="form-group"><label class="form-label">كلمة المرور</label><input class="form-input" type="password" id="dpass"></div>
-    <button class="btn btn-primary" onclick="addDriver()">حفظ</button>`);
-}
-async function addDriver(){
-  const n=document.getElementById('dname').value,p=document.getElementById('dphone').value,ps=document.getElementById('dpass').value;
-  if(!n||!p||!ps) return showToast('أكمل الحقول');
-  await apiFetch(API+'/admin/drivers',{method:'POST',body:JSON.stringify({name:n,phone:p,password:ps})});
-  closeModal(); loadDrivers(); showToast('تمت الإضافة');
-}
-async function driverDetails(id){
-  const res=await apiFetch(API+'/admin/drivers/'+id+'/details'); const d=await res.json();
-  openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>تفاصيل الطيار</h3>
-    <p>الاسم: ${d.name}</p><p>الهاتف: ${d.phone}</p><p>الأرباح الكلية: ${d.earnings} ج</p><p>الرصيد: ${d.credit||0} ج</p><p>طلبات اليوم: ${d.todayOrdersCount}</p><p>إيراد اليوم: ${d.todayRevenue} ج</p>
-    <h4>طلبات اليوم</h4>${d.todayOrders.length?d.todayOrders.map(o=>`<div>#${o.orderNumber||'-'} - ${o.restaurantName} - ${o.total} ج</div>`).join(''):'لا يوجد'}`);
-}
-async function deleteDriver(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/drivers/'+id,{method:'DELETE'}); loadDrivers(); } }
-
-// --- الأسواق والصيدليات (بطاقات صغيرة) ---
-async function loadMarkets(){
-  const res=await apiFetch(API+'/admin/markets').then(r=>r.json());
-  let html = `<div class="section-card"><div class="section-header"><h2>🛒 الأسواق</h2><button class="btn btn-primary btn-sm" onclick="showAddMarket()">+ إضافة</button></div><div class="grid-cards">`;
-  res.forEach(m => { html += `<div class="mini-card"><div class="card-title">${m.name}</div><div>${m.isOpen?'<span class="badge badge-success">مفتوح</span>':'<span class="badge badge-danger">مغلق</span>'}</div><div class="card-actions"><button class="btn btn-sm btn-outline" onclick="toggleMarket('${m.id}')">تبديل</button><button class="btn btn-sm btn-danger" onclick="deleteMarket('${m.id}')">حذف</button></div></div>`; });
-  html += `</div></div>`; document.getElementById('mainContent').innerHTML = html;
-}
-function showAddMarket(){
-  openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>إضافة سوق</h3>
-    <div class="form-group"><label class="form-label">الاسم</label><input class="form-input" id="mname"></div>
-    <div class="form-group"><label class="form-label">هاتف المالك</label><input class="form-input" id="mphone"></div>
-    <div class="form-group"><label class="form-label">كلمة المرور</label><input class="form-input" type="password" id="mpass"></div>
-    <button class="btn btn-primary" onclick="addMarket()">حفظ</button>`);
-}
-async function addMarket(){
-  const n=document.getElementById('mname').value,p=document.getElementById('mphone').value,ps=document.getElementById('mpass').value;
-  if(!n||!p||!ps) return showToast('أكمل الحقول');
-  await apiFetch(API+'/admin/markets',{method:'POST',body:JSON.stringify({name:n,ownerPhone:p,ownerPassword:ps})});
-  closeModal(); loadMarkets();
-}
-async function toggleMarket(id){ await apiFetch(API+'/admin/markets/'+id+'/toggle',{method:'PATCH'}); loadMarkets(); }
-async function deleteMarket(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/markets/'+id,{method:'DELETE'}); loadMarkets(); } }
-
-async function loadPharmacies(){
-  const res=await apiFetch(API+'/admin/pharmacies').then(r=>r.json());
-  let html = `<div class="section-card"><div class="section-header"><h2>💊 الصيدليات</h2><button class="btn btn-primary btn-sm" onclick="showAddPharmacy()">+ إضافة</button></div><div class="grid-cards">`;
-  res.forEach(p => { html += `<div class="mini-card"><div class="card-title">${p.name}</div><div>${p.isOpen?'<span class="badge badge-success">مفتوح</span>':'<span class="badge badge-danger">مغلق</span>'}</div><div class="card-actions"><button class="btn btn-sm btn-outline" onclick="togglePharmacy('${p.id}')">تبديل</button><button class="btn btn-sm btn-danger" onclick="deletePharmacy('${p.id}')">حذف</button></div></div>`; });
-  html += `</div></div>`; document.getElementById('mainContent').innerHTML = html;
-}
-function showAddPharmacy(){
-  openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>إضافة صيدلية</h3>
-    <div class="form-group"><label class="form-label">الاسم</label><input class="form-input" id="phname"></div>
-    <div class="form-group"><label class="form-label">هاتف المالك</label><input class="form-input" id="phphone"></div>
-    <div class="form-group"><label class="form-label">كلمة المرور</label><input class="form-input" type="password" id="phpass"></div>
-    <button class="btn btn-primary" onclick="addPharmacy()">حفظ</button>`);
-}
-async function addPharmacy(){
-  const n=document.getElementById('phname').value,p=document.getElementById('phphone').value,ps=document.getElementById('phpass').value;
-  if(!n||!p||!ps) return showToast('أكمل الحقول');
-  await apiFetch(API+'/admin/pharmacies',{method:'POST',body:JSON.stringify({name:n,ownerPhone:p,ownerPassword:ps})});
-  closeModal(); loadPharmacies();
-}
-async function togglePharmacy(id){ await apiFetch(API+'/admin/pharmacies/'+id+'/toggle',{method:'PATCH'}); loadPharmacies(); }
-async function deletePharmacy(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/pharmacies/'+id,{method:'DELETE'}); loadPharmacies(); } }
-
-// --- العملاء ---
-async function loadCustomers(){
-  const search=document.getElementById('customerSearch')?.value||'';
-  const res=await apiFetch(API+'/admin/customers?search='+search).then(r=>r.json());
-  document.getElementById('mainContent').innerHTML=`
-    <div class="section-card"><div class="section-header"><h2>👥 العملاء</h2><input class="form-input" id="customerSearch" placeholder="بحث..." oninput="loadCustomers()" style="width:200px;"></div>
-    <div class="table-responsive"><table><thead><tr><th>الاسم</th><th>الهاتف</th><th>المنطقة</th><th>العنوان</th><th>الطلبات</th><th>آخر طلب</th><th>إجراءات</th></tr></thead><tbody>
-    ${res.map(c=>`<tr><td><strong>${c.name}</strong></td><td>${c.phone}</td><td>${c.regionName}</td><td>${c.address}</td><td>${c.totalOrders}</td><td>${c.lastOrderDate?new Date(c.lastOrderDate).toLocaleDateString('ar-EG'):'—'}</td><td><button class="btn btn-sm btn-warning" onclick="editCustomer('${c.id}')">تعديل</button></td></tr>`).join('')}
-    </tbody></table></div></div>`;
-}
-async function editCustomer(id){
-  const c=await apiFetch(API+'/admin/customers/'+id).then(r=>r.json());
-  const regions=await apiFetch(API+'/admin/regions').then(r=>r.json());
-  const opts=regions.map(r=>`<option value="${r.id}" ${r.id===c.regionId?'selected':''}>${r.name}</option>`).join('');
-  openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>تعديل</h3>
-    <div class="form-group"><label class="form-label">الاسم</label><input class="form-input" id="ecname" value="${c.name}"></div>
-    <div class="form-group"><label class="form-label">الهاتف</label><input class="form-input" id="ecphone" value="${c.phone}"></div>
-    <div class="form-group"><label class="form-label">المنطقة</label><select class="form-input" id="ecregion">${opts}</select></div>
-    <div class="form-group"><label class="form-label">العنوان</label><input class="form-input" id="ecaddr" value="${c.address}"></div>
-    <button class="btn btn-primary" onclick="saveCustomerEdit('${id}')">حفظ</button>`);
-}
-async function saveCustomerEdit(id){
-  const n=document.getElementById('ecname').value,p=document.getElementById('ecphone').value,reg=document.getElementById('ecregion').value,addr=document.getElementById('ecaddr').value;
-  await apiFetch(API+'/admin/customers/'+id,{method:'PATCH',body:JSON.stringify({name:n,phone:p,regionId:reg,address:addr})});
-  closeModal(); loadCustomers();
-}
-
-// --- المناطق ---
-async function loadRegions(){
-  const res=await apiFetch(API+'/admin/regions').then(r=>r.json()); allRegions=res;
-  document.getElementById('mainContent').innerHTML=`
-    <div class="section-card"><div class="section-header"><h2>📍 المناطق</h2><button class="btn btn-primary" onclick="showAddRegion()">+ إضافة</button></div>
-    <div class="table-responsive"><table><thead><tr><th>الاسم</th><th>الرسوم</th><th>إجراءات</th></tr></thead><tbody>
-    ${res.map(r=>`<tr><td><strong>${r.name}</strong></td><td>${r.fee} ج</td><td><button class="btn btn-sm btn-warning" onclick="editRegion('${r.id}','${r.name}',${r.fee})">تعديل</button><button class="btn btn-sm btn-danger" onclick="deleteRegion('${r.id}')">حذف</button></td></tr>`).join('')}
-    </tbody></table></div></div>`;
-}
-function showAddRegion(){
-  openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>إضافة منطقة</h3>
-    <div class="form-group"><label class="form-label">الاسم</label><input class="form-input" id="regname"></div>
-    <div class="form-group"><label class="form-label">الرسوم</label><input class="form-input" type="number" id="regfee"></div>
-    <button class="btn btn-primary" onclick="addRegion()">حفظ</button>`);
-}
-async function addRegion(){
-  const n=document.getElementById('regname').value,f=Number(document.getElementById('regfee').value);
-  await apiFetch(API+'/admin/regions',{method:'POST',body:JSON.stringify({name:n,fee:f})});
-  closeModal(); loadRegions();
-}
-function editRegion(id,name,fee){
-  openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>تعديل</h3>
-    <div class="form-group"><label class="form-label">الاسم</label><input class="form-input" id="eregname" value="${name}"></div>
-    <div class="form-group"><label class="form-label">الرسوم</label><input class="form-input" type="number" id="eregfee" value="${fee}"></div>
-    <button class="btn btn-primary" onclick="updateRegion('${id}')">حفظ</button>`);
-}
-async function updateRegion(id){
-  const n=document.getElementById('eregname').value,f=Number(document.getElementById('eregfee').value);
-  await apiFetch(API+'/admin/regions/'+id,{method:'PATCH',body:JSON.stringify({name:n,fee:f})});
-  closeModal(); loadRegions();
-}
-async function deleteRegion(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/regions/'+id,{method:'DELETE'}); loadRegions(); } }
-
-// --- الطلبات (مع تبويبات و orderNumber) ---
-let currentOrderTab = 'new';
-let filteredOrders = [];
-async function loadOrders(){
-  const orders=await apiFetch(API+'/orders').then(r=>r.json());
-  allOrdersCache=orders;
-  window._orders=orders.slice().reverse();
-  currentOrderTab='new';
-  applyOrderFilter();
-  document.getElementById('mainContent').innerHTML=`
-    <div class="section-card"><div class="section-header"><h2>📦 الطلبات</h2><input class="form-input" id="ordSearch" placeholder="بحث..." oninput="applyOrderFilter()" style="width:200px;"></div>
-    <div class="tab-bar"><div class="tab-btn active" onclick="switchOrderTab('new')">🆕 جديدة</div><div class="tab-btn" onclick="switchOrderTab('in-progress')">⏳ قيد التنفيذ</div><div class="tab-btn" onclick="switchOrderTab('completed')">✅ مكتملة</div></div>
-    <div class="table-responsive"><table><thead><tr><th>رقم</th><th>العميل</th><th>المطعم</th><th>الإجمالي</th><th>الحالة</th><th>الطيار</th><th>إجراءات</th></tr></thead><tbody id="ordersTbody"></tbody></table></div></div>`;
-  renderOrdersTable();
-}
-function switchOrderTab(tab){ currentOrderTab=tab; document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); event?.target?.classList.add('active'); applyOrderFilter(); }
-function applyOrderFilter(){
-  const all=window._orders||[];
-  const q=document.getElementById('ordSearch')?.value?.toLowerCase()||'';
-  filteredOrders=all.filter(o=>{
-    if(currentOrderTab==='new') return !o.adminApproved && o.status!=='CANCELLED';
-    if(currentOrderTab==='in-progress') return o.adminApproved && !['DELIVERED','CANCELLED'].includes(o.status);
-    return ['DELIVERED','CANCELLED'].includes(o.status);
-  });
-  if(q) filteredOrders=filteredOrders.filter(o=>(o.customerName||'').includes(q)||o.id.includes(q));
-  renderOrdersTable();
-}
-function renderOrdersTable(){
-  const tbody = document.getElementById('ordersTbody');
-  if (!tbody) return;
-  if (!filteredOrders.length) { tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">لا توجد طلبات</div></td></tr>'; return; }
-  tbody.innerHTML = filteredOrders.map(o => {
-    const actions = (!o.adminApproved && o.status !== 'CANCELLED') ? `
-      <div class="action-btns">
-        <button class="btn-act btn-act-approve" onclick="approveOrder('${o.id}')">✅ موافقة</button>
-        <button class="btn-act btn-act-reject" onclick="rejectOrder('${o.id}')">❌ رفض</button>
-        <button class="btn-act btn-act-edit" onclick="editOrder('${o.id}')">✏️ تعديل</button>
-        <button class="btn-act btn-act-view" onclick="viewOrder('${o.id}')">👁️ عرض</button>
-      </div>` : '<span>—</span>';
-    return `
-      <tr>
-        <td style="color:var(--brand);font-weight:800">#${o.orderNumber || '-'}</td>
-        <td>${o.customerName}</td>
-        <td>${o.restaurantName || '—'}</td>
-        <td>${o.total} ج</td>
-        <td>${statusBadge(o.status)}</td>
-        <td>${o.driverName || '—'}</td>
-        <td>${actions}</td>
-      </tr>`;
   }).join('');
 }
-async function approveOrder(id){ await apiFetch(API+'/admin/orders/'+id+'/approve',{method:'PATCH'}); showToast('تمت الموافقة'); loadOrders(); }
-async function rejectOrder(id){ const r=prompt('سبب الرفض:'); if(r===null) return; await apiFetch(API+'/admin/orders/'+id+'/reject',{method:'PATCH',body:JSON.stringify({reason:r})}); loadOrders(); }
-async function editOrder(id){
-  const o=allOrdersCache.find(o=>o.id===id);
-  openModal(`<button class="modal-close" onclick="closeModal()">✕</button><h3>تعديل طلب #${o.orderNumber||id.slice(-6)}</h3>
-    <div class="form-group"><label class="form-label">الأصناف (JSON)</label><textarea class="form-input" id="editItems" rows="4">${JSON.stringify(o.items,null,2)}</textarea></div>
-    <div class="form-group"><label class="form-label">الإجمالي</label><input class="form-input" type="number" id="editTotal" value="${o.total}"></div>
-    <div class="form-group"><label class="form-label">ملاحظات الأدمن</label><input class="form-input" id="editAdminNotes" value="${o.adminNotes||''}"></div>
-    <button class="btn btn-primary" onclick="saveOrderEdit('${id}')">حفظ</button>`);
+
+// ========== Special Order ==========
+function openSpecialOrder(type, id) { specialOrderType=type; specialOrderStoreId=id; let title=type==='market'?'طلب ماركت':(type==='pharmacy'?'طلب صيدلية':'طلب خاص'); document.getElementById('specialOrderTitle').innerText=title; document.getElementById('specialOrderDetails').value=''; document.getElementById('filePreview').innerHTML=''; selectedFiles=[]; document.getElementById('attachFiles').value=''; updateSpecialDeliveryFee(); showScreen('specialOrderScreen'); }
+function updateSpecialDeliveryFee() { let fee=selectedArea?selectedArea.fee:10; document.getElementById('specialDeliveryFee').innerText=fee+' ج'; document.getElementById('specialTotal').innerText=fee+' ج'; }
+function previewFiles(input) { let preview=document.getElementById('filePreview'); preview.innerHTML=''; selectedFiles=Array.from(input.files); selectedFiles.forEach(file=>{ let img=document.createElement('img'); img.src=URL.createObjectURL(file); preview.appendChild(img); }); }
+async function submitSpecialOrder() {
+  if(!currentUser){ showToast('⚠️ يرجى تسجيل الدخول أولاً'); return; }
+  let details = document.getElementById('specialOrderDetails').value.trim();
+  if(!details && specialOrderType!=='custom'){ showToast('⚠️ اكتب تفاصيل طلبك'); return; }
+  if (!selectedArea) { if (currentUser.regionId && allRegions.length) { const region = allRegions.find(r => r.id === currentUser.regionId); if (region) selectedArea = region; } if (!selectedArea) { pendingSpecialOrderData = { type: specialOrderType, storeId: specialOrderStoreId, details: details }; showToast('⚠️ يرجى اختيار المنطقة أولاً'); showScreen('areaScreen'); return; } }
+  let fee = selectedArea.fee; let total = fee;
+  let orderData = { orderType: specialOrderType, storeId: specialOrderStoreId, items: [], orderNotes: details, customerName: currentUser.name, customerPhone: currentUser.phone, address: currentUser.address || selectedArea.name, regionName: selectedArea.name, paymentMethod: paymentMethod, deliveryFee: fee, total };
+  try {
+    let formData = new FormData(); formData.append('orderData', JSON.stringify(orderData));
+    for (let file of selectedFiles) { formData.append('files', file); }
+    const res = await fetch(API+'/orders/special', { method:'POST', body:formData, credentials:'include' });
+    const data = await res.json(); if(data.error) return showToast('❌ '+data.error);
+    showToast('✅ تم إرسال الطلب بنجاح'); showScreen('homeScreen'); loadMyOrders();
+  } catch(e) { showToast('❌ فشل الاتصال'); }
 }
-async function saveOrderEdit(id){
-  try{
-    const items=JSON.parse(document.getElementById('editItems').value);
-    const total=Number(document.getElementById('editTotal').value);
-    const adminNotes=document.getElementById('editAdminNotes').value;
-    await apiFetch(API+'/admin/orders/'+id,{method:'PATCH',body:JSON.stringify({items,total,adminNotes})});
-    closeModal(); showToast('تم التعديل'); loadOrders();
-  }catch(e){ showToast('صيغة JSON غير صحيحة'); }
-}
-function viewOrder(id){
-  const o = allOrdersCache.find(o => o.id === id);
-  if (!o) return;
-  let paymentDetails = '';
-  if (o.paymentMethod === 'VODAFONE') {
-    paymentDetails = `
-      <div><strong>الدفع:</strong> 📱 فودافون كاش</div>
-      <div><strong>آخر 3 أرقام من المحول:</strong> ${o.lastDigits || '—'}</div>
-      ${o.extraFee ? `<div><strong>رسوم تحويل:</strong> ${o.extraFee} ج</div>` : ''}
-    `;
-  } else if (o.paymentMethod === 'INSTAPAY') {
-    paymentDetails = `
-      <div><strong>الدفع:</strong> 🟣 انستا باي</div>
-      <div><strong>معرف المعاملة:</strong> ${o.transactionId || '—'}</div>
-      ${o.extraFee ? `<div><strong>رسوم تحويل:</strong> ${o.extraFee} ج</div>` : ''}
-    `;
-  } else {
-    paymentDetails = `<div><strong>الدفع:</strong> 💵 كاش عند الاستلام</div>`;
+
+// ========== Restaurants ==========
+async function loadRestaurants() { try { const res=await apiFetch(API+'/restaurants'); restaurants=await res.json(); renderHomeItems(); } catch(e){ console.log(e); } }
+async function openRestaurant(id) {
+  selectedRestaurant = restaurants.find(r => r.id === id);
+  if (!selectedRestaurant) { showToast('⚠️ المطعم غير موجود'); return; }
+  document.getElementById('restaurantName').innerText = selectedRestaurant.name;
+  document.getElementById('restaurantTitleHeader').innerText = selectedRestaurant.name;
+  document.getElementById('restaurantHero').src = (selectedRestaurant.logo && selectedRestaurant.logo.startsWith('/uploads')) ? selectedRestaurant.logo : (selectedRestaurant.logo || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600');
+  try {
+    showSpinner();
+    const res = await apiFetch(API + '/restaurants/' + id + '/menu');
+    if (!res.ok) throw new Error('فشل تحميل القائمة');
+    products = await res.json();
+    renderTabs();
+    showScreen('restaurantScreen');
+  } catch (e) {
+    showToast('⚠️ ' + e.message);
+    console.error(e);
+  } finally {
+    hideSpinner();
   }
+}
+function renderTabs() { const categories=[...new Set(products.map(p=>p.category||'عام'))]; const tabs=document.getElementById('tabsContainer'); tabs.innerHTML=categories.map((c,i)=>`<div class="tab ${i===0?'active':''}" onclick="filterProducts('${c}', this)">${esc(c)}</div>`).join(''); filterProducts(categories[0],document.querySelector('.tab')); }
+function filterProducts(category,el) { document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); if(el) el.classList.add('active'); const filtered=category?products.filter(p=>(p.category||'عام')===category):products; renderProducts(filtered); }
 
-  openModal(`
-    <button class="modal-close" onclick="closeModal()">✕</button>
-    <h3>تفاصيل #${o.orderNumber || id.slice(-6)}</h3>
-    <div style="display:flex;flex-direction:column;gap:8px">
-      <div><strong>العميل:</strong> ${o.customerName} (${o.customerPhone})</div>
-      <div><strong>المطعم:</strong> ${o.restaurantName || '—'}</div>
-      <div><strong>المنطقة:</strong> ${o.regionName} | <strong>العنوان:</strong> ${o.address}</div>
-      <div><strong>الإجمالي:</strong> ${o.total} ج</div>
-      ${paymentDetails}
-      <div><strong>الحالة:</strong> ${STATUS_AR[o.status]}</div>
-      <div><strong>الطيار:</strong> ${o.driverName || '—'}</div>
-      ${o.orderNotes ? `<div><strong>ملاحظات:</strong> ${o.orderNotes}</div>` : ''}
-      ${o.invoiceAmount ? `<div><strong>الفاتورة:</strong> ${o.invoiceAmount} ج (${o.invoiceBy})</div>` : ''}
-      <div><strong>الأصناف:</strong><ul>${(o.items || []).map(i => `<li>${i.name} ×${i.quantity || 1} (${i.price} ج) ${i.selectedOptions?.length ? '(' + i.selectedOptions.map(o => o.value).join(',') + ')' : ''} ${i.notes ? '- ' + i.notes : ''}</li>`).join('')}</ul></div>
-      ${o.attachments?.length ? `<div><strong>مرفقات:</strong><br>${o.attachments.map(u => `<img src="${u}" style="width:80px;margin:4px;border-radius:8px">`).join('')}</div>` : ''}
-    </div>
-  `);
-}
-// --- المنتجات والتصنيفات ---
-async function loadProducts(){
-  const [p,c]=await Promise.all([apiFetch(API+'/admin/products'), apiFetch(API+'/admin/categories')]);
-  const products=await p.json(), categories=await c.json();
-  document.getElementById('mainContent').innerHTML=`
-    <div class="section-card"><div class="section-header"><h2>🏷️ المنتجات</h2><button class="btn btn-primary btn-sm" onclick="alert('يمكنك إضافة المنتجات عبر واجهة المطعم')">+ إضافة</button></div>
-    <div class="table-responsive"><table><thead><tr><th>الصورة</th><th>الاسم</th><th>السعر</th><th>التصنيف</th><th>المطعم</th><th>حذف</th></tr></thead><tbody>
-    ${products.map(p=>`<tr><td><img src="${p.image}" width="40" height="40" style="border-radius:8px"></td><td>${p.name}</td><td>${p.price||p.basePrice} ج</td><td>${p.category}</td><td>${p.restaurantName||''}</td><td><button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.id}')">حذف</button></td></tr>`).join('')}
-    </tbody></table></div></div>
-    <div class="section-card"><div class="section-header"><h2>التصنيفات</h2><button class="btn btn-primary btn-sm" onclick="addCategory()">+ إضافة</button></div>
-    <div style="margin-top:12px">${categories.map(c=>`<span class="badge badge-info" style="margin:4px">${c.name} <button onclick="deleteCategory('${c.id}')" style="border:none;color:red;cursor:pointer">×</button></span>`).join('')}</div></div>`;
-}
-async function deleteProduct(id){ if(confirm('حذف؟')){ await apiFetch(API+'/admin/products/'+id,{method:'DELETE'}); loadProducts(); } }
-function addCategory(){ const n=prompt('اسم التصنيف:'); if(n) apiFetch(API+'/admin/categories',{method:'POST',body:JSON.stringify({name:n})}).then(()=>loadProducts()); }
-async function deleteCategory(id){ await apiFetch(API+'/admin/categories/'+id,{method:'DELETE'}); loadProducts(); }
-
-// --- الأصوات ---
-async function loadSounds(){
-  document.getElementById('mainContent').innerHTML = `<div class="section-card"><div class="section-header"><h2>🎵 إدارة الأصوات</h2></div><div class="grid-cards" id="soundCards"></div></div>`;
-  renderSoundCards();
-}
-function renderSoundCards(){
-  const events = [
-    { role: 'أدمن', prefix: 'admin', items: ['new_order','order_cancelled','driver_arrived'] },
-    { role: 'عميل', prefix: 'customer', items: ['new_order','order_accepted','order_cancelled','driver_assigned','on_the_way','delivered'] },
-    { role: 'طيار', prefix: 'driver', items: ['new_order','order_accepted','order_cancelled','delivered'] },
-    { role: 'مطعم', prefix: 'restaurant', items: ['new_order','order_accepted'] },
-    { role: 'ماركت', prefix: 'market', items: ['new_order','order_accepted'] }
-  ];
-  let html = '';
-  events.forEach(role => {
-    role.items.forEach(ev => {
-      const id = `${role.prefix}_${ev}`;
-      html += `<div class="mini-card"><div class="card-title">${role.role} - ${ev.replace(/_/g,' ')}</div><audio controls style="width:100%; margin:8px 0;" id="audio_${id}"><source src="/sounds/${id}.mp3"></audio><div class="card-actions"><button class="btn btn-sm btn-primary" onclick="document.getElementById('file_${id}').click()">📤 رفع</button><input type="file" id="file_${id}" accept="audio/*" style="display:none" onchange="uploadSound('${id}', this)"></div></div>`;
-    });
-  });
-  document.getElementById('soundCards').innerHTML = html;
-}
-async function uploadSound(eventId, input) {
-  const file = input.files[0];
-  if (!file) return;
-  const formData = new FormData();
-  formData.append('sound', file);
-  formData.append('event', eventId);
-  try {
-    const res = await fetch(API + '/admin/upload-sound', { method: 'POST', body: formData, credentials: 'include' });
-    const data = await res.json();
-    if (data.error) { showToast('❌ ' + data.error); return; }
-    showToast('✅ تم رفع الصوت');
-    const audio = document.getElementById('audio_' + eventId);
-    if (audio) { audio.src = `/sounds/${eventId}.mp3?t=${Date.now()}`; audio.load(); audio.play().catch(() => {}); }
-  } catch (e) { showToast('❌ فشل الاتصال'); }
-}
-
-// --- طلبات الشحن ---
-async function loadRecharge(){
-  const res=await apiFetch(API+'/admin/recharge-requests?status=PENDING').then(r=>r.json());
-  document.getElementById('mainContent').innerHTML=`
-    <div class="section-card"><div class="section-header"><h2>💰 طلبات الشحن المعلقة</h2></div>
-    ${res.length?res.map(r=>`<div class="info-item"><div><strong>${r.driverName}</strong> (${r.driverPhone})</div><div>المبلغ: <strong>${r.amount} ج</strong></div><div>آخر 4 أرقام: <strong>${r.last4digits}</strong></div><div>${new Date(r.createdAt).toLocaleString('ar-EG')}</div><div><button class="btn btn-sm btn-success" onclick="approveRecharge('${r.id}')">✅</button><button class="btn btn-sm btn-danger" onclick="rejectRecharge('${r.id}')">❌</button></div></div>`).join('') : '<div class="empty-state">لا توجد طلبات</div>'}
-    </div>`;
-}
-async function approveRecharge(id){ if(confirm('موافقة؟')){ await apiFetch(API+'/admin/recharge-requests/'+id+'/approve',{method:'PATCH'}); showToast('تم'); loadRecharge(); } }
-async function rejectRecharge(id){ if(confirm('رفض؟')){ await apiFetch(API+'/admin/recharge-requests/'+id+'/reject',{method:'PATCH'}); showToast('تم'); loadRecharge(); } }
-
-// --- التقارير ---
-async function loadReports(){
-  const data=await apiFetch(API+'/admin/reports/full').then(r=>r.json());
-  document.getElementById('mainContent').innerHTML=`
-    <div class="stats-grid">
-      <div class="stat-card"><h4>يومي</h4><div class="value">${data.daily?.count||0} طلب</div><div>${data.daily?.totalRevenue||0} ج</div></div>
-      <div class="stat-card"><h4>أسبوعي</h4><div class="value">${data.weekly?.count||0} طلب</div><div>${data.weekly?.totalRevenue||0} ج</div></div>
-      <div class="stat-card"><h4>شهري</h4><div class="value">${data.monthly?.count||0} طلب</div><div>${data.monthly?.totalRevenue||0} ج</div></div>
-      <div class="stat-card"><h4>الإجمالي</h4><div class="value">${data.total?.count||0} طلب</div><div>${data.total?.totalRevenue||0} ج</div></div>
-    </div>
-    <div class="grid-2">
-      <div class="section-card"><h3>أفضل المطاعم (شهري)</h3>${(data.restaurants?.month||[]).map(r=>`<div class="info-item"><span>${r.name}</span><span>${r.netRevenue} ج</span></div>`).join('')||'<div class="info-item">لا توجد بيانات</div>'}</div>
-      <div class="section-card"><h3>أفضل الطيارين (شهري)</h3>${(data.drivers?.month||[]).map(d=>`<div class="info-item"><span>${d.name}</span><span>${d.revenue} ج</span></div>`).join('')||'<div class="info-item">لا توجد بيانات</div>'}</div>
-    </div>`;
-}
-
-// --- إيرادات المنصة ---
-async function loadPlatformRevenue(){
-  const data=await apiFetch(API+'/admin/platform-revenue').then(r=>r.json());
-  document.getElementById('mainContent').innerHTML=`<div class="stats-grid"><div class="stat-card"><h4>إيرادات المنصة اليوم</h4><div class="value">${data.today||0} ج</div></div><div class="stat-card"><h4>إجمالي إيرادات المنصة</h4><div class="value">${data.total||0} ج</div></div></div>`;
-}
-
-// --- اوردرات المطاعم المباشرة ---
-async function loadRestaurantDirectOrders() {
-  try {
-    const res = await apiFetch(API + '/admin/restaurant-direct-orders');
-    const orders = await res.json();
-    const grouped = {};
-    orders.forEach(o => {
-      const name = o.restaurantName || 'مطعم غير معروف';
-      if (!grouped[name]) grouped[name] = [];
-      grouped[name].push(o);
-    });
-    let html = '<div class="section-card"><div class="section-header"><h2>📋 اوردرات المطاعم المباشرة</h2></div>';
-    for (const [restaurant, list] of Object.entries(grouped)) {
-      html += `<h3 style="margin-top:20px;">🍽️ ${restaurant}</h3><div class="table-responsive"><table><thead><tr><th>رقم</th><th>العميل</th><th>المنطقة</th><th>المبلغ</th><th>الحالة</th><th>الطيار</th><th>إجراءات</th></tr></thead><tbody>`;
-      list.forEach(o => {
-        html += `<tr><td>#${o.orderNumber||'-'}</td><td>${o.customerName}<br><small>${o.customerPhone}</small></td><td>${o.regionName}<br><small>${o.address}</small></td><td>${o.total} ج</td><td>${statusBadge(o.status)}</td><td>${o.driverName||'—'}</td><td>${!o.driverId ? `<button class="btn btn-sm btn-primary" onclick="assignDriverToDirectOrder('${o.id}')">تعيين طيار</button>` : '—'}</td></tr>`;
-      });
-      html += '</tbody></table></div>';
+// ========== Product Sheet ==========
+function openProductSheet(product) {
+  currentProduct=product;
+  const hasGroups=product.groups&&product.groups.length>0;
+  if(!hasGroups){ addToCartSimple(product); return; }
+  const basePrice=product.basePrice||0;
+  let html=`<div style="display:flex;gap:16px;margin-bottom:20px"><img src="${product.image||'placeholder.jpg'}" style="width:100px;height:100px;border-radius:16px;object-fit:cover"><div><h3>${esc(product.name)}</h3><p style="color:#666">${esc(product.description||'')}</p><div style="color:#FF6B00;">السعر الأساسي: ${basePrice} ج</div></div></div>`;
+  product.groups.forEach(group=>{
+    html+=`<div style="margin-top:16px"><strong>${esc(group.name)} ${group.required?'*':''}</strong>`;
+    if(group.type==='single'){
+      group.options.forEach(opt=>{ html+=`<label class="option-label"><input type="radio" name="${group.id}" value="${opt.price}" data-extra="${opt.price}" ${opt.price===0&&group.required?'checked':''}><span style="flex:1">${esc(opt.value)}</span><span style="color:#FF6B00;font-weight:bold">${opt.price>0?'+'+opt.price+' ج':'مجاني'}</span></label>`; });
+    } else {
+      group.options.forEach(opt=>{ html+=`<label class="option-label"><input type="checkbox" name="${group.id}" value="${opt.price}" data-extra="${opt.price}"><span style="flex:1">${esc(opt.value)}</span><span style="color:#FF6B00;font-weight:bold">+${opt.price} ج</span></label>`; });
     }
-    html += '</div>';
-    document.getElementById('mainContent').innerHTML = html;
-  } catch(e) { showToast('خطأ في تحميل الطلبات'); }
-}
-async function assignDriverToDirectOrder(orderId) {
-  const drivers = await apiFetch(API + '/admin/drivers').then(r => r.json());
-  const avail = drivers.filter(d => d.isAvailable);
-  if (!avail.length) return alert('لا يوجد طيارين متاحين');
-  const options = avail.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
-  openModal(`<h3>تعيين طيار للطلب</h3><select id="driverSelect" class="form-input">${options}</select><button class="btn btn-primary" onclick="confirmAssign('${orderId}')">تعيين</button>`);
-}
-async function confirmAssign(orderId) {
-  const driverId = document.getElementById('driverSelect').value;
-  await apiFetch(API + '/admin/restaurant-direct-orders/' + orderId + '/assign-driver', { method: 'PATCH', body: JSON.stringify({ driverId }) });
-  closeModal(); showToast('تم تعيين الطيار'); loadRestaurantDirectOrders();
-}
-
-// --- الإعدادات (نوع التوزيع) ---
-async function loadSettings() {
-  document.getElementById('mainContent').innerHTML = `
-    <div class="section-card">
-      <div class="section-header"><h2>⚙️ إعدادات المنصة</h2></div>
-      <h3>نوع توزيع الطلبات</h3>
-      <p style="color:var(--text-muted); margin-bottom:16px;">حالياً: <strong>${dispatchMode === 'manual' ? 'توزيع مخصص (يدوي)' : 'توزيع تلقائي'}</strong></p>
-      <button class="btn btn-sm ${dispatchMode==='manual'?'btn-primary':'btn-outline'}" onclick="setDispatchMode('manual')">🔧 مخصص (يدوي)</button>
-      <button class="btn btn-sm ${dispatchMode==='auto'?'btn-primary':'btn-outline'}" onclick="setDispatchMode('auto')">🤖 تلقائي</button>
-      <p style="font-size:12px; color:var(--text-muted); margin-top:12px;">في الوضع المخصص، لن تظهر الطلبات الجاهزة للسائقين إلا بعد تعيينك لهم.</p>
-    </div>`;
-}
-async function setDispatchMode(mode) {
-  dispatchMode = mode;
-  localStorage.setItem('drako_dispatch_mode', mode);
-  try {
-    await apiFetch(API + '/admin/dispatch-mode', { method: 'PATCH', body: JSON.stringify({ mode }) });
-    showToast('تم تحديث إعدادات التوزيع');
-    loadSettings();
-  } catch(e) { showToast('فشل تحديث الإعدادات على السيرفر'); }
-}
-
-// --- طلب تجريبي ---
-async function testOrder(){
-  const restId=prompt('معرف المطعم:');
-  if(!restId) return;
-  const d=await apiFetch(API+'/admin/test-order',{method:'POST',body:JSON.stringify({restaurantId:restId})}).then(r=>r.json());
-  if(d.success) { showToast('تم إنشاء طلب تجريبي'); navigate('orders'); }
-  else showToast(d.error,'error');
-}
-
-// --- بدء التشغيل ---
-async function loadDispatchMode() {
-  try {
-    const res = await apiFetch(API + '/admin/dispatch-mode');
-    const data = await res.json();
-    dispatchMode = data.mode || 'manual';
-  } catch(e) {
-    dispatchMode = localStorage.getItem('drako_dispatch_mode') || 'manual';
-  }
-}
-
-function initApp() {
-  fetch(API+'/regions').then(r=>r.json()).then(d=>{ allRegions=d; });
-  loadDispatchMode().then(() => {
-    navigate('dashboard');
+    if(group.maxSelection) html+=`<small style="color:#888">الحد الأقصى ${group.maxSelection} اختيارات</small>`;
+    html+=`</div>`;
   });
-  const socket=io(); window._socket = socket;
-  socket.on('newOrder',data=>{ playSound('newOrder', 800, 'square'); showToast('طلب جديد من '+data.customerName); });
-  socket.on('orderCancelled',data=>{ playSound('orderCancelled', 400, 'triangle'); showToast('تم إلغاء طلب #'+(data.orderId||'').slice(-6),'error'); });
-  socket.on('driverArrived',data=>{ playSound('driverArrived', 600, 'sine'); showToast('الطيار '+data.driverName+' وصل'); });
+  html+=`<div style="margin-top:20px;display:flex;gap:12px;align-items:center"><span>الكمية:</span><button class="qty-btn qty-minus" onclick="changeQty(-1)">-</button><strong id="item-qty">1</strong><button class="qty-btn qty-plus" onclick="changeQty(1)">+</button></div><div style="margin-top:16px"><label style="font-size:13px;color:#666">ملاحظات للطلب</label><textarea id="item-notes" style="width:100%;height:60px;border:1px solid #ddd;border-radius:10px;padding:8px;margin-top:4px" placeholder="مثلاً: بدون بصل، زيادة صوص..."></textarea></div><div id="sheet-error" style="color:red; font-size:12px; margin-top:8px; display:none;">⚠️ يرجى اختيار جميع الخيارات الإجبارية</div><div style="font-size:20px;font-weight:900;margin-top:16px;color:#FF6B00">الإجمالي: <span id="sheet-total">${basePrice}</span> ج</div><button class="btn" style="margin-top:16px" onclick="confirmAddToCart()">🛒 أضف للطلب</button>`;
+  document.getElementById('sheetContent').innerHTML=html;
+  document.getElementById('productSheet').classList.add('open');
+  window._requiredGroups=[];
+  product.groups.forEach(g=>{ if(g.required) window._requiredGroups.push(g.id); });
+  const updateTotal=()=>{
+    let total=basePrice;
+    document.querySelectorAll('#sheetContent input:checked').forEach(inp=>total+=Number(inp.value)||0);
+    window._currentUnitPrice=total;
+    document.getElementById('sheet-total').textContent=total*(window._currentQty||1);
+    let allRequired=true;
+    window._requiredGroups.forEach(grpId=>{ if(!document.querySelector(`#sheetContent input[name="${grpId}"]:checked`)) allRequired=false; });
+    document.getElementById('sheet-error').style.display=allRequired?'none':'block';
+  };
+  document.querySelectorAll('#sheetContent input').forEach(inp=>inp.addEventListener('change',updateTotal));
+  window._currentQty=1;
+  updateTotal();
+}
+function changeQty(delta) { window._currentQty=Math.max(1,(window._currentQty||1)+delta); document.getElementById('item-qty').textContent=window._currentQty; const unitPrice=window._currentUnitPrice||0; document.getElementById('sheet-total').textContent=unitPrice*window._currentQty; }
+function closeProductSheet() { document.getElementById('productSheet').classList.remove('open'); currentProduct=null; }
+function confirmAddToCart() {
+  if(!currentProduct) return;
+  let allRequired=true;
+  window._requiredGroups.forEach(grpId=>{ if(!document.querySelector(`#sheetContent input[name="${grpId}"]:checked`)) allRequired=false; });
+  if(!allRequired){ showToast('⚠️ يرجى اختيار جميع الخيارات الإجبارية'); return; }
+  const product=currentProduct;
+  const qty=window._currentQty||1;
+  const notes=document.getElementById('item-notes')?.value||'';
+  const basePrice=product.basePrice||0;
+  const groups=product.groups||[];
+  const selectedOptions=[];
+  let finalPrice=basePrice;
+  groups.forEach(group=>{
+    if(group.type==='single'){
+      const radio=document.querySelector(`#sheetContent input[name="${group.id}"]:checked`);
+      if(radio){ const price=Number(radio.value)||0; finalPrice+=price; selectedOptions.push({ groupId:group.id, groupName:group.name, value:radio.parentElement.textContent.trim().split('(')[0].trim(), price }); }
+    } else {
+      document.querySelectorAll(`#sheetContent input[name="${group.id}"]:checked`).forEach(cb=>{ const price=Number(cb.value)||0; finalPrice+=price; selectedOptions.push({ groupId:group.id, groupName:group.name, value:cb.parentElement.textContent.trim().split('(')[0].trim(), price }); });
+    }
+  });
+  const uniqueId=product.id+'_'+JSON.stringify(selectedOptions);
+  const existing=cart.find(i=>i.id===uniqueId);
+  if(existing){ existing.quantity=(existing.quantity||1)+qty; }
+  else { cart.push({ id:uniqueId, productId:product.id, name:product.name, price:finalPrice, image:product.image, selectedOptions, quantity:qty, notes }); }
+  saveCart(); renderCart(); closeProductSheet(); showToast('✅ تمت إضافة المنتج');
+}
+function addToCartSimple(product) {
+  const existing=cart.find(i=>i.id===product.id);
+  if(existing){ existing.quantity=(existing.quantity||1)+1; }
+  else { cart.push({ id:product.id, productId:product.id, name:product.name, price:product.price||product.basePrice||0, image:product.image, selectedOptions:[], quantity:1, notes:'' }); }
+  saveCart(); renderCart(); showToast('✅ تمت إضافة المنتج');
 }
 
-document.addEventListener('click', function initialActivation() {
-  if (!audioActivated) activateAudio();
-  document.removeEventListener('click', initialActivation);
-}, { once: true });
+// ========== Cart Functions ==========
+function saveCart() { localStorage.setItem('drako_cart',JSON.stringify(cart)); const count=cart.reduce((a,b)=>a+(b.quantity||1),0); document.getElementById('cartBadge').innerText=count; document.getElementById('headerBadge').innerText=count; }
+function renderCart() {
+  const container=document.getElementById('cartItems');
+  if(!cart.length){ container.innerHTML='<div class="empty">🛒 السلة فارغة<br><span style="font-size:12px;">أضف بعض المنتجات من المطاعم</span></div>'; updateTotals(); return; }
+  container.innerHTML=cart.map((item,index)=>{ const optionsText=(item.selectedOptions||[]).map(o=>esc(o.value)).join(', '); const notesText=item.notes?`<div style="font-size:11px;color:#888">📝 ${esc(item.notes)}</div>`:''; return `<div class="cart-item"><img src="${(item.image&&item.image.startsWith('/uploads'))?item.image:(item.image||'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500')}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'"><div class="cart-content"><h4>${esc(item.name)}</h4>${optionsText?`<div style="font-size:11px;color:#888">${optionsText}</div>`:''}${notesText}<div>${item.price} ج</div><div class="qty-box"><button class="qty-btn qty-minus" onclick="updateCartItem(${index},-1)">-</button><strong>${item.quantity||1}</strong><button class="qty-btn qty-plus" onclick="updateCartItem(${index},1)">+</button></div></div><button class="icon-btn" onclick="removeCartItem(${index})">🗑</button></div>`; }).join('');
+  updateTotals();
+}
+function updateCartItem(i,d){ let nq=cart[i].quantity+d; if(nq<=0) cart.splice(i,1); else cart[i].quantity=nq; saveCart(); renderCart(); }
+function removeCartItem(i){ cart.splice(i,1); saveCart(); renderCart(); }
+function updateTotals() {
+  const itemsTotal = cart.reduce((a,b)=>a+(b.price*(b.quantity||1)),0);
+  const fee = selectedArea ? selectedArea.fee : 0;
+  let extraFee = 0;
+  if (paymentMethod === 'VODAFONE' || paymentMethod === 'INSTAPAY') extraFee = 5;
+  const final = itemsTotal + fee + extraFee;
+  document.getElementById('itemsTotal').innerText = itemsTotal + ' ج';
+  document.getElementById('deliveryFee').innerText = fee + ' ج';
+  document.getElementById('finalTotal').innerText = final + ' ج';
+  document.getElementById('checkoutItemsTotal').innerText = itemsTotal + ' ج';
+  document.getElementById('checkoutDelivery').innerText = fee + ' ج';
+  document.getElementById('checkoutFinal').innerText = final + ' ج';
+  const extraRow = document.getElementById('extraFeeRow');
+  const extraAmount = document.getElementById('extraFeeAmount');
+  if (extraRow && extraAmount) { if (extraFee > 0) { extraRow.style.display = 'flex'; extraAmount.innerText = extraFee + ' ج'; } else { extraRow.style.display = 'none'; } }
+}
+function proceedToCheckout() { if(!cart.length) return showToast('⚠️ السلة فارغة'); if(currentUser&&currentUser.regionId&&allRegions.length){ const region=allRegions.find(r=>r.id===currentUser.regionId); if(region){ selectedArea=region; updateTotals(); document.getElementById('selectedAreaName').innerText=region.name+' - '+region.fee+' ج'; renderCheckoutUserInfo(); renderCheckoutItems(); showScreen('checkoutScreen'); return; } } showScreen('areaScreen'); }
 
-// التحقق من الجلسة عند التحميل
-async function checkSession() {
+// ========== Order Functions ==========
+async function submitOrder() {
+  if(!selectedArea){ showToast('⚠️ يرجى اختيار المنطقة أولاً'); showScreen('areaScreen'); return; }
+  let name, phone, address;
+  if(currentUser){ name=currentUser.name; phone=currentUser.phone; address=currentUser.address; }
+  else { name=document.getElementById('customerName')?.value.trim(); phone=document.getElementById('customerPhone')?.value.trim(); if(!name||!phone){ showToast('⚠️ اكمل البيانات'); return; } }
+
+  const itemsTotal = cart.reduce((a,b)=>a+(b.price*(b.quantity||1)),0);
+  let extraFee = 0;
+  let lastDigits = null;
+  let transactionId = null;
+
+  if(paymentMethod === 'VODAFONE'){
+    const digitsInput = document.getElementById('vodafoneLastDigits');
+    if(!digitsInput || !digitsInput.value.trim() || digitsInput.value.trim().length !== 3 || isNaN(digitsInput.value.trim())){
+      return showToast('⚠️ أدخل آخر 3 أرقام من رقمك');
+    }
+    lastDigits = digitsInput.value.trim();
+    extraFee = 5;
+  } else if(paymentMethod === 'INSTAPAY'){
+    const txInput = document.getElementById('instapayTransactionId');
+    if(!txInput || !txInput.value.trim()){
+      return showToast('⚠️ أدخل معرف المعاملة');
+    }
+    transactionId = txInput.value.trim();
+    extraFee = 5;
+  }
+
+  const total = itemsTotal + (selectedArea.fee || 0) + extraFee;
+
+  const orderData = {
+    restaurantId: selectedRestaurant?.id,
+    items: cart.map(i => ({
+      productId: i.productId,
+      name: i.name,
+      price: i.price,
+      quantity: i.quantity || 1,
+      selectedOptions: i.selectedOptions || [],
+      notes: i.notes || ''
+    })),
+    total,
+    customerName: name,
+    customerPhone: phone,
+    address: address || selectedArea.name,
+    regionName: selectedArea.name,
+    paymentMethod,
+    deliveryFee: selectedArea.fee || 0,
+    lastDigits: lastDigits,
+    transactionId: transactionId,
+    extraFee: extraFee
+  };
+
   try {
-    const res = await fetch(API + '/whoami', { credentials: 'include' });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.user?.role === 'ADMIN') {
-        hideLogin();
-        initApp();
-        return;
+    const res = await apiFetch(API+'/orders', { method:'POST', body: JSON.stringify(orderData) });
+    const data = await res.json();
+    if(data.error){ showToast('❌ '+data.error); return; }
+    cart = []; saveCart(); renderCart();
+    trackOrder(data.orderId);
+    showToast('✅ تم إرسال الطلب بنجاح');
+  } catch(e){ console.error(e); showToast('❌ فشل في الاتصال بالسيرفر'); }
+}
+async function trackOrder(orderId) {
+  window._trackingOrderId = orderId;
+  document.getElementById('trackOrderId').innerText = '#' + orderId.slice(-6).toUpperCase();
+  showScreen('trackScreen');
+  const updateTrack = async () => {
+    try {
+      const res = await apiFetch(API + '/orders/' + orderId + '/track');
+      const order = await res.json();
+      const steps = ['PENDING', 'ACCEPTED', 'PREPARING', 'INVOICE_ADDED', 'READY', 'DRIVER_ASSIGNED', 'ON_THE_WAY', 'DELIVERED'];
+      const currentIdx = steps.indexOf(order.status);
+      let statusHtml = '';
+      steps.forEach((s, i) => { if (i <= currentIdx) { statusHtml += `<div class="status-step"><div class="status-dot done"></div><div class="status-text">${i === currentIdx ? '<span class="active">' + getStatusText(s) + '</span>' : getStatusText(s)}</div></div>`; } else { statusHtml += `<div class="status-step"><div class="status-dot"></div><div class="status-text">${getStatusText(s)}</div></div>`; } });
+      document.getElementById('trackStatusContainer').innerHTML = statusHtml;
+      let itemsHtml = '';
+      if (order.items && order.items.length > 0) {
+        itemsHtml = '<div style="margin-top:16px; background:#f9f9f9; border-radius:12px; padding:14px;"><h4 style="margin-bottom:12px;">🧾 المنتجات المطلوبة</h4>';
+        order.items.forEach(item => {
+          let optionsText = ''; if (item.selectedOptions && item.selectedOptions.length) { optionsText = item.selectedOptions.map(opt => esc(opt.value)).join('، '); optionsText = `<div style="font-size:11px; color:#666; margin-top:2px;">الخيارات: ${optionsText}</div>`; }
+          let notesText = item.notes ? `<div style="font-size:11px; color:#888; margin-top:2px;">📝 ${esc(item.notes)}</div>` : '';
+          const itemTotal = item.price * (item.quantity || 1);
+          itemsHtml += `<div style="display:flex; justify-content:space-between; border-bottom:1px dashed #ddd; padding:6px 0;"><div><strong>${esc(item.name)}</strong> × ${item.quantity || 1}${optionsText}${notesText}</div><div style="color:#FF6B00; font-weight:bold;">${itemTotal} ج</div></div>`;
+        });
+        itemsHtml += '</div>';
       }
-    }
-  } catch(e) {}
-  showLogin();
+      let invoiceHtml = '';
+      if (order.invoiceAmount) { invoiceHtml = `<div class="detail-row"><span>💰 قيمة الفاتورة</span><strong>${order.invoiceAmount} ج</strong></div>`; }
+      document.getElementById('trackDetails').innerHTML = `<div class="detail-row"><span>المطعم/المتجر</span><strong>${esc(order.restaurantName || order.storeName || 'طلب خاص')}</strong></div><div class="detail-row"><span>العميل</span><strong>${esc(order.customerName)}</strong></div><div class="detail-row"><span>المنطقة</span><strong>${esc(order.regionName || '—')}</strong></div><div class="detail-row"><span>العنوان</span><strong>${esc(order.address || '—')}</strong></div>${invoiceHtml}<div class="detail-row"><span>الإجمالي النهائي</span><strong>${order.total} ج</strong></div><div class="detail-row"><span>رسوم التوصيل</span><strong>${order.deliveryFee} ج</strong></div><div class="detail-row"><span>وقت الطلب</span>${new Date(order.createdAt).toLocaleString('ar-EG')}</div>${itemsHtml}`;
+      if (order.status !== 'DELIVERED' && order.status !== 'CANCELLED') { setTimeout(updateTrack, 10000); }
+    } catch (e) { console.log(e); }
+  };
+  updateTrack();
 }
-checkSession();
+function getStatusText(s) { const map={ PENDING:'في الانتظار', ACCEPTED:'مقبول', PREPARING:'قيد التحضير', INVOICE_ADDED:'تم إضافة الفاتورة', READY:'جاهز للتوصيل', DRIVER_ASSIGNED:'مع طيار', ON_THE_WAY:'في الطريق', DELIVERED:'تم التوصيل', CANCELLED:'ملغي' }; return map[s]||s; }
+
+// ========== My Orders ==========
+function switchOrdersTab(tab) { window._ordersTab=tab; document.querySelectorAll('#orders-tab-bar .tab').forEach(t=>t.classList.remove('active')); if(event&&event.target) event.target.classList.add('active'); loadMyOrders(); }
+async function loadMyOrders() {
+  const container=document.getElementById('myOrdersList'); if(!currentUser){ container.innerHTML='<div class="empty">🔐 سجل دخولك أولاً لمشاهدة طلباتك</div>'; return; }
+  try{ const res=await apiFetch(API+'/orders?customerPhone='+encodeURIComponent(currentUser.phone)); let orders=await res.json(); orders=orders.filter(o=>o.customerPhone===currentUser.phone); if(!orders.length){ container.innerHTML='<div class="empty">📋 لا توجد طلبات سابقة</div>'; return; } const tab=window._ordersTab||'active'; let filtered=tab==='active'?orders.filter(o=>!['DELIVERED','CANCELLED'].includes(o.status)):orders.filter(o=>['DELIVERED','CANCELLED'].includes(o.status)); if(!filtered.length){ container.innerHTML='<div class="empty">📋 لا توجد طلبات في هذا القسم</div>'; return; } container.innerHTML=filtered.reverse().map(order=>{ const firstItem=order.items?.[0]; const imgSrc=(firstItem&&firstItem.image&&firstItem.image.startsWith('/uploads'))?firstItem.image:'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'; const itemCount=(order.items||[]).length; const statusColor=order.status==='DELIVERED'?'#2ECC71':(order.status==='CANCELLED'?'#F05252':'#FF6B00'); const statusLabel=getStatusText(order.status); const total=order.total||0; const date=new Date(order.createdAt).toLocaleDateString('ar-EG'); const time=new Date(order.createdAt).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}); return `<div class="order-item"><img src="${imgSrc}" onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200'"><div class="order-info"><h4>طلب #${order.id.slice(-6)}</h4><div class="restaurant">🍽️ ${esc(order.restaurantName||(order.specialOrder?'طلب خاص':'مطعم'))}</div><div class="items-summary">📦 ${itemCount} منتج</div><span class="status-badge" style="background:${statusColor}20; color:${statusColor}; padding:2px 8px; border-radius:20px; font-size:11px;">${statusLabel}</span><div class="order-footer"><span>📅 ${date} - ${time}</span><span class="total">💰 ${total} ج</span></div></div><button class="track-btn" onclick="trackOrder('${order.id}')">📋 تتبع</button></div>`; }).join(''); } catch(e){ console.error(e); container.innerHTML='<div class="empty">⚠️ تعذر تحميل الطلبات</div>'; }
+}
+
+// ========== Initialization ==========
+if(currentUser){ document.getElementById('authWrapper').classList.add('hide'); document.getElementById('mainAppWrapper').classList.add('active'); loadSocket(); loadRestaurants(); loadMarketsAndPharmacies(); renderCart(); loadRegionsForSelect(); loadRegions().then(()=>{ if(currentUser.regionId&&allRegions.length){ selectedArea=allRegions.find(r=>r.id===currentUser.regionId)||null; } }); if(!restoreCurrentScreen()) showScreen('homeScreen'); initCategoryFilters(); } else { document.getElementById('authWrapper').classList.remove('hide'); document.getElementById('mainAppWrapper').classList.remove('active'); loadRegionsForSelect(); }
+saveCart();
+window.addEventListener('beforeunload',()=>{ if(currentUser) localStorage.setItem('drako_current_screen',currentScreen); });
 </script>
 </body>
 </html>
