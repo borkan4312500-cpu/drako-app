@@ -1073,6 +1073,15 @@ app.delete('/api/restaurant/products/:id', requireAuth, (req, res) => {
   data.products.splice(index, 1);
   writeData(data);
   res.json({ success: true });
+  // داخل المسار PATCH /api/restaurant/products/:id
+  // التعامل مع الصورة
+  if (req.file) {
+    product.image = '/uploads/' + req.file.filename;
+  } else if (req.body.existingImage) {
+    // الإبقاء على الصورة الحالية إذا أُرسلت
+    product.image = req.body.existingImage;
+  }
+  // إذا لم يصل ملف ولا existingImage، تبقى الصورة دون تغيير
 });
 
 // تقارير وإحصائيات المطعم
