@@ -713,9 +713,10 @@ app.patch('/api/admin/customers/:id', requireAuth, adminOnly, (req, res) => {
   const data = readData();
   const user = data.users.find(u => u.id === req.params.id && u.role === 'CUSTOMER');
   if (!user) return res.status(404).json({ error: 'العميل غير موجود' });
-  const { name, phone, regionId, address } = req.body;
+  const { name, phone, regionId, address, password } = req.body;
   if (name !== undefined) { if (!name.trim()) return res.status(400).json({ error: 'الاسم لا يمكن أن يكون فارغاً' }); user.name = name.trim(); }
   if (phone !== undefined) { if (!phone.trim()) return res.status(400).json({ error: 'الهاتف لا يمكن أن يكون فارغاً' }); const existing = data.users.find(u => u.phone === phone.trim() && u.id !== user.id); if (existing) return res.status(400).json({ error: 'الهاتف مستخدم من عميل آخر' }); user.phone = phone.trim(); }
+  if (password && password.trim()) { user.password = bcrypt.hashSync(password.trim(), 10); }
   if (regionId !== undefined) { if (regionId && !data.regions.find(r => r.id === regionId)) return res.status(400).json({ error: 'المنطقة غير موجودة' }); user.regionId = regionId; }
   if (address !== undefined) user.address = address;
   writeData(data);
