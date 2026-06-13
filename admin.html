@@ -123,6 +123,19 @@
       .menu-toggle { display:block; }
       .grid-2, .grid-cards { grid-template-columns:1fr; }
     }
+    .action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.btn-act {
+  padding: 5px 12px; font-size: 12px; font-weight: 700;
+  border-radius: 30px; border: none; cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.btn-act:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+.btn-act-approve { background: linear-gradient(135deg, #10b981, #059669); color: white; }
+.btn-act-reject  { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
+.btn-act-edit    { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
+.btn-act-view    { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; }
   </style>
 </head>
 <body>
@@ -578,15 +591,28 @@ function applyOrderFilter(){
   renderOrdersTable();
 }
 function renderOrdersTable(){
-  const tbody=document.getElementById('ordersTbody');
-  if(!tbody) return;
-  if(!filteredOrders.length){ tbody.innerHTML='<tr><td colspan="7"><div class="empty-state">لا توجد طلبات</div></td></tr>'; return; }
-  tbody.innerHTML=filteredOrders.map(o=>`
-    <tr>
-      <td style="color:var(--brand);font-weight:800">#${o.orderNumber||'-'}</td>
-      <td>${o.customerName}</td><td>${o.restaurantName||'—'}</td><td>${o.total} ج</td>
-      <td>${statusBadge(o.status)}</td><td>${o.driverName||'—'}</td>
-      <td>${!o.adminApproved && o.status!=='CANCELLED' ? `<button class="btn btn-sm btn-success" onclick="approveOrder('${o.id}')">موافقة</button><button class="btn btn-sm btn-danger" onclick="rejectOrder('${o.id}')">رفض</button><button class="btn btn-sm btn-warning" onclick="editOrder('${o.id}')">تعديل</button><button class="btn btn-sm btn-info" onclick="viewOrder('${o.id}')">عرض</button>` : '<span>—</span>'}</td></tr>`).join('');
+  const tbody = document.getElementById('ordersTbody');
+  if (!tbody) return;
+  if (!filteredOrders.length) { tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">لا توجد طلبات</div></td></tr>'; return; }
+  tbody.innerHTML = filteredOrders.map(o => {
+    const actions = (!o.adminApproved && o.status !== 'CANCELLED') ? `
+      <div class="action-btns">
+        <button class="btn-act btn-act-approve" onclick="approveOrder('${o.id}')">✅ موافقة</button>
+        <button class="btn-act btn-act-reject" onclick="rejectOrder('${o.id}')">❌ رفض</button>
+        <button class="btn-act btn-act-edit" onclick="editOrder('${o.id}')">✏️ تعديل</button>
+        <button class="btn-act btn-act-view" onclick="viewOrder('${o.id}')">👁️ عرض</button>
+      </div>` : '<span>—</span>';
+    return `
+      <tr>
+        <td style="color:var(--brand);font-weight:800">#${o.orderNumber || '-'}</td>
+        <td>${o.customerName}</td>
+        <td>${o.restaurantName || '—'}</td>
+        <td>${o.total} ج</td>
+        <td>${statusBadge(o.status)}</td>
+        <td>${o.driverName || '—'}</td>
+        <td>${actions}</td>
+      </tr>`;
+  }).join('');
 }
 async function approveOrder(id){ await apiFetch(API+'/admin/orders/'+id+'/approve',{method:'PATCH'}); showToast('تمت الموافقة'); loadOrders(); }
 async function rejectOrder(id){ const r=prompt('سبب الرفض:'); if(r===null) return; await apiFetch(API+'/admin/orders/'+id+'/reject',{method:'PATCH',body:JSON.stringify({reason:r})}); loadOrders(); }
