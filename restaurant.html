@@ -529,7 +529,24 @@ function renderProductForm(isEdit = false, productData = null) {
   setTimeout(() => {
     if (catVal) document.getElementById('prodCat').value = catVal;
     if (isEdit && productData?.groups) {
-      // ... (إعادة بناء المجموعات كما هي بدون تغيير)
+      const container = document.getElementById('groups-container');
+      container.innerHTML = '';
+      productData.groups.forEach(g => {
+        addGroupRow();
+        const lastGroup = container.lastChild;
+        lastGroup.querySelector('.grp-name').value = g.name;
+        lastGroup.querySelector('.grp-type').value = g.type;
+        lastGroup.querySelector('.grp-required').checked = g.required;
+        const optsContainer = lastGroup.querySelector('.grp-options-container');
+        optsContainer.innerHTML = '';
+        g.options.forEach(opt => {
+          const row = document.createElement('div');
+          row.className = 'option-row';
+          row.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:6px;';
+          row.innerHTML = `<input value="${opt.value}" class="form-input opt-value" style="flex:2"><input type="number" value="${opt.price}" class="form-input opt-price" style="flex:1"><button type="button" class="btn btn-sm btn-ghost" onclick="this.parentElement.remove()">✕</button>`;
+          optsContainer.appendChild(row);
+        });
+      });
     } else {
       addGroupRow();
     }
@@ -661,7 +678,7 @@ async function saveEditProduct(productId){
   if (img) {
     f.append('image', img);
   } else if (existing) {
-    f.append('existingImage', existing); // مهم لحفظ الصورة القديمة
+    f.append('existingImage', existing);
   }
   const res = await apiFetch(API+'/restaurant/products/' + productId, { method:'PATCH', body: f });
   const data = await res.json();
