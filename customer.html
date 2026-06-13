@@ -189,6 +189,14 @@
     .checkout-items { background: white; border-radius: 16px; padding: 16px; margin-bottom: 16px; }
     .checkout-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; }
     .checkout-item:last-child { border-bottom: none; }
+    /* منع الزوم والتكبير */
+html, body {
+  touch-action: pan-x pan-y; /* يسمح بالتمرير فقط */
+  -webkit-text-size-adjust: none; /* يمنع تعديل حجم النص */
+}
+input, textarea, select {
+  font-size: 16px !important; /* يمنع التكبير على التركيز في iOS */
+}
   </style>
 </head>
 <body>
