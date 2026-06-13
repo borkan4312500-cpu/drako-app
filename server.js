@@ -1380,7 +1380,7 @@ app.post('/api/orders', customerAuth, (req, res) => {
   const restaurant = data.restaurants.find(r => r.id === restaurantId);
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
   const orderNumber = getNextOrderNumber();
-  const order = {
+    const order = {
     id: 'ord_' + Date.now(),
     orderNumber,
     restaurantId,
@@ -1398,11 +1398,13 @@ app.post('/api/orders', customerAuth, (req, res) => {
     createdAt: new Date().toISOString(),
     deliveredAt: null
   };
-  // حفظ بيانات الدفع الإلكتروني
+  // ⬇️ تأكد من وجود هذه الأسطر الثلاثة بالضبط
   if (req.body.lastDigits) order.lastDigits = req.body.lastDigits;
   if (req.body.transactionId) order.transactionId = req.body.transactionId;
   if (req.body.extraFee) order.extraFee = req.body.extraFee;
+  // ⬆️
 
+  data.orders.push(order);
   data.orders.push(order);
   writeData(data);
   io.emit('newOrder', { orderId: order.id, restaurantId, customerName });
