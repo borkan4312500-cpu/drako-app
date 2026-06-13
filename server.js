@@ -1041,6 +1041,7 @@ app.patch('/api/restaurant/products/:id', requireAuth, upload.single('image'), (
   if (!restaurant) return res.status(404).json({ error: 'المطعم غير موجود' });
   const product = data.products.find(p => p.id === req.params.id && p.restaurantId === restaurant.id);
   if (!product) return res.status(404).json({ error: 'المنتج غير موجود' });
+
   const { name, description, category, isAvailable, groups, basePrice } = req.body;
   if (name !== undefined) product.name = name;
   if (description !== undefined) product.description = description;
@@ -1048,7 +1049,16 @@ app.patch('/api/restaurant/products/:id', requireAuth, upload.single('image'), (
   if (isAvailable !== undefined) product.isAvailable = (isAvailable === 'true' || isAvailable === true);
   if (basePrice !== undefined) product.basePrice = Number(basePrice);
   if (groups !== undefined) { try { product.groups = JSON.parse(groups); } catch(e) {} }
-  if (req.file) product.image = '/uploads/' + req.file.filename;
+
+  // التعامل مع الصورة
+  if (req.file) {
+    product.image = '/uploads/' + req.file.filename;
+  } else if (req.body.existingImage) {
+    // الإبقاء على الصورة الحالية إذا لم يتم رفع صورة جديدة
+    product.image = req.body.existingImage;
+  }
+  // إذا لم يصل ملف ولا existingImage، الصورة لا تتغير
+
   writeData(data);
   res.json(product);
 });
