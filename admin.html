@@ -621,32 +621,93 @@ function applyOrderFilter(){
   if(q) filteredOrders=filteredOrders.filter(o=>(o.customerName||'').includes(q)||o.id.includes(q));
   renderOrdersTable();
 }
-function renderOrdersTable(){
-  const tbody = document.getElementById('ordersTbody');
-  if (!tbody) return;
-  if (!filteredOrders.length) { tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">لا توجد طلبات</div></td></tr>'; return; }
-  tbody.innerHTML = filteredOrders.map(o => {
-    const isPending = !o.adminApproved && o.status !== 'CANCELLED';
-    const actions = `
-      <div class="action-btns">
-        ${isPending ? `
-          <button class="btn-act btn-act-approve" onclick="approveOrder('${o.id}')">✅ موافقة</button>
-          <button class="btn-act btn-act-reject" onclick="rejectOrder('${o.id}')">❌ رفض</button>
-          <button class="btn-act btn-act-edit" onclick="editOrder('${o.id}')">✏️ تعديل</button>
-        ` : ''}
-        <button class="btn-act btn-act-view" onclick="viewOrder('${o.id}')">👁️ عرض</button>
-      </div>`;
-    return `
-      <tr>
-        <td style="color:var(--brand);font-weight:800">#${o.orderNumber || '-'}</td>
-        <td>${o.customerName}</td>
-        <td>${o.restaurantName || '—'}</td>
-        <td>${o.total} ج</td>
-        <td>${statusBadge(o.status)}</td>
-        <td>${o.driverName || '—'}</td>
-        <td>${actions}</td>
-      </tr>`;
-  }).join('');
+// تغيير حالة الطلب من الأدمن
+async function changeOrderStatus(orderId) {
+  const order = allOrdersCache.find(o => o.id === orderId);
+  if (!order) return;
+  const statuses = [
+    { value: 'PENDING', label: 'في الانتظار' },
+    { value: 'ACCEPTED', label: 'مقبول' },
+    { value: 'PREPARING', label: 'قيد التحضير' },
+    { value: 'READY', label: 'جاهز' },
+    { value: 'DRIVER_ASSIGNED', label: 'مع طيار' },
+    { value: 'ON_THE_WAY', label: 'في الطريق' },
+    { value: 'DELIVERED', label: 'تم التوصيل' },
+    { value: 'CANCELLED', label: 'ملغي' },
+    { value: 'INVOICE_ADDED', label: 'تمت الفاتورة (للطلبات الخاصة)' }
+  ];
+  const options = statuses.map(s => `<option value="${s.value}" ${order.status === s.value ? 'selected' : ''}>${s.label}</option>`).join('');
+  
+  openModal(`
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3>تغيير حالة الطلب #${order.orderNumber || order.id.slice(-6)}</h3>
+    <div class="form-group">
+      <label class="form-label">اختر الحالة الجديدة</label>
+      <select class="form-input" id="newStatus">${options}</select>
+    </div>
+    <button class="btn btn-primary" onclick="confirmChangeStatus('${orderId}')">تأكيد</button>
+  `);
+}
+
+async function confirmChangeStatus(orderId) {
+  const newStatus = document.getElementById('newStatus').value;
+  try {
+    const res = await apiFetch(API + '/admin/orders/' + orderId + '/change-status', {
+      method: 'PATCH',
+      body: JSON.stringify({ status: newStatus })
+    });
+    const data = await res.json();
+    if (data.error) { showToast('❌ ' + data.error); return; }
+    closeModal();
+    showToast('✅ تم تحديث الحالة');
+    loadOrders(); // إعادة تحميل الطلبات
+  } catch (e) {
+    showToast('❌ فشل الاتصال');
+  }
+}
+// تغيير حالة الطلب من الأدمن
+async function changeOrderStatus(orderId) {
+  const order = allOrdersCache.find(o => o.id === orderId);
+  if (!order) return;
+  const statuses = [
+    { value: 'PENDING', label: 'في الانتظار' },
+    { value: 'ACCEPTED', label: 'مقبول' },
+    { value: 'PREPARING', label: 'قيد التحضير' },
+    { value: 'READY', label: 'جاهز' },
+    { value: 'DRIVER_ASSIGNED', label: 'مع طيار' },
+    { value: 'ON_THE_WAY', label: 'في الطريق' },
+    { value: 'DELIVERED', label: 'تم التوصيل' },
+    { value: 'CANCELLED', label: 'ملغي' },
+    { value: 'INVOICE_ADDED', label: 'تمت الفاتورة (للطلبات الخاصة)' }
+  ];
+  const options = statuses.map(s => `<option value="${s.value}" ${order.status === s.value ? 'selected' : ''}>${s.label}</option>`).join('');
+  
+  openModal(`
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3>تغيير حالة الطلب #${order.orderNumber || order.id.slice(-6)}</h3>
+    <div class="form-group">
+      <label class="form-label">اختر الحالة الجديدة</label>
+      <select class="form-input" id="newStatus">${options}</select>
+    </div>
+    <button class="btn btn-primary" onclick="confirmChangeStatus('${orderId}')">تأكيد</button>
+  `);
+}
+
+async function confirmChangeStatus(orderId) {
+  const newStatus = document.getElementById('newStatus').value;
+  try {
+    const res = await apiFetch(API + '/admin/orders/' + orderId + '/change-status', {
+      method: 'PATCH',
+      body: JSON.stringify({ status: newStatus })
+    });
+    const data = await res.json();
+    if (data.error) { showToast('❌ ' + data.error); return; }
+    closeModal();
+    showToast('✅ تم تحديث الحالة');
+    loadOrders(); // إعادة تحميل الطلبات
+  } catch (e) {
+    showToast('❌ فشل الاتصال');
+  }
 }
 async function approveOrder(id){ await apiFetch(API+'/admin/orders/'+id+'/approve',{method:'PATCH'}); showToast('تمت الموافقة'); loadOrders(); }
 async function rejectOrder(id){ const r=prompt('سبب الرفض:'); if(r===null) return; await apiFetch(API+'/admin/orders/'+id+'/reject',{method:'PATCH',body:JSON.stringify({reason:r})}); loadOrders(); }
