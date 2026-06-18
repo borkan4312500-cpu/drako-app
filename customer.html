@@ -768,7 +768,7 @@ async function trackOrder(orderId) {
         itemsHtml += '</div>';
       }
       let invoiceHtml = '';
-      if (order.invoiceAmount) { invoiceHtml = `<div class="detail-row"><span>💰 قيمة الفاتورة</span><strong>${order.invoiceAmount} ج</strong></div>`; }
+      if (order.invoiceAmount) { invoiceHtml = `<div class="detail-row"><span>💰قيمة الفاتوره</span><strong>${order.invoiceAmount} ج</strong></div>`; }
       document.getElementById('trackDetails').innerHTML = `<div class="detail-row"><span>المطعم/المتجر</span><strong>${esc(order.restaurantName || order.storeName || 'طلب خاص')}</strong></div><div class="detail-row"><span>العميل</span><strong>${esc(order.customerName)}</strong></div><div class="detail-row"><span>المنطقة</span><strong>${esc(order.regionName || '—')}</strong></div><div class="detail-row"><span>العنوان</span><strong>${esc(order.address || '—')}</strong></div>${invoiceHtml}<div class="detail-row"><span>الإجمالي النهائي</span><strong>${order.total} ج</strong></div><div class="detail-row"><span>رسوم التوصيل</span><strong>${order.deliveryFee} ج</strong></div><div class="detail-row"><span>وقت الطلب</span>${new Date(order.createdAt).toLocaleString('ar-EG')}</div>${itemsHtml}`;
       if (order.status !== 'DELIVERED' && order.status !== 'CANCELLED') { setTimeout(updateTrack, 10000); }
     } catch (e) { console.log(e); }
