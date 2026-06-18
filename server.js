@@ -11,13 +11,14 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
 const Database = require('better-sqlite3');
+const https = require('https'); // لإرسال إشعارات الواتساب
 
 const app = express();
 
 // --- إعدادات الأمان الأساسية ---
 app.use(helmet({
-  contentSecurityPolicy: false, // لأن التطبيق يقدم صفحات HTML ثابتة قد تحتاج لتعديل
-  crossOriginResourcePolicy: { policy: "cross-origin" } // للسماح بعرض الصور المرفوعة
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 app.use(cors());
 app.use(express.json());
@@ -27,7 +28,7 @@ app.set('trust proxy', 1);
 
 // --- تحديد معدل الطلبات (Rate Limiting) ---
 const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 دقيقة
+  windowMs: 15 * 60 * 1000,
   max: 500,
   message: { error: 'طلبات كثيرة جداً، حاول لاحقاً' }
 });
@@ -41,8 +42,6 @@ app.use(generalLimiter);
 // --- إعداد قاعدة البيانات SQLite ---
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'drako.db');
 const db = new Database(DB_PATH);
-
-// تفعيل وضع WAL لتحسين الأداء
 db.pragma('journal_mode = WAL');
 
 // إنشاء الجداول إذا لم تكن موجودة
@@ -57,7 +56,6 @@ db.exec(`
     address TEXT DEFAULT '',
     isActive INTEGER DEFAULT 1
   );
-
   CREATE TABLE IF NOT EXISTS restaurants (
     id TEXT PRIMARY KEY,
     userId TEXT UNIQUE NOT NULL,
@@ -69,7 +67,6 @@ db.exec(`
     "order" INTEGER DEFAULT 0,
     FOREIGN KEY (userId) REFERENCES users(id)
   );
-
   CREATE TABLE IF NOT EXISTS markets (
     id TEXT PRIMARY KEY,
     userId TEXT UNIQUE NOT NULL,
@@ -78,7 +75,6 @@ db.exec(`
     isOpen INTEGER DEFAULT 1,
     FOREIGN KEY (userId) REFERENCES users(id)
   );
-
   CREATE TABLE IF NOT EXISTS pharmacies (
     id TEXT PRIMARY KEY,
     userId TEXT UNIQUE NOT NULL,
@@ -87,7 +83,6 @@ db.exec(`
     isOpen INTEGER DEFAULT 1,
     FOREIGN KEY (userId) REFERENCES users(id)
   );
-
   CREATE TABLE IF NOT EXISTS drivers (
     id TEXT PRIMARY KEY,
     userId TEXT UNIQUE NOT NULL,
@@ -96,7 +91,6 @@ db.exec(`
     isAvailable INTEGER DEFAULT 1,
     FOREIGN KEY (userId) REFERENCES users(id)
   );
-
   CREATE TABLE IF NOT EXISTS orders (
     id TEXT PRIMARY KEY,
     orderNumber INTEGER,
@@ -132,7 +126,6 @@ db.exec(`
     preparingAt TEXT,
     deliveredAt TEXT
   );
-
   CREATE TABLE IF NOT EXISTS products (
     id TEXT PRIMARY KEY,
     restaurantId TEXT NOT NULL,
@@ -146,20 +139,17 @@ db.exec(`
     type TEXT DEFAULT 'single',
     FOREIGN KEY (restaurantId) REFERENCES restaurants(id)
   );
-
   CREATE TABLE IF NOT EXISTS categories (
     id TEXT PRIMARY KEY,
     restaurantId TEXT,
     name TEXT NOT NULL,
     FOREIGN KEY (restaurantId) REFERENCES restaurants(id)
   );
-
   CREATE TABLE IF NOT EXISTS regions (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     fee REAL NOT NULL
   );
-
   CREATE TABLE IF NOT EXISTS rechargeRequests (
     id TEXT PRIMARY KEY,
     driverId TEXT NOT NULL,
@@ -171,19 +161,17 @@ db.exec(`
     createdAt TEXT,
     processedAt TEXT
   );
-
   CREATE TABLE IF NOT EXISTS dailyOrderCounter (
     date TEXT PRIMARY KEY,
     counter INTEGER DEFAULT 0
   );
-
   CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT
   );
 `);
 
-// --- مؤشرات لتحسين الأداء ---
+// مؤشرات
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
   CREATE INDEX IF NOT EXISTS idx_orders_driverId ON orders(driverId);
@@ -192,12 +180,11 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_orders_createdAt ON orders(createdAt);
 `);
 
-// --- دوال مساعدة للبيانات (تستبدل readData/writeData القديمة) ---
+// دوال مساعدة
 function getSetting(key, defaultValue) {
   const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
   return row ? row.value : defaultValue;
 }
-
 function setSetting(key, value) {
   db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(key, String(value));
 }
@@ -209,8 +196,6 @@ function initializeData() {
     const adminId = 'admin1';
     db.prepare('INSERT INTO users (id, name, phone, password, role) VALUES (?,?,?,?,?)')
       .run(adminId, 'أدمن دراكو', '01000000000', bcrypt.hashSync('123456', 10), 'ADMIN');
-
-    // إضافة المناطق الافتراضية
     const regions = [
       { id: 'reg_1', name: 'مساكن جمصة', fee: 10 },
       { id: 'reg_2', name: '15 مايو', fee: 15 },
@@ -220,11 +205,22 @@ function initializeData() {
     ];
     const insertRegion = db.prepare('INSERT OR IGNORE INTO regions (id, name, fee) VALUES (?,?,?)');
     regions.forEach(r => insertRegion.run(r.id, r.name, r.fee));
-
     setSetting('dispatchMode', 'manual');
   }
 }
 initializeData();
+
+// --- إعدادات واتساب (CallMeBot) ---
+const WHATSAPP_ENABLED = true; // مفعل
+const WHATSAPP_API_KEY = process.env.WHATSAPP_API_KEY || 'PASTE_YOUR_API_KEY_HERE'; // ⬅️ استبدل بمفتاحك
+const WHATSAPP_PHONE = process.env.WHATSAPP_PHONE || '201064530217'; // رقمك
+
+function sendWhatsAppMessage(text) {
+  if (!WHATSAPP_ENABLED || !WHATSAPP_API_KEY || WHATSAPP_API_KEY === 'PASTE_YOUR_API_KEY_HERE') return;
+  const encoded = encodeURIComponent(text);
+  const url = `https://api.callmebot.com/whatsapp.php?phone=${WHATSAPP_PHONE}&text=${encoded}&apikey=${WHATSAPP_API_KEY}`;
+  https.get(url).on('error', (e) => console.error('WhatsApp error:', e.message));
+}
 
 // --- إعدادات Multer للملفات ---
 const SOUNDS_DIR = path.join(__dirname, 'sounds');
@@ -232,23 +228,16 @@ const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
 if (!fs.existsSync(SOUNDS_DIR)) fs.mkdirSync(SOUNDS_DIR);
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR);
 
-// فلتر عام لمنع الملفات التنفيذية
 const fileFilter = (req, file, cb) => {
-  // السماح فقط بالصور، الصوت، والمستندات
   const allowedMimes = /^(image\/|audio\/|application\/pdf|text\/|application\/msword|application\/vnd\.openxmlformats)/;
-  if (allowedMimes.test(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('نوع الملف غير مسموح به'), false);
-  }
+  if (allowedMimes.test(file.mimetype)) cb(null, true);
+  else cb(new Error('نوع الملف غير مسموح به'), false);
 };
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     let dir = UPLOADS_DIR;
-    if (req.originalUrl.includes('/orders/special')) {
-      dir = path.join(dir, 'special_orders');
-    }
+    if (req.originalUrl.includes('/orders/special')) dir = path.join(dir, 'special_orders');
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
@@ -259,7 +248,6 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage, fileFilter });
 
-// Multer لملفات الصوت (فقط)
 const soundUpload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => cb(null, SOUNDS_DIR),
@@ -271,7 +259,6 @@ const soundUpload = multer({
   }
 });
 
-// --- خدمة الملفات الثابتة ---
 app.use('/uploads', express.static(UPLOADS_DIR));
 app.use('/sounds', express.static(SOUNDS_DIR));
 
@@ -281,13 +268,11 @@ const { Server } = require('socket.io');
 const server = http.createServer(app);
 const io = new Server(server);
 
-// --- مفاتيح ---
 const JWT_SECRET = process.env.JWT_SECRET || 'drako_secret_fallback_replace_in_production';
 
-// --- دوال مساعدة للمصادقة ---
 const isSecure = (req) => req.secure || req.headers['x-forwarded-proto'] === 'https';
 
-// تجديد الكوكي تلقائياً
+// تجديد الكوكي
 app.use((req, res, next) => {
   const token = req.cookies?.token;
   if (token) {
@@ -299,12 +284,11 @@ app.use((req, res, next) => {
         secure: isSecure(req),
         maxAge: 365 * 24 * 60 * 60 * 1000
       });
-    } catch (e) { /* منتهي */ }
+    } catch (e) {}
   }
   next();
 });
 
-// --- دالة مساعدة للحصول على رقم الطلب اليومي ---
 const getNextOrderNumber = () => {
   const today = new Date().toISOString().slice(0, 10);
   const row = db.prepare('SELECT counter FROM dailyOrderCounter WHERE date = ?').get(today);
@@ -314,7 +298,6 @@ const getNextOrderNumber = () => {
   return counter;
 };
 
-// --- دالة مساعدة لاسم المتجر للطلبات الخاصة ---
 function getStoreNameForOrder(order) {
   if (order.type === 'special') {
     if (order.orderType === 'market' && order.storeId) {
@@ -328,7 +311,6 @@ function getStoreNameForOrder(order) {
   return null;
 }
 
-// --- Middlewares للمصادقة ---
 function requireAuth(req, res, next) {
   const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'غير مصرح' });
@@ -343,7 +325,7 @@ function adminOnly(req, res, next) {
   next();
 }
 
-// --- الصفحات الثابتة ---
+// ============== الصفحات الثابتة ==============
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'customer.html')));
 app.get('/customer', (req, res) => res.sendFile(path.join(__dirname, 'customer.html')));
 app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, 'login.html')));
@@ -353,21 +335,14 @@ app.get('/driver', (req, res) => res.sendFile(path.join(__dirname, 'driver.html'
 app.get('/market', (req, res) => res.sendFile(path.join(__dirname, 'market.html')));
 app.get('/pharmacy', (req, res) => res.sendFile(path.join(__dirname, 'pharmacy.html')));
 
-// --- المصادقة ---
+// ============== المصادقة ==============
 app.post('/api/login', authLimiter, (req, res) => {
   const { phone, password } = req.body;
   if (!phone || !password) return res.status(400).json({ error: 'الهاتف وكلمة المرور مطلوبان' });
   const user = db.prepare('SELECT * FROM users WHERE phone = ?').get(phone);
-  if (!user || !bcrypt.compareSync(password, user.password)) {
-    return res.status(401).json({ error: 'بيانات خاطئة' });
-  }
+  if (!user || !bcrypt.compareSync(password, user.password)) return res.status(401).json({ error: 'بيانات خاطئة' });
   const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '365d' });
-  res.cookie('token', token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: isSecure(req),
-    maxAge: 365 * 24 * 60 * 60 * 1000
-  });
+  res.cookie('token', token, { httpOnly: true, sameSite: 'lax', secure: isSecure(req), maxAge: 365 * 24 * 60 * 60 * 1000 });
   res.json({ token, user: { id: user.id, name: user.name, role: user.role } });
 });
 
@@ -409,7 +384,6 @@ app.get('/api/admin/dashboard', requireAuth, adminOnly, (req, res) => {
   res.json({ todayOrders, activeOrders, restaurants: db.prepare('SELECT COUNT(*) as count FROM restaurants').get().count, drivers: db.prepare('SELECT COUNT(*) as count FROM drivers').get().count, totalRevenue, recentOrders, availableDrivers });
 });
 
-// إعدادات وضع التوزيع
 app.get('/api/admin/dispatch-mode', requireAuth, adminOnly, (req, res) => {
   const mode = getSetting('dispatchMode', 'manual');
   res.json({ mode });
@@ -472,7 +446,7 @@ app.delete('/api/admin/restaurants/:id', requireAuth, adminOnly, (req, res) => {
   res.json({ success: true });
 });
 
-// الطيارين (Drivers)
+// الطيارين
 app.get('/api/admin/drivers', requireAuth, adminOnly, (req, res) => {
   const drivers = db.prepare(`
     SELECT u.id, u.name, u.phone, d.earnings, d.credit, d.isAvailable, u.isActive
@@ -540,8 +514,7 @@ app.get('/api/admin/drivers/:id/details', requireAuth, adminOnly, (req, res) => 
   const driver = db.prepare('SELECT * FROM drivers WHERE userId = ?').get(user.id) || {};
   const today = new Date().toISOString().slice(0, 10);
   const todayOrders = db.prepare(`
-    SELECT * FROM orders
-    WHERE driverId = ? AND status = 'DELIVERED' AND deliveredAt LIKE ?
+    SELECT * FROM orders WHERE driverId = ? AND status = 'DELIVERED' AND deliveredAt LIKE ?
   `).all(user.id, today + '%');
   const todayRevenue = todayOrders.reduce((s, o) => s + (o.deliveryFee || 0), 0);
   const enriched = todayOrders.map(o => ({
@@ -598,8 +571,7 @@ app.delete('/api/admin/regions/:id', requireAuth, adminOnly, (req, res) => {
 // المنتجات والتصنيفات
 app.get('/api/admin/products', requireAuth, adminOnly, (req, res) => {
   const products = db.prepare(`
-    SELECT p.*, r.name as restaurantName
-    FROM products p LEFT JOIN restaurants r ON p.restaurantId = r.id
+    SELECT p.*, r.name as restaurantName FROM products p LEFT JOIN restaurants r ON p.restaurantId = r.id
   `).all();
   res.json(products.map(p => ({ ...p, groups: JSON.parse(p.groups || '[]') })));
 });
@@ -690,7 +662,10 @@ app.post('/api/admin/test-order', requireAuth, adminOnly, (req, res) => {
     INSERT INTO orders (id, orderNumber, restaurantId, customerName, customerPhone, address, items, total, paymentMethod, status, deliveryFee, createdAt)
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
   `).run(orderId, orderNumber, restaurantId, 'عميل تجريبي', '0100000000', 'العنوان التجريبي', JSON.stringify([{ name: 'منتج تجريبي', price: 50, quantity: 2 }]), 100, 'CASH', 'PENDING', 10, new Date().toISOString());
-  res.json({ success: true, order: db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId) });
+  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
+  // إشعار واتساب للطلب التجريبي (اختياري)
+  sendWhatsAppMessage(`🧪 طلب تجريبي #${orderNumber}\n👤 ${order.customerName}\n💰 ${order.total} ج`);
+  res.json({ success: true, order });
 });
 
 // التقارير
@@ -775,6 +750,30 @@ app.patch('/api/admin/orders/:id', requireAuth, adminOnly, (req, res) => {
   res.json({ success: true });
 });
 
+// --- تغيير حالة الطلب من الأدمن (جديد) ---
+app.patch('/api/admin/orders/:id/change-status', requireAuth, adminOnly, (req, res) => {
+  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
+  const { status } = req.body;
+  const allowedStatuses = ['PENDING','ACCEPTED','PREPARING','READY','DRIVER_ASSIGNED','ON_THE_WAY','DELIVERED','CANCELLED','INVOICE_ADDED'];
+  if (!allowedStatuses.includes(status)) return res.status(400).json({ error: 'حالة غير صالحة' });
+
+  if (status === 'PREPARING') {
+    db.prepare('UPDATE orders SET status = ?, preparingAt = ? WHERE id = ?').run(status, new Date().toISOString(), req.params.id);
+  } else if (status === 'DELIVERED') {
+    const productValue = (order.total || 0) - (order.deliveryFee || 0);
+    const commission = Math.round(productValue * 0.2);
+    db.prepare('UPDATE orders SET status = ?, platformFee = ?, deliveredAt = ? WHERE id = ?').run(status, commission, new Date().toISOString(), req.params.id);
+    if (order.driverId) {
+      db.prepare('UPDATE drivers SET earnings = earnings + ?, credit = credit - ? WHERE userId = ?').run(order.deliveryFee || 10, commission, order.driverId);
+    }
+  } else {
+    db.prepare('UPDATE orders SET status = ? WHERE id = ?').run(status, req.params.id);
+  }
+  io.emit('orderStatusUpdate', { orderId: order.id, status });
+  res.json({ success: true });
+});
+
 // العملاء
 app.get('/api/admin/customers', requireAuth, adminOnly, (req, res) => {
   const search = req.query.search || '';
@@ -791,15 +790,8 @@ app.get('/api/admin/customers', requireAuth, adminOnly, (req, res) => {
     const orders = db.prepare('SELECT * FROM orders WHERE customerPhone = ?').all(u.phone);
     const lastOrder = orders.length ? orders.reduce((latest, o) => new Date(o.createdAt) > new Date(latest.createdAt) ? o : latest) : null;
     return {
-      id: u.id,
-      name: u.name,
-      phone: u.phone,
-      regionId: u.regionId,
-      regionName: region?.name || '—',
-      regionFee: region?.fee || 0,
-      address: u.address,
-      totalOrders: orders.length,
-      lastOrderDate: lastOrder?.createdAt || null
+      id: u.id, name: u.name, phone: u.phone, regionId: u.regionId, regionName: region?.name || '—',
+      regionFee: region?.fee || 0, address: u.address, totalOrders: orders.length, lastOrderDate: lastOrder?.createdAt || null
     };
   });
   res.json(enriched);
@@ -811,17 +803,11 @@ app.get('/api/admin/customers/:id', requireAuth, adminOnly, (req, res) => {
   const region = user.regionId ? db.prepare('SELECT * FROM regions WHERE id = ?').get(user.regionId) : null;
   const orders = db.prepare('SELECT * FROM orders WHERE customerPhone = ?').all(user.phone);
   const lastOrder = orders.length ? orders.reduce((latest, o) => new Date(o.createdAt) > new Date(latest.createdAt) ? o : latest) : null;
-  // لا نعيد كلمة المرور أبداً في الاستجابة
+  // لا نعيد كلمة المرور أبداً
   res.json({
-    id: user.id,
-    name: user.name,
-    phone: user.phone,
-    regionId: user.regionId,
-    regionName: region?.name || '—',
-    regionFee: region?.fee || 0,
-    address: user.address,
-    totalOrders: orders.length,
-    lastOrderDate: lastOrder?.createdAt || null
+    id: user.id, name: user.name, phone: user.phone, regionId: user.regionId,
+    regionName: region?.name || '—', regionFee: region?.fee || 0, address: user.address,
+    totalOrders: orders.length, lastOrderDate: lastOrder?.createdAt || null
   });
 });
 
@@ -831,7 +817,8 @@ app.patch('/api/admin/customers/:id', requireAuth, adminOnly, (req, res) => {
   const { name, phone, regionId, address, password } = req.body;
   if (name) db.prepare('UPDATE users SET name = ? WHERE id = ?').run(name.trim(), req.params.id);
   if (phone) {
-    if (db.prepare('SELECT id FROM users WHERE phone = ? AND id != ?').get(phone.trim(), req.params.id)) return res.status(400).json({ error: 'الهاتف مستخدم' });
+    if (db.prepare('SELECT id FROM users WHERE phone = ? AND id != ?').get(phone.trim(), req.params.id))
+      return res.status(400).json({ error: 'الهاتف مستخدم' });
     db.prepare('UPDATE users SET phone = ? WHERE id = ?').run(phone.trim(), req.params.id);
   }
   if (password) db.prepare('UPDATE users SET password = ? WHERE id = ?').run(bcrypt.hashSync(password.trim(), 10), req.params.id);
@@ -845,9 +832,7 @@ const manageStore = (storeType) => {
   const table = storeType === 'market' ? 'markets' : 'pharmacies';
   const role = storeType === 'market' ? 'MARKET' : 'PHARMACY';
   return (app) => {
-    app.get(`/api/admin/${table}`, requireAuth, adminOnly, (req, res) => {
-      res.json(db.prepare(`SELECT * FROM ${table}`).all());
-    });
+    app.get(`/api/admin/${table}`, requireAuth, adminOnly, (req, res) => res.json(db.prepare(`SELECT * FROM ${table}`).all()));
     app.post(`/api/admin/${table}`, requireAuth, adminOnly, (req, res) => {
       const { name, ownerPhone, ownerPassword } = req.body;
       if (!name || !ownerPhone || !ownerPassword) return res.status(400).json({ error: 'بيانات ناقصة' });
@@ -933,14 +918,19 @@ app.post('/api/restaurant/order-from-restaurant', requireAuth, (req, res) => {
   const restaurant = db.prepare('SELECT * FROM restaurants WHERE userId = ?').get(req.user.id);
   if (!restaurant) return res.status(404).json({ error: 'غير موجود' });
   const { customerName, customerPhone, regionName, address, orderPrice, deliveryFee, total, notes } = req.body;
-  if (!customerName || !customerPhone || !address || !orderPrice || !deliveryFee || !total) return res.status(400).json({ error: 'بيانات ناقصة' });
+  if (!customerName || !customerPhone || !address || !orderPrice || !deliveryFee || !total)
+    return res.status(400).json({ error: 'بيانات ناقصة' });
   const orderNumber = getNextOrderNumber();
   const orderId = 'dir_' + uuidv4();
   db.prepare(`
     INSERT INTO orders (id, orderNumber, restaurantId, customerName, customerPhone, regionName, address, items, total, orderPrice, deliveryFee, paymentMethod, status, isDirect, notes, createdAt)
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-  `).run(orderId, orderNumber, restaurant.id, customerName, customerPhone, regionName, address, JSON.stringify([{ name: 'أوردر مطعم', price: orderPrice, quantity: 1 }]), total, orderPrice, deliveryFee, 'CASH', 'PENDING', 1, notes || '', new Date().toISOString());
+  `).run(orderId, orderNumber, restaurant.id, customerName, customerPhone, regionName, address,
+    JSON.stringify([{ name: 'أوردر مطعم', price: orderPrice, quantity: 1 }]),
+    total, orderPrice, deliveryFee, 'CASH', 'PENDING', 1, notes || '', new Date().toISOString());
   io.emit('newOrder', { orderId, restaurantId: restaurant.id, customerName });
+  // إشعار واتساب
+  sendWhatsAppMessage(`🍽️ طلب مطعم مباشر #${orderNumber}\n👤 ${customerName}\n📞 ${customerPhone}\n💰 ${total} ج`);
   res.json({ success: true, orderId });
 });
 
@@ -1002,10 +992,8 @@ app.post('/api/restaurant/products', requireAuth, upload.single('image'), (req, 
   try { if (groups) groupsParsed = JSON.parse(groups); } catch(e) {}
   const imagePath = req.file ? '/uploads/' + req.file.filename : '';
   const id = 'prod_' + uuidv4();
-  db.prepare(`
-    INSERT INTO products (id, restaurantId, name, description, basePrice, category, image, groups, type)
-    VALUES (?,?,?,?,?,?,?,?,?)
-  `).run(id, restaurant.id, name, description || '', Number(basePrice) || 0, category || 'أخرى', imagePath, JSON.stringify(groupsParsed), groupsParsed.length ? 'multi' : 'single');
+  db.prepare('INSERT INTO products (id, restaurantId, name, description, basePrice, category, image, groups, type) VALUES (?,?,?,?,?,?,?,?,?)')
+    .run(id, restaurant.id, name, description || '', Number(basePrice) || 0, category || 'أخرى', imagePath, JSON.stringify(groupsParsed), groupsParsed.length ? 'multi' : 'single');
   res.json(db.prepare('SELECT * FROM products WHERE id = ?').get(id));
 });
 
@@ -1015,16 +1003,13 @@ app.patch('/api/restaurant/products/:id', requireAuth, upload.single('image'), (
   if (!restaurant) return res.status(404).json({ error: 'غير موجود' });
   const product = db.prepare('SELECT * FROM products WHERE id = ? AND restaurantId = ?').get(req.params.id, restaurant.id);
   if (!product) return res.status(404).json({ error: 'المنتج غير موجود' });
-
   const { name, description, category, isAvailable, groups, basePrice } = req.body;
   if (name) db.prepare('UPDATE products SET name = ? WHERE id = ?').run(name, product.id);
   if (description !== undefined) db.prepare('UPDATE products SET description = ? WHERE id = ?').run(description, product.id);
   if (category !== undefined) db.prepare('UPDATE products SET category = ? WHERE id = ?').run(category, product.id);
   if (isAvailable !== undefined) db.prepare('UPDATE products SET isAvailable = ? WHERE id = ?').run(isAvailable === 'true' || isAvailable === true ? 1 : 0, product.id);
   if (basePrice !== undefined) db.prepare('UPDATE products SET basePrice = ? WHERE id = ?').run(Number(basePrice), product.id);
-  if (groups !== undefined) {
-    try { db.prepare('UPDATE products SET groups = ? WHERE id = ?').run(JSON.stringify(JSON.parse(groups)), product.id); } catch(e) {}
-  }
+  if (groups !== undefined) { try { db.prepare('UPDATE products SET groups = ? WHERE id = ?').run(JSON.stringify(JSON.parse(groups)), product.id); } catch(e) {} }
   if (req.file) db.prepare('UPDATE products SET image = ? WHERE id = ?').run('/uploads/' + req.file.filename, product.id);
   res.json(db.prepare('SELECT * FROM products WHERE id = ?').get(product.id));
 });
@@ -1046,7 +1031,6 @@ app.get('/api/restaurant/reports', requireAuth, (req, res) => {
   const now = new Date();
   const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay()).toISOString().slice(0, 10);
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-
   const sum = (list) => {
     const pr = list.reduce((s, o) => s + (o.total - (o.deliveryFee || 0)), 0);
     const pf = list.reduce((s, o) => s + (o.platformFee || 0), 0);
@@ -1108,7 +1092,6 @@ app.patch('/api/driver/orders/:id/accept', requireAuth, (req, res) => {
   if (!order) return res.status(404).json({ error: 'غير متاح' });
   const driver = db.prepare('SELECT * FROM drivers WHERE userId = ?').get(req.user.id);
   if (!driver) return res.status(404).json({ error: 'لم يتم العثور على ملف السائق' });
-  // خصم تقديري للعمولة: 20% من قيمة المنتج (total - deliveryFee)
   const productValue = (order.total || 0) - (order.deliveryFee || 0);
   const estimatedCommission = Math.round(productValue * 0.2);
   if ((driver.credit || 0) < estimatedCommission) {
@@ -1127,7 +1110,7 @@ app.patch('/api/driver/orders/:id/status', requireAuth, (req, res) => {
   if (!['ON_THE_WAY','DELIVERED'].includes(status)) return res.status(400).json({ error: 'حالة غير صالحة' });
   if (status === 'DELIVERED') {
     const productValue = (order.total || 0) - (order.deliveryFee || 0);
-    const commission = Math.round(productValue * 0.2); // نسبة 20% من قيمة المنتج فقط
+    const commission = Math.round(productValue * 0.2);
     db.prepare('UPDATE orders SET status = ?, platformFee = ?, deliveredAt = ? WHERE id = ?').run(status, commission, new Date().toISOString(), req.params.id);
     db.prepare('UPDATE drivers SET earnings = earnings + ?, credit = credit - ? WHERE userId = ?').run(order.deliveryFee || 10, commission, req.user.id);
   } else {
@@ -1201,13 +1184,8 @@ app.get('/api/restaurants/:id/menu', (req, res) => {
   res.json(products);
 });
 
-app.get('/api/markets', (req, res) => {
-  res.json(db.prepare('SELECT * FROM markets WHERE isOpen = 1').all());
-});
-
-app.get('/api/pharmacies', (req, res) => {
-  res.json(db.prepare('SELECT * FROM pharmacies WHERE isOpen = 1').all());
-});
+app.get('/api/markets', (req, res) => res.json(db.prepare('SELECT * FROM markets WHERE isOpen = 1').all()));
+app.get('/api/pharmacies', (req, res) => res.json(db.prepare('SELECT * FROM pharmacies WHERE isOpen = 1').all()));
 
 app.post('/api/orders/special', upload.array('files', 10), (req, res) => {
   let orderData;
@@ -1223,16 +1201,14 @@ app.post('/api/orders/special', upload.array('files', 10), (req, res) => {
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `).run(orderId, orderNumber, 'special', orderType, storeId, JSON.stringify(items || []), orderNotes, JSON.stringify(attachments), customerName, customerPhone, address, regionName, paymentMethod || 'CASH', deliveryFee || 10, total, lastDigits, transactionId, extraFee, 'PENDING', new Date().toISOString());
   io.emit('newSpecialOrder', { orderId, orderType, storeId });
+  // إشعار واتساب
+  sendWhatsAppMessage(`📦 طلب خاص #${orderNumber}\n👤 ${customerName}\n📞 ${customerPhone}\n🏪 ${orderType === 'market' ? 'ماركت' : 'صيدلية'}\n💰 ${total} ج`);
   res.json({ success: true, orderId });
 });
 
 function customerAuth(req, res, next) {
   const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
-  if (token) {
-    try {
-      req.customer = jwt.verify(token, JWT_SECRET);
-    } catch(e) {}
-  }
+  if (token) { try { req.customer = jwt.verify(token, JWT_SECRET); } catch(e) {} }
   next();
 }
 
@@ -1260,6 +1236,9 @@ app.post('/api/orders', customerAuth, (req, res) => {
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `).run(orderId, orderNumber, restaurantId, JSON.stringify(items || []), Number(total), customerName, customerPhone, address, regionName || '', paymentMethod || 'CASH', deliveryFee || 10, lastDigits, transactionId, extraFee, new Date().toISOString());
   io.emit('newOrder', { orderId, restaurantId, customerName });
+  // إشعار واتساب
+  const rest = db.prepare('SELECT name FROM restaurants WHERE id = ?').get(restaurantId);
+  sendWhatsAppMessage(`🛵 طلب جديد #${orderNumber}\n👤 ${customerName}\n📞 ${customerPhone}\n🍽️ ${rest?.name || '—'}\n💰 ${total} ج`);
   res.json({ success: true, orderId });
 });
 
@@ -1270,9 +1249,7 @@ app.get('/api/orders/:id/track', (req, res) => {
   res.json({ ...order, restaurantName });
 });
 
-app.get('/api/regions', (req, res) => {
-  res.json(db.prepare('SELECT * FROM regions').all());
-});
+app.get('/api/regions', (req, res) => res.json(db.prepare('SELECT * FROM regions').all()));
 
 app.post('/api/customer/register', authLimiter, (req, res) => {
   const { name, phone, password, regionId, address } = req.body;
@@ -1307,7 +1284,6 @@ const storeProfileRoutes = (storeType) => {
       const owner = db.prepare('SELECT phone FROM users WHERE id = ?').get(store.userId);
       res.json({ id: store.id, name: store.name, logo: store.logo, ownerPhone: owner?.phone });
     });
-
     app.patch(`/api/${storeType}/profile`, requireAuth, upload.single('logo'), (req, res) => {
       if (req.user.role !== role) return res.status(403).json({ error: 'غير مسموح' });
       const store = db.prepare(`SELECT * FROM ${table} WHERE userId = ?`).get(req.user.id);
@@ -1316,7 +1292,6 @@ const storeProfileRoutes = (storeType) => {
       if (req.file) db.prepare(`UPDATE ${table} SET logo = ? WHERE id = ?`).run('/uploads/' + req.file.filename, store.id);
       res.json(db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(store.id));
     });
-
     app.get(`/api/${storeType}/orders`, requireAuth, (req, res) => {
       if (req.user.role !== role) return res.status(403).json({ error: 'غير مسموح' });
       const store = db.prepare(`SELECT * FROM ${table} WHERE userId = ?`).get(req.user.id);
@@ -1324,7 +1299,6 @@ const storeProfileRoutes = (storeType) => {
       const orders = db.prepare("SELECT * FROM orders WHERE type = 'special' AND storeId = ?").all(store.id).map(o => ({ ...o, items: JSON.parse(o.items || '[]') }));
       res.json(orders);
     });
-
     app.patch(`/api/${storeType}/orders/:id/items`, requireAuth, (req, res) => {
       if (req.user.role !== role) return res.status(403).json({ error: 'غير مسموح' });
       const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
@@ -1335,7 +1309,6 @@ const storeProfileRoutes = (storeType) => {
       io.emit('orderStatusUpdate', { orderId: order.id });
       res.json({ success: true });
     });
-
     app.patch(`/api/${storeType}/orders/:id/accept`, requireAuth, (req, res) => {
       if (req.user.role !== role) return res.status(403).json({ error: 'غير مسموح' });
       const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
@@ -1345,7 +1318,6 @@ const storeProfileRoutes = (storeType) => {
       io.emit('orderStatusUpdate', { orderId: order.id, status: 'ACCEPTED' });
       res.json({ success: true });
     });
-
     app.patch(`/api/${storeType}/orders/:id/invoice`, requireAuth, (req, res) => {
       if (req.user.role !== role) return res.status(403).json({ error: 'غير مسموح' });
       const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
@@ -1358,7 +1330,6 @@ const storeProfileRoutes = (storeType) => {
       io.emit('orderStatusUpdate', { orderId: order.id, status: 'INVOICE_ADDED' });
       res.json({ success: true });
     });
-
     app.patch(`/api/${storeType}/orders/:id/ready`, requireAuth, (req, res) => {
       if (req.user.role !== role) return res.status(403).json({ error: 'غير مسموح' });
       const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
@@ -1390,17 +1361,12 @@ setInterval(() => {
 
 // معالج أخطاء multer
 app.use((err, req, res, next) => {
-  if (err instanceof multer.MulterError) {
-    return res.status(400).json({ error: 'خطأ في رفع الملف: ' + err.message });
-  } else if (err) {
-    return res.status(500).json({ error: err.message });
-  }
+  if (err instanceof multer.MulterError) return res.status(400).json({ error: 'خطأ في رفع الملف: ' + err.message });
+  else if (err) return res.status(500).json({ error: err.message });
   next();
 });
 
-io.on('connection', (socket) => {
-  console.log('عميل متصل:', socket.id);
-});
+io.on('connection', (socket) => { console.log('عميل متصل:', socket.id); });
 
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => console.log(`Drako server on port ${PORT}`));
