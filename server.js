@@ -35,13 +35,11 @@ const generalLimiter = rateLimit({
 });
 
 // معدل خاص للأدمن (أعلى بكثير)
-const adminLimiter = rateLimit({
+const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5000,
+  max: 5000,  // ← رفعنا الحد إلى 5000 طلب في 15 دقيقة
   message: { error: 'طلبات كثيرة جداً، حاول لاحقاً' }
 });
-
-// تطبيق المحدد العام على الجميع
 app.use(generalLimiter);
 
 // ثم بعد تعريف requireAuth و adminOnly، أضف هذا السطر:
