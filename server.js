@@ -37,7 +37,7 @@ const generalLimiter = rateLimit({
 // معدل خاص للأدمن (أعلى بكثير)
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5000,  // ← رفعنا الحد إلى 5000 طلب في 15 دقيقة
+  max: 500,
   message: { error: 'طلبات كثيرة جداً، حاول لاحقاً' }
 });
 app.use(generalLimiter);
