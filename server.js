@@ -27,17 +27,25 @@ app.use(cookieParser());
 app.set('trust proxy', 1);
 
 // --- تحديد معدل الطلبات (Rate Limiting) ---
+// معدل عام للمستخدمين العاديين
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 500,
+  max: 1000, // زيادة الحد
   message: { error: 'طلبات كثيرة جداً، حاول لاحقاً' }
 });
-const authLimiter = rateLimit({
+
+// معدل خاص للأدمن (أعلى بكثير)
+const adminLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
-  message: { error: 'محاولات تسجيل دخول كثيرة، حاول لاحقاً' }
+  max: 5000,
+  message: { error: 'طلبات كثيرة جداً، حاول لاحقاً' }
 });
+
+// تطبيق المحدد العام على الجميع
 app.use(generalLimiter);
+
+// ثم بعد تعريف requireAuth و adminOnly، أضف هذا السطر:
+app.use('/api/admin', requireAuth, adminOnly, adminLimiter);
 
 // --- إعداد المسار الدائم (Railway Volume) ---
 const DATA_DIR = '/app/data';
