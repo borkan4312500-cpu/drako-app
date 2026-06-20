@@ -11,7 +11,7 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
 const Database = require('better-sqlite3');
-const https = require('https'); // لإرسال إشعارات الواتساب
+const https = require('https');
 
 const app = express();
 
@@ -39,8 +39,19 @@ const authLimiter = rateLimit({
 });
 app.use(generalLimiter);
 
+// --- إعداد المسار الدائم (Railway Volume) ---
+const DATA_DIR = '/app/data';
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+
+const DB_PATH = process.env.DB_PATH || path.join(DATA_DIR, 'drako.db');
+const SOUNDS_DIR = path.join(DATA_DIR, 'sounds');
+const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(DATA_DIR, 'uploads');
+
+// تأكد من وجود المجلدات
+if (!fs.existsSync(SOUNDS_DIR)) fs.mkdirSync(SOUNDS_DIR, { recursive: true });
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
 // --- إعداد قاعدة البيانات SQLite ---
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'drako.db');
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 
@@ -211,9 +222,9 @@ function initializeData() {
 initializeData();
 
 // --- إعدادات واتساب (CallMeBot) ---
-const WHATSAPP_ENABLED = true; // مفعل
-const WHATSAPP_API_KEY = process.env.WHATSAPP_API_KEY || 'PASTE_YOUR_API_KEY_HERE'; // ⬅️ استبدل بمفتاحك
-const WHATSAPP_PHONE = process.env.WHATSAPP_PHONE || '201064530217'; // رقمك
+const WHATSAPP_ENABLED = true;
+const WHATSAPP_API_KEY = process.env.WHATSAPP_API_KEY || 'PASTE_YOUR_API_KEY_HERE'; // ⚠️ استبدل بمفتاحك
+const WHATSAPP_PHONE = process.env.WHATSAPP_PHONE || '201064530217';
 
 function sendWhatsAppMessage(text) {
   if (!WHATSAPP_ENABLED || !WHATSAPP_API_KEY || WHATSAPP_API_KEY === 'PASTE_YOUR_API_KEY_HERE') return;
@@ -223,11 +234,6 @@ function sendWhatsAppMessage(text) {
 }
 
 // --- إعدادات Multer للملفات ---
-const SOUNDS_DIR = path.join(__dirname, 'sounds');
-const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
-if (!fs.existsSync(SOUNDS_DIR)) fs.mkdirSync(SOUNDS_DIR);
-if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR);
-
 const fileFilter = (req, file, cb) => {
   const allowedMimes = /^(image\/|audio\/|application\/pdf|text\/|application\/msword|application\/vnd\.openxmlformats)/;
   if (allowedMimes.test(file.mimetype)) cb(null, true);
@@ -272,7 +278,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'drako_secret_fallback_replace_in_p
 
 const isSecure = (req) => req.secure || req.headers['x-forwarded-proto'] === 'https';
 
-// تجديد الكوكي
+// تجديد الكوكي تلقائياً
 app.use((req, res, next) => {
   const token = req.cookies?.token;
   if (token) {
@@ -663,7 +669,6 @@ app.post('/api/admin/test-order', requireAuth, adminOnly, (req, res) => {
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
   `).run(orderId, orderNumber, restaurantId, 'عميل تجريبي', '0100000000', 'العنوان التجريبي', JSON.stringify([{ name: 'منتج تجريبي', price: 50, quantity: 2 }]), 100, 'CASH', 'PENDING', 10, new Date().toISOString());
   const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
-  // إشعار واتساب للطلب التجريبي (اختياري)
   sendWhatsAppMessage(`🧪 طلب تجريبي #${orderNumber}\n👤 ${order.customerName}\n💰 ${order.total} ج`);
   res.json({ success: true, order });
 });
@@ -750,7 +755,7 @@ app.patch('/api/admin/orders/:id', requireAuth, adminOnly, (req, res) => {
   res.json({ success: true });
 });
 
-// --- تغيير حالة الطلب من الأدمن (جديد) ---
+// --- تغيير حالة الطلب من الأدمن ---
 app.patch('/api/admin/orders/:id/change-status', requireAuth, adminOnly, (req, res) => {
   const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
   if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
@@ -803,11 +808,11 @@ app.get('/api/admin/customers/:id', requireAuth, adminOnly, (req, res) => {
   const region = user.regionId ? db.prepare('SELECT * FROM regions WHERE id = ?').get(user.regionId) : null;
   const orders = db.prepare('SELECT * FROM orders WHERE customerPhone = ?').all(user.phone);
   const lastOrder = orders.length ? orders.reduce((latest, o) => new Date(o.createdAt) > new Date(latest.createdAt) ? o : latest) : null;
-  // لا نعيد كلمة المرور أبداً
+  // نعيد كلمة المرور للأدمن (لأيقونة العين)
   res.json({
-    id: user.id, name: user.name, phone: user.phone, regionId: user.regionId,
-    regionName: region?.name || '—', regionFee: region?.fee || 0, address: user.address,
-    totalOrders: orders.length, lastOrderDate: lastOrder?.createdAt || null
+    id: user.id, name: user.name, phone: user.phone, password: user.password,
+    regionId: user.regionId, regionName: region?.name || '—', regionFee: region?.fee || 0,
+    address: user.address, totalOrders: orders.length, lastOrderDate: lastOrder?.createdAt || null
   });
 });
 
@@ -869,6 +874,33 @@ const manageStore = (storeType) => {
 manageStore('market')(app);
 manageStore('pharmacy')(app);
 
+// --- اوردرات المطاعم المباشرة (مفقود سابقاً) ---
+app.get('/api/admin/restaurant-direct-orders', requireAuth, adminOnly, (req, res) => {
+  const orders = db.prepare("SELECT * FROM orders WHERE isDirect = 1").all();
+  const enriched = orders.map(o => ({
+    ...o,
+    restaurantName: o.restaurantId ? (db.prepare('SELECT name FROM restaurants WHERE id = ?').get(o.restaurantId)?.name) : '—',
+    driverName: o.driverId ? (db.prepare('SELECT name FROM users WHERE id = ?').get(o.driverId)?.name) : '—'
+  }));
+  res.json(enriched);
+});
+
+app.patch('/api/admin/restaurant-direct-orders/:id/assign-driver', requireAuth, adminOnly, (req, res) => {
+  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+  if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
+  db.prepare('UPDATE orders SET driverId = ?, status = ? WHERE id = ?').run(req.body.driverId, 'DRIVER_ASSIGNED', req.params.id);
+  res.json({ success: true });
+});
+
+// --- إيرادات المنصة (مفقود سابقاً) ---
+app.get('/api/admin/platform-revenue', requireAuth, adminOnly, (req, res) => {
+  const orders = db.prepare("SELECT * FROM orders WHERE status = 'DELIVERED' AND platformFee > 0").all();
+  const total = orders.reduce((s, o) => s + (o.platformFee || 0), 0);
+  const today = new Date().toISOString().slice(0, 10);
+  const todayTotal = orders.filter(o => o.deliveredAt?.startsWith(today)).reduce((s, o) => s + (o.platformFee || 0), 0);
+  res.json({ total, today: todayTotal });
+});
+
 // ==================== RESTAURANT ROUTES ====================
 app.get('/api/restaurant/profile', requireAuth, (req, res) => {
   if (req.user.role !== 'RESTAURANT') return res.status(403).json({ error: 'غير مسموح' });
@@ -929,7 +961,6 @@ app.post('/api/restaurant/order-from-restaurant', requireAuth, (req, res) => {
     JSON.stringify([{ name: 'أوردر مطعم', price: orderPrice, quantity: 1 }]),
     total, orderPrice, deliveryFee, 'CASH', 'PENDING', 1, notes || '', new Date().toISOString());
   io.emit('newOrder', { orderId, restaurantId: restaurant.id, customerName });
-  // إشعار واتساب
   sendWhatsAppMessage(`🍽️ طلب مطعم مباشر #${orderNumber}\n👤 ${customerName}\n📞 ${customerPhone}\n💰 ${total} ج`);
   res.json({ success: true, orderId });
 });
@@ -1201,7 +1232,6 @@ app.post('/api/orders/special', upload.array('files', 10), (req, res) => {
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `).run(orderId, orderNumber, 'special', orderType, storeId, JSON.stringify(items || []), orderNotes, JSON.stringify(attachments), customerName, customerPhone, address, regionName, paymentMethod || 'CASH', deliveryFee || 10, total, lastDigits, transactionId, extraFee, 'PENDING', new Date().toISOString());
   io.emit('newSpecialOrder', { orderId, orderType, storeId });
-  // إشعار واتساب
   sendWhatsAppMessage(`📦 طلب خاص #${orderNumber}\n👤 ${customerName}\n📞 ${customerPhone}\n🏪 ${orderType === 'market' ? 'ماركت' : 'صيدلية'}\n💰 ${total} ج`);
   res.json({ success: true, orderId });
 });
@@ -1236,7 +1266,6 @@ app.post('/api/orders', customerAuth, (req, res) => {
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `).run(orderId, orderNumber, restaurantId, JSON.stringify(items || []), Number(total), customerName, customerPhone, address, regionName || '', paymentMethod || 'CASH', deliveryFee || 10, lastDigits, transactionId, extraFee, new Date().toISOString());
   io.emit('newOrder', { orderId, restaurantId, customerName });
-  // إشعار واتساب
   const rest = db.prepare('SELECT name FROM restaurants WHERE id = ?').get(restaurantId);
   sendWhatsAppMessage(`🛵 طلب جديد #${orderNumber}\n👤 ${customerName}\n📞 ${customerPhone}\n🍽️ ${rest?.name || '—'}\n💰 ${total} ج`);
   res.json({ success: true, orderId });
