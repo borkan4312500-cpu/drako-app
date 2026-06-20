@@ -650,9 +650,9 @@ app.patch('/api/admin/recharge-requests/:id/reject', requireAuth, adminOnly, (re
 app.get('/api/orders', (req, res) => {
   const orders = db.prepare('SELECT * FROM orders ORDER BY createdAt DESC').all().map(o => {
     let items = [];
-    try { items = JSON.parse(o.items || '[]'); } catch(e){ items = []; }
+    try { items = JSON.parse(o.items || '[]'); } catch(e) { items = []; }
     let attachments = [];
-    try { attachments = JSON.parse(o.attachments || '[]'); } catch(e){ attachments = []; }
+    try { attachments = JSON.parse(o.attachments || '[]'); } catch(e) { attachments = []; }
     return {
       ...o,
       items,
