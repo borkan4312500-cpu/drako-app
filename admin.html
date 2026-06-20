@@ -728,6 +728,34 @@ async function saveOrderEdit(id){
     closeModal(); showToast('تم التعديل'); loadOrders();
   }catch(e){ showToast('صيغة JSON غير صحيحة'); }
 }
+function renderOrdersTable(){
+  const tbody = document.getElementById('ordersTbody');
+  if (!tbody) return;
+  if (!filteredOrders.length) { tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">لا توجد طلبات</div></td></tr>'; return; }
+  tbody.innerHTML = filteredOrders.map(o => {
+    const isPending = !o.adminApproved && o.status !== 'CANCELLED';
+    const actions = `
+      <div class="action-btns">
+        ${isPending ? `
+          <button class="btn-act btn-act-approve" onclick="approveOrder('${o.id}')">✅ موافقة</button>
+          <button class="btn-act btn-act-reject" onclick="rejectOrder('${o.id}')">❌ رفض</button>
+          <button class="btn-act btn-act-edit" onclick="editOrder('${o.id}')">✏️ تعديل</button>
+        ` : ''}
+        <button class="btn-act btn-act-view" onclick="viewOrder('${o.id}')">👁️ عرض</button>
+        <button class="btn-act btn-act-change-status" onclick="changeOrderStatus('${o.id}')" style="background: #8b5cf6; color: white;">🔄 تغيير الحالة</button>
+      </div>`;
+    return `
+      <tr>
+        <td style="color:var(--brand);font-weight:800">#${o.orderNumber || '-'}</td>
+        <td>${o.customerName}</td>
+        <td>${o.restaurantName || '—'}</td>
+        <td>${o.total} ج</td>
+        <td>${statusBadge(o.status)}</td>
+        <td>${o.driverName || '—'}</td>
+        <td>${actions}</td>
+      </tr>`;
+  }).join('');
+}
 function viewOrder(id){
   const o = allOrdersCache.find(o => o.id === id);
   if (!o) return;
