@@ -300,7 +300,11 @@ const getNextOrderNumber = () => {
   const row = db.prepare('SELECT counter FROM dailyOrderCounter WHERE date = ?').get(today);
   let counter = row ? row.counter : 0;
   counter += 1;
-  db.prepare('INSERT OR REPLACE INTO dailyOrderCounter (date, counter) VALUES (?,?)').run(today, counter);
+  if (row) {
+    db.prepare('UPDATE dailyOrderCounter SET counter = ? WHERE date = ?').run(counter, today);
+  } else {
+    db.prepare('INSERT INTO dailyOrderCounter (date, counter) VALUES (?, ?)').run(today, counter);
+  }
   return counter;
 };
 
@@ -644,14 +648,21 @@ app.patch('/api/admin/recharge-requests/:id/reject', requireAuth, adminOnly, (re
 
 // الطلبات
 app.get('/api/orders', (req, res) => {
-  const orders = db.prepare('SELECT * FROM orders ORDER BY createdAt DESC').all().map(o => ({
-    ...o,
-    restaurantName: o.restaurantId ? (db.prepare('SELECT name FROM restaurants WHERE id = ?').get(o.restaurantId)?.name) : getStoreNameForOrder(o) || '—',
-    driverName: o.driverId ? (db.prepare('SELECT name FROM users WHERE id = ?').get(o.driverId)?.name) : '—'
-  }));
+  const orders = db.prepare('SELECT * FROM orders ORDER BY createdAt DESC').all().map(o => {
+    let items = [];
+    try { items = JSON.parse(o.items || '[]'); } catch(e){ items = []; }
+    let attachments = [];
+    try { attachments = JSON.parse(o.attachments || '[]'); } catch(e){ attachments = []; }
+    return {
+      ...o,
+      items,
+      attachments,
+      restaurantName: o.restaurantId ? (db.prepare('SELECT name FROM restaurants WHERE id = ?').get(o.restaurantId)?.name) : getStoreNameForOrder(o) || '—',
+      driverName: o.driverId ? (db.prepare('SELECT name FROM users WHERE id = ?').get(o.driverId)?.name) : '—'
+    };
+  });
   res.json(orders);
 });
-
 app.patch('/api/admin/orders/:id/assign-driver', requireAuth, adminOnly, (req, res) => {
   const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
   if (!order) return res.status(404).json({ error: 'الطلب غير موجود' });
@@ -877,11 +888,19 @@ manageStore('pharmacy')(app);
 // --- اوردرات المطاعم المباشرة (مفقود سابقاً) ---
 app.get('/api/admin/restaurant-direct-orders', requireAuth, adminOnly, (req, res) => {
   const orders = db.prepare("SELECT * FROM orders WHERE isDirect = 1").all();
-  const enriched = orders.map(o => ({
-    ...o,
-    restaurantName: o.restaurantId ? (db.prepare('SELECT name FROM restaurants WHERE id = ?').get(o.restaurantId)?.name) : '—',
-    driverName: o.driverId ? (db.prepare('SELECT name FROM users WHERE id = ?').get(o.driverId)?.name) : '—'
-  }));
+  const enriched = orders.map(o => {
+    let items = [];
+    try { items = JSON.parse(o.items || '[]'); } catch(e) {}
+    let attachments = [];
+    try { attachments = JSON.parse(o.attachments || '[]'); } catch(e) {}
+    return {
+      ...o,
+      items,
+      attachments,
+      restaurantName: o.restaurantId ? (db.prepare('SELECT name FROM restaurants WHERE id = ?').get(o.restaurantId)?.name) : '—',
+      driverName: o.driverId ? (db.prepare('SELECT name FROM users WHERE id = ?').get(o.driverId)?.name) : '—'
+    };
+  });
   res.json(enriched);
 });
 
@@ -1289,8 +1308,12 @@ app.post('/api/orders', customerAuth, (req, res) => {
 app.get('/api/orders/:id/track', (req, res) => {
   const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
   if (!order) return res.status(404).json({ error: 'غير موجود' });
+  let items = [];
+  try { items = JSON.parse(order.items || '[]'); } catch(e) {}
+  let attachments = [];
+  try { attachments = JSON.parse(order.attachments || '[]'); } catch(e) {}
   const restaurantName = order.restaurantId ? (db.prepare('SELECT name FROM restaurants WHERE id = ?').get(order.restaurantId)?.name) : getStoreNameForOrder(order);
-  res.json({ ...order, restaurantName });
+  res.json({ ...order, items, attachments, restaurantName });
 });
 
 app.get('/api/regions', (req, res) => res.json(db.prepare('SELECT * FROM regions').all()));
