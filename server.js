@@ -1211,7 +1211,22 @@ app.get('/api/restaurants', (req, res) => {
 app.get('/api/restaurants/:id/menu', (req, res) => {
   const restaurant = db.prepare('SELECT * FROM restaurants WHERE id = ?').get(req.params.id);
   if (!restaurant) return res.status(404).json({ error: 'غير موجود' });
-  const products = db.prepare('SELECT * FROM products WHERE restaurantId = ? AND isAvailable = 1').all(restaurant.id).map(p => ({ ...p, groups: JSON.parse(p.groups || '[]') }));
+
+  // جلب تصنيفات المطعم لتحويل المعرفات إلى أسماء
+  const categories = db.prepare('SELECT id, name FROM categories WHERE restaurantId = ?').all(restaurant.id);
+  const categoryMap = new Map(categories.map(c => [c.id, c.name]));
+
+  let products = db.prepare('SELECT * FROM products WHERE restaurantId = ? AND isAvailable = 1')
+    .all(restaurant.id)
+    .map(p => {
+      let categoryName = p.category || 'عام';
+      // إذا كانت قيمة التصنيف معرّفاً موجوداً في التصنيفات، استبدله بالاسم
+      if (categoryMap.has(categoryName)) {
+        categoryName = categoryMap.get(categoryName);
+      }
+      return { ...p, category: categoryName, groups: JSON.parse(p.groups || '[]') };
+    });
+
   res.json(products);
 });
 
