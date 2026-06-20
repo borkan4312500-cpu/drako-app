@@ -26,19 +26,19 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.set('trust proxy', 1);
 
+  
 // --- تحديد معدل الطلبات (Rate Limiting) ---
-// معدل عام للمستخدمين العاديين
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 1000, // زيادة الحد
+  max: 5000,  // 5000 طلب كل 15 دقيقة - كافي للجميع
   message: { error: 'طلبات كثيرة جداً، حاول لاحقاً' }
 });
+app.use(generalLimiter);
 
-// معدل خاص للأدمن (أعلى بكثير)
-const generalLimiter = rateLimit({
+const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 500,
-  message: { error: 'طلبات كثيرة جداً، حاول لاحقاً' }
+  max: 20,
+  message: { error: 'محاولات تسجيل دخول كثيرة، حاول لاحقاً' }
 });
 app.use(generalLimiter);
 
